@@ -63,6 +63,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </Link>
             )}
             <Link
+              href="/dashboard/form"
+              className="block px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100"
+            >
+              Form editor
+            </Link>
+            <Link
               href="/dashboard/submissions"
               className="block px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100"
             >
