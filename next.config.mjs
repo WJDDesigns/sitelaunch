@@ -1,12 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  allowedDevOrigins: ["lvh.me", "*.lvh.me", "app.lvh.me"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
+  // Silence the "Detected multiple lockfiles" warning if it shows up.
+  // Vercel only ships the lockfile at the project root.
 };
 
 export default nextConfig;
