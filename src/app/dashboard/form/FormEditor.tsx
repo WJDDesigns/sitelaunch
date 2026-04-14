@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, RepeaterConfig, RepeaterSubField } from "@/lib/forms";
 import { saveFormSchemaAction } from "./actions";
 
@@ -111,13 +111,13 @@ const INPUT_CLS =
 /* ── Main editor ───────────────────────────────────────────── */
 
 export default function FormEditor({ initialSchema, onOpenTemplates }: { initialSchema: FormSchema; onOpenTemplates?: () => void }) {
-  const [schema, setSchema] = useState<FormSchema>(initialSchema);
+  const [schema, setSchemaRaw] = useState<FormSchema>(initialSchema);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(
-    new Set(schema.steps.map((s) => s.id)),
+    new Set(initialSchema.steps.map((s) => s.id)),
   );
   /* Mobile panel toggle: "palette" | "canvas" | "settings" */
   const [mobilePanel, setMobilePanel] = useState<"palette" | "canvas" | "settings">("canvas");
@@ -125,10 +125,70 @@ export default function FormEditor({ initialSchema, onOpenTemplates }: { initial
   const dragPayload = useRef<DragPayload | null>(null);
   const [dropTarget, setDropTarget] = useState<{ stepId: string; index: number } | null>(null);
 
+  /* ── Undo / Redo history ───────────────────────────────── */
+  const MAX_HISTORY = 50;
+  const historyRef = useRef<string[]>([JSON.stringify(initialSchema)]);
+  const historyIdxRef = useRef(0);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const setSchema = useCallback((next: FormSchema | ((prev: FormSchema) => FormSchema)) => {
+    setSchemaRaw((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      const json = JSON.stringify(resolved);
+      // Only push if actually different from current position
+      if (json !== historyRef.current[historyIdxRef.current]) {
+        // Truncate any future states (if we undid and then made a new change)
+        historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+        historyRef.current.push(json);
+        // Cap the history size
+        if (historyRef.current.length > MAX_HISTORY) {
+          historyRef.current = historyRef.current.slice(-MAX_HISTORY);
+        }
+        historyIdxRef.current = historyRef.current.length - 1;
+      }
+      setCanUndo(historyIdxRef.current > 0);
+      setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+      return resolved;
+    });
+  }, []);
+
+  function undo() {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current--;
+    const prev = JSON.parse(historyRef.current[historyIdxRef.current]) as FormSchema;
+    setSchemaRaw(prev);
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(true);
+    setMessage(null);
+  }
+
+  function redo() {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current++;
+    const next = JSON.parse(historyRef.current[historyIdxRef.current]) as FormSchema;
+    setSchemaRaw(next);
+    setCanUndo(true);
+    setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+    setMessage(null);
+  }
+
+  // Keyboard shortcuts: Ctrl/Cmd+Z for undo, Ctrl/Cmd+Shift+Z for redo
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (mod && e.key === "z" && e.shiftKey) { e.preventDefault(); redo(); }
+      if (mod && e.key === "y") { e.preventDefault(); redo(); }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
   const updateSteps = useCallback((fn: (steps: StepDef[]) => StepDef[]) => {
     setSchema((prev) => ({ steps: fn([...prev.steps]) }));
     setMessage(null);
-  }, []);
+  }, [setSchema]);
 
   const selectedStep = schema.steps.find((s) => s.id === selectedStepId) ?? null;
   const selectedField = selectedStep?.fields.find((f) => f.id === selectedFieldId) ?? null;
@@ -331,6 +391,25 @@ export default function FormEditor({ initialSchema, onOpenTemplates }: { initial
               {message.text}
             </span>
           )}
+          {/* Undo / Redo */}
+          <div className="hidden sm:flex items-center gap-1 border-r border-outline-variant/20 pr-3 mr-1">
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              className="p-2 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:hover:text-on-surface-variant transition-colors rounded-lg hover:bg-on-surface/5"
+            >
+              <i className="fa-solid fa-rotate-left text-sm" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              className="p-2 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:hover:text-on-surface-variant transition-colors rounded-lg hover:bg-on-surface/5"
+            >
+              <i className="fa-solid fa-rotate-right text-sm" />
+            </button>
+          </div>
           {/* Import / Export */}
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
           <button
