@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-50:  239 246 255;
+  --brand-100: 219 234 254;
+  --brand-500:  59 130 246;
+  --brand-600:  37  99 235;
+  --brand-700:  29  78 216;
+}
+
+html, body { height: 100%; }
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
