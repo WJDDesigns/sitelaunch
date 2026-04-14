@@ -312,6 +312,58 @@ function PreviewField({ field, primaryColor, delay }: { field: FieldDef; primary
     );
   }
 
+  if (field.type === "repeater" && field.repeaterConfig) {
+    const cfg = field.repeaterConfig;
+    const summaryFields = cfg.subFields.filter((sf) => !sf.showWhen).slice(0, 3);
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-3 ml-1">{field.hint}</p>}
+
+        {cfg.maxEntries && cfg.maxEntries > 0 && (
+          <div className="mb-3 px-4 py-2 bg-amber-50 dark:bg-amber-500/10 rounded-xl">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              You can add up to <strong>{cfg.maxEntries}</strong> {cfg.entryLabel?.toLowerCase() || "entries"} based on your package.
+            </p>
+          </div>
+        )}
+
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-outline-variant/15">
+                {summaryFields.map((sf) => (
+                  <th key={sf.id} className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-4 py-3">{sf.label}</th>
+                ))}
+                <th className="w-20" />
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan={summaryFields.length + 1} className="px-6 py-8 text-center text-sm text-on-surface-variant/60">
+                  There are no {cfg.entryLabel?.toLowerCase() || "entries"}.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button
+          type="button"
+          disabled
+          className="mt-3 px-5 py-2.5 font-bold rounded-xl text-sm"
+          style={{ backgroundColor: primaryColor, color: lightBg ? "#1a1c25" : "#ffffff" }}
+        >
+          <i className="fa-solid fa-plus text-xs mr-1.5" />
+          {cfg.addButtonLabel || `Add ${cfg.entryLabel || "Entry"}`}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">

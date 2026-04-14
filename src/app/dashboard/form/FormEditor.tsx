@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, RepeaterConfig, RepeaterSubField } from "@/lib/forms";
 import { saveFormSchemaAction } from "./actions";
 
 /* ── Field type catalogue ──────────────────────────────────── */
@@ -30,6 +30,7 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "file", label: "File Upload", icon: "fa-paperclip", group: "advanced" },
   { type: "files", label: "Multi-File", icon: "fa-folder-open", group: "advanced" },
   { type: "package", label: "Package Selector", icon: "fa-box-open", group: "advanced" },
+  { type: "repeater", label: "Repeater / Pages", icon: "fa-layer-group", group: "advanced" },
 ];
 
 function iconFor(type: FieldType) {
@@ -74,6 +75,20 @@ function makeField(type: FieldType, label: string): FieldDef {
     const pkgs = base.packageConfig.packages;
     base.packageConfig.features[0].values = { [pkgs[0].id]: "Up to 5", [pkgs[1].id]: "Up to 20", [pkgs[2].id]: "Unlimited" };
     base.packageConfig.features[1].values = { [pkgs[0].id]: false, [pkgs[1].id]: true, [pkgs[2].id]: true };
+  }
+  if (type === "repeater") {
+    base.repeaterConfig = {
+      subFields: [
+        { id: `sf_${uid()}`, type: "select", label: "Page Type", required: true, options: ["Home", "About Us", "Services", "Contact", "Blog", "Portfolio/Gallery", "FAQ", "Testimonials", "Team", "Pricing", "Shop/Products", "Custom Page"] },
+        { id: `sf_${uid()}`, type: "textarea", label: "What is the main purpose of this page?", required: true, placeholder: "What should visitors learn, feel, or do on this page?", rows: 3 },
+        { id: `sf_${uid()}`, type: "text", label: "Primary Call-to-Action", placeholder: 'e.g. "Schedule a consultation"' },
+      ],
+      minEntries: 1,
+      maxEntries: 20,
+      addButtonLabel: "Add Page",
+      entryLabel: "Page",
+    };
+    base.label = "Which pages will your site have?";
   }
   return base;
 }
@@ -256,6 +271,44 @@ export default function FormEditor({ initialSchema, onOpenTemplates }: { initial
     setDropTarget(null);
   }
 
+  /* ── Export / Import ────────────────────────────────────── */
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleExport() {
+    const json = JSON.stringify(schema, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `form-schema-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string) as FormSchema;
+        if (!parsed.steps || !Array.isArray(parsed.steps)) {
+          setMessage({ kind: "err", text: "Invalid form schema — missing steps array." });
+          return;
+        }
+        setSchema(parsed);
+        setExpandedSteps(new Set(parsed.steps.map((s) => s.id)));
+        clearSelection();
+        setMessage({ kind: "ok", text: `Imported ${parsed.steps.length} steps!` });
+      } catch {
+        setMessage({ kind: "err", text: "Failed to parse JSON file." });
+      }
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-imported
+    e.target.value = "";
+  }
+
   async function handleSave() {
     setSaving(true);
     setMessage(null);
@@ -278,10 +331,24 @@ export default function FormEditor({ initialSchema, onOpenTemplates }: { initial
               {message.text}
             </span>
           )}
+          {/* Import / Export */}
+          <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant/20 rounded-lg hover:text-primary hover:border-primary/30 transition-all whitespace-nowrap hidden sm:flex items-center gap-1.5"
+          >
+            <i className="fa-solid fa-file-import text-[10px]" /> Import
+          </button>
+          <button
+            onClick={handleExport}
+            className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant/20 rounded-lg hover:text-primary hover:border-primary/30 transition-all whitespace-nowrap hidden sm:flex items-center gap-1.5"
+          >
+            <i className="fa-solid fa-file-export text-[10px]" /> Export
+          </button>
           {onOpenTemplates && (
             <button
               onClick={onOpenTemplates}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant/20 rounded-lg hover:text-primary hover:border-primary/30 transition-all whitespace-nowrap hidden sm:block"
+              className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant/20 rounded-lg hover:text-primary hover:border-primary/30 transition-all whitespace-nowrap hidden sm:block"
             >
               Templates
             </button>
@@ -633,6 +700,10 @@ function FieldSettingsPanel({ field, onUpdate, onClose }: {
           <PackageSettingsPanel config={field.packageConfig} onUpdate={(cfg) => onUpdate({ packageConfig: cfg })} />
         )}
 
+        {field.type === "repeater" && field.repeaterConfig && (
+          <RepeaterSettingsPanel config={field.repeaterConfig} onUpdate={(cfg) => onUpdate({ repeaterConfig: cfg })} />
+        )}
+
         <section className="space-y-3">
           <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Logic &amp; Rules</div>
           <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
@@ -969,6 +1040,232 @@ function PackageSettingsPanel({ config, onUpdate }: {
           >
             <i className="fa-solid fa-plus text-[10px] mr-1" /> Add Rule
           </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── Repeater settings panel ──────────────────────────────── */
+
+const REPEATER_SUB_TYPES: { value: RepeaterSubField["type"]; label: string }[] = [
+  { value: "text", label: "Short Text" },
+  { value: "textarea", label: "Long Text" },
+  { value: "select", label: "Dropdown" },
+  { value: "radio", label: "Radio" },
+  { value: "checkbox", label: "Checkbox" },
+  { value: "email", label: "Email" },
+  { value: "tel", label: "Phone" },
+  { value: "url", label: "URL" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "file", label: "File Upload" },
+  { value: "files", label: "Multi-File" },
+];
+
+function RepeaterSettingsPanel({ config, onUpdate }: {
+  config: RepeaterConfig;
+  onUpdate: (cfg: RepeaterConfig) => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"fields" | "settings">("fields");
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+  function addSubField() {
+    const sf: RepeaterSubField = { id: `sf_${uid()}`, type: "text", label: "New Field" };
+    onUpdate({ ...config, subFields: [...config.subFields, sf] });
+    setEditingIdx(config.subFields.length);
+  }
+
+  function removeSubField(idx: number) {
+    const removed = config.subFields[idx];
+    // Also clean up any showWhen references to this field
+    const subFields = config.subFields
+      .filter((_, i) => i !== idx)
+      .map((sf) => sf.showWhen?.fieldId === removed.id ? { ...sf, showWhen: undefined } : sf);
+    onUpdate({ ...config, subFields });
+    if (editingIdx === idx) setEditingIdx(null);
+    else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
+  }
+
+  function updateSubField(idx: number, patch: Partial<RepeaterSubField>) {
+    onUpdate({
+      ...config,
+      subFields: config.subFields.map((sf, i) => (i === idx ? { ...sf, ...patch } : sf)),
+    });
+  }
+
+  function moveSubField(idx: number, dir: -1 | 1) {
+    const j = idx + dir;
+    if (j < 0 || j >= config.subFields.length) return;
+    const subFields = [...config.subFields];
+    [subFields[idx], subFields[j]] = [subFields[j], subFields[idx]];
+    onUpdate({ ...config, subFields });
+    if (editingIdx === idx) setEditingIdx(j);
+    else if (editingIdx === j) setEditingIdx(idx);
+  }
+
+  const tabs = [
+    { key: "fields" as const, label: "Sub-Fields", icon: "fa-list" },
+    { key: "settings" as const, label: "Settings", icon: "fa-gear" },
+  ];
+
+  return (
+    <section className="space-y-3">
+      <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Repeater Configuration</div>
+
+      <div className="flex bg-surface-container rounded-lg p-0.5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${
+              activeTab === t.key
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-on-surface-variant/50 hover:text-on-surface-variant"
+            }`}
+          >
+            <i className={`fa-solid ${t.icon} text-[9px]`} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "fields" && (
+        <div className="space-y-2">
+          {config.subFields.map((sf, si) => {
+            const isEditing = editingIdx === si;
+            return (
+              <div key={sf.id} className="bg-surface-container rounded-xl border border-outline-variant/10 overflow-hidden">
+                {/* Sub-field header */}
+                <div
+                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${isEditing ? "bg-primary/5" : "hover:bg-surface-container-high/60"}`}
+                  onClick={() => setEditingIdx(isEditing ? null : si)}
+                >
+                  <i className={`fa-solid fa-chevron-${isEditing ? "down" : "right"} text-[8px] text-on-surface-variant/50 w-3`} />
+                  <span className="text-xs font-medium text-on-surface flex-1 truncate">{sf.label}</span>
+                  <span className="text-[9px] text-on-surface-variant/40 uppercase">{sf.type}</span>
+                  {sf.required && <span className="text-[9px] text-tertiary font-bold">*</span>}
+                  <div className="flex items-center gap-0.5">
+                    <button onClick={(e) => { e.stopPropagation(); moveSubField(si, -1); }} disabled={si === 0} className="p-0.5 text-on-surface-variant/40 hover:text-on-surface disabled:opacity-30"><i className="fa-solid fa-arrow-up text-[8px]" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); moveSubField(si, 1); }} disabled={si === config.subFields.length - 1} className="p-0.5 text-on-surface-variant/40 hover:text-on-surface disabled:opacity-30"><i className="fa-solid fa-arrow-down text-[8px]" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removeSubField(si); }} className="p-0.5 text-on-surface-variant/40 hover:text-error ml-1"><i className="fa-solid fa-trash text-[8px]" /></button>
+                  </div>
+                </div>
+
+                {/* Sub-field editor */}
+                {isEditing && (
+                  <div className="px-3 pb-3 space-y-2 border-t border-outline-variant/10 pt-2">
+                    <label className="block">
+                      <span className="text-[10px] text-on-surface-variant mb-0.5 block">Label</span>
+                      <input value={sf.label} onChange={(e) => updateSubField(si, { label: e.target.value })} className={`${INPUT_CLS} text-xs`} />
+                    </label>
+                    <div className="flex gap-2">
+                      <label className="flex-1">
+                        <span className="text-[10px] text-on-surface-variant mb-0.5 block">Type</span>
+                        <select value={sf.type} onChange={(e) => updateSubField(si, { type: e.target.value as RepeaterSubField["type"] })} className={`${INPUT_CLS} text-xs`}>
+                          {REPEATER_SUB_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                      </label>
+                      <label className="flex items-end gap-1.5 pb-1">
+                        <input type="checkbox" checked={!!sf.required} onChange={(e) => updateSubField(si, { required: e.target.checked })} className="accent-primary" />
+                        <span className="text-[10px] text-on-surface-variant">Req</span>
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="text-[10px] text-on-surface-variant mb-0.5 block">Placeholder</span>
+                      <input value={sf.placeholder ?? ""} onChange={(e) => updateSubField(si, { placeholder: e.target.value || undefined })} className={`${INPUT_CLS} text-xs`} />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] text-on-surface-variant mb-0.5 block">Hint</span>
+                      <input value={sf.hint ?? ""} onChange={(e) => updateSubField(si, { hint: e.target.value || undefined })} className={`${INPUT_CLS} text-xs`} />
+                    </label>
+
+                    {(sf.type === "select" || sf.type === "radio" || sf.type === "checkbox") && (
+                      <label className="block">
+                        <span className="text-[10px] text-on-surface-variant mb-0.5 block">Options (one per line)</span>
+                        <textarea value={(sf.options ?? []).join("\n")} onChange={(e) => updateSubField(si, { options: e.target.value.split("\n").filter((l) => l.trim()) })} rows={4} className={`${INPUT_CLS} text-xs font-mono`} />
+                      </label>
+                    )}
+
+                    {sf.type === "textarea" && (
+                      <label className="flex items-center gap-2">
+                        <span className="text-[10px] text-on-surface-variant">Rows</span>
+                        <input type="number" min={2} max={10} value={sf.rows ?? 3} onChange={(e) => updateSubField(si, { rows: Number(e.target.value) || 3 })} className="w-14 px-2 py-1 text-xs bg-surface-container-highest/50 border-0 rounded text-on-surface outline-none" />
+                      </label>
+                    )}
+
+                    {(sf.type === "file" || sf.type === "files") && (
+                      <label className="block">
+                        <span className="text-[10px] text-on-surface-variant mb-0.5 block">Accepted types</span>
+                        <input value={sf.accept ?? ""} onChange={(e) => updateSubField(si, { accept: e.target.value || undefined })} placeholder="e.g. image/*,.pdf" className={`${INPUT_CLS} text-xs`} />
+                      </label>
+                    )}
+
+                    {/* Conditional visibility */}
+                    <div className="pt-1 border-t border-outline-variant/10">
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Show When</span>
+                      <div className="flex gap-2">
+                        <select
+                          value={sf.showWhen?.fieldId ?? ""}
+                          onChange={(e) => {
+                            if (!e.target.value) { updateSubField(si, { showWhen: undefined }); return; }
+                            updateSubField(si, { showWhen: { fieldId: e.target.value, values: sf.showWhen?.values ?? [] } });
+                          }}
+                          className="flex-1 text-[10px] bg-surface-container-highest/50 border-0 rounded px-2 py-1 text-on-surface outline-none"
+                        >
+                          <option value="">Always visible</option>
+                          {config.subFields.filter((_, i) => i !== si).map((other) => (
+                            <option key={other.id} value={other.id}>{other.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {sf.showWhen?.fieldId && (
+                        <label className="block mt-1">
+                          <span className="text-[9px] text-on-surface-variant/60 block mb-0.5">equals (one per line)</span>
+                          <textarea
+                            value={(sf.showWhen.values ?? []).join("\n")}
+                            onChange={(e) => updateSubField(si, { showWhen: { ...sf.showWhen!, values: e.target.value.split("\n").filter((l) => l.trim()) } })}
+                            rows={3}
+                            className="w-full text-[10px] bg-surface-container-highest/50 border-0 rounded px-2 py-1 text-on-surface outline-none font-mono"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <button
+            onClick={addSubField}
+            className="w-full py-2 border border-dashed border-outline-variant/20 rounded-xl text-xs font-bold text-on-surface-variant hover:border-primary/40 hover:text-primary transition-all"
+          >
+            <i className="fa-solid fa-plus text-[10px] mr-1" /> Add Sub-Field
+          </button>
+        </div>
+      )}
+
+      {activeTab === "settings" && (
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-[10px] text-on-surface-variant mb-0.5 block">Entry label (singular)</span>
+            <input value={config.entryLabel ?? ""} onChange={(e) => onUpdate({ ...config, entryLabel: e.target.value || undefined })} placeholder="e.g. Page" className={`${INPUT_CLS} text-xs`} />
+          </label>
+          <label className="block">
+            <span className="text-[10px] text-on-surface-variant mb-0.5 block">Add button label</span>
+            <input value={config.addButtonLabel ?? ""} onChange={(e) => onUpdate({ ...config, addButtonLabel: e.target.value || undefined })} placeholder="e.g. Add Page" className={`${INPUT_CLS} text-xs`} />
+          </label>
+          <div className="flex gap-3">
+            <label className="flex-1">
+              <span className="text-[10px] text-on-surface-variant mb-0.5 block">Min entries</span>
+              <input type="number" min={0} max={50} value={config.minEntries ?? 0} onChange={(e) => onUpdate({ ...config, minEntries: Number(e.target.value) || 0 })} className={`${INPUT_CLS} text-xs`} />
+            </label>
+            <label className="flex-1">
+              <span className="text-[10px] text-on-surface-variant mb-0.5 block">Max entries</span>
+              <input type="number" min={0} max={100} value={config.maxEntries ?? 0} onChange={(e) => onUpdate({ ...config, maxEntries: Number(e.target.value) || 0 })} className={`${INPUT_CLS} text-xs`} />
+            </label>
+          </div>
+          <p className="text-[9px] text-on-surface-variant/50">Set max to 0 for unlimited entries.</p>
         </div>
       )}
     </section>

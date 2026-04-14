@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
-import type { FormSchema, FieldDef, UploadedFile, PackageRule } from "@/lib/forms";
+import type { FormSchema, FieldDef, UploadedFile, PackageRule, RepeaterSubField } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
 import FileField from "./FileField";
 
@@ -338,6 +338,10 @@ export default function SubmissionForm({
                 <div key={f.id} className={`sl-fade-up sl-d${Math.min(i + 2, 5)}`}>
                   <FileField field={f} initialFiles={initialFiles[f.id] ?? []} upload={uploadFile} remove={deleteFile} primaryColor={primaryColor} />
                 </div>
+              ) : f.type === "repeater" && f.repeaterConfig ? (
+                <div key={f.id} className={`sl-fade-up sl-d${Math.min(i + 2, 5)}`}>
+                  <RepeaterField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} />
+                </div>
               ) : (
                 <div key={f.id} className={`sl-fade-up sl-d${Math.min(i + 2, 5)}`}>
                   <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} />
@@ -382,6 +386,242 @@ export default function SubmissionForm({
 
 function Spinner() {
   return <i className="fa-solid fa-spinner fa-spin text-sm" />;
+}
+
+/* ── Repeater field (nested entries like pages) ───────────── */
+
+type RepeaterEntry = Record<string, string>;
+
+function RepeaterField({
+  field, value, error, onChange, primaryColor,
+}: {
+  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string;
+}) {
+  const cfg = field.repeaterConfig!;
+  const lightBg = isLightColor(primaryColor);
+
+  // Parse entries from stored value (JSON string or array)
+  const entries: RepeaterEntry[] = (() => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string" && value) {
+      try { return JSON.parse(value); } catch { return []; }
+    }
+    return [];
+  })();
+
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [draft, setDraft] = useState<RepeaterEntry>({});
+
+  const atMax = cfg.maxEntries && cfg.maxEntries > 0 && entries.length >= cfg.maxEntries;
+
+  function openNew() {
+    setDraft({});
+    setEditingIdx(-1); // -1 = new entry
+  }
+  function openEdit(idx: number) {
+    setDraft({ ...entries[idx] });
+    setEditingIdx(idx);
+  }
+  function closeEditor() {
+    setEditingIdx(null);
+    setDraft({});
+  }
+  function saveEntry() {
+    // Validate required sub-fields
+    for (const sf of cfg.subFields) {
+      if (sf.required && !draft[sf.id]?.trim()) return;
+      // Skip validation for conditionally hidden fields
+      if (sf.showWhen) {
+        const depVal = draft[sf.showWhen.fieldId] ?? "";
+        if (!sf.showWhen.values.includes(depVal)) continue;
+        if (sf.required && !draft[sf.id]?.trim()) return;
+      }
+    }
+    let next: RepeaterEntry[];
+    if (editingIdx === -1) {
+      next = [...entries, draft];
+    } else {
+      next = entries.map((e, i) => (i === editingIdx ? draft : e));
+    }
+    onChange(JSON.stringify(next));
+    closeEditor();
+  }
+  function removeEntry(idx: number) {
+    const next = entries.filter((_, i) => i !== idx);
+    onChange(JSON.stringify(next));
+    if (editingIdx === idx) closeEditor();
+  }
+
+  function isSubFieldVisible(sf: RepeaterSubField): boolean {
+    if (!sf.showWhen) return true;
+    const depVal = draft[sf.showWhen.fieldId] ?? "";
+    return sf.showWhen.values.includes(depVal);
+  }
+
+  // Summary columns: first 3 non-hidden text-like sub-fields
+  const summaryFields = cfg.subFields.filter((sf) => !sf.showWhen).slice(0, 3);
+
+  return (
+    <div className="group">
+      <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+        {field.label}
+        {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+      </label>
+      {field.hint && <p className="text-xs text-on-surface-variant/60 mb-3 ml-1">{field.hint}</p>}
+
+      {cfg.maxEntries && cfg.maxEntries > 0 && (
+        <div className="mb-3 px-4 py-2 bg-amber-50 dark:bg-amber-500/10 rounded-xl">
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            You can add up to <strong>{cfg.maxEntries}</strong> {cfg.entryLabel?.toLowerCase() || "entries"}{" "}
+            based on your package.
+          </p>
+        </div>
+      )}
+
+      {/* Entries table */}
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 overflow-hidden">
+        {entries.length > 0 && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-outline-variant/15">
+                {summaryFields.map((sf) => (
+                  <th key={sf.id} className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-4 py-3">
+                    {sf.label}
+                  </th>
+                ))}
+                <th className="w-20" />
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry, ei) => (
+                <tr key={ei} className="border-b border-outline-variant/10 last:border-0 hover:bg-on-surface/[0.02] transition-colors">
+                  {summaryFields.map((sf) => (
+                    <td key={sf.id} className="px-4 py-3 text-on-surface truncate max-w-[200px]">
+                      {entry[sf.id] || <span className="text-on-surface-variant/30">—</span>}
+                    </td>
+                  ))}
+                  <td className="px-4 py-3 text-right">
+                    <button type="button" onClick={() => openEdit(ei)} className="text-xs text-primary hover:underline mr-2">Edit</button>
+                    <button type="button" onClick={() => removeEntry(ei)} className="text-xs text-on-surface-variant/40 hover:text-error">
+                      <i className="fa-solid fa-trash text-[10px]" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {entries.length === 0 && editingIdx === null && (
+          <div className="px-6 py-8 text-center text-sm text-on-surface-variant/60">
+            There are no {cfg.entryLabel?.toLowerCase() || "entries"}.
+          </div>
+        )}
+
+        {/* Inline editor */}
+        {editingIdx !== null && (
+          <div className="border-t border-outline-variant/15 bg-surface-container-low/30 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-on-surface uppercase tracking-widest">
+                {editingIdx === -1 ? `New ${cfg.entryLabel || "Entry"}` : `Edit ${cfg.entryLabel || "Entry"} ${editingIdx + 1}`}
+              </h4>
+              <button type="button" onClick={closeEditor} className="text-on-surface-variant/40 hover:text-on-surface p-1">
+                <i className="fa-solid fa-xmark text-xs" />
+              </button>
+            </div>
+
+            {cfg.subFields.map((sf) => {
+              if (!isSubFieldVisible(sf)) return null;
+              const val = draft[sf.id] ?? "";
+              return (
+                <div key={sf.id}>
+                  <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1 ml-0.5">
+                    {sf.label}
+                    {sf.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+                  </label>
+                  {sf.hint && <p className="text-[10px] text-on-surface-variant/60 mb-1 ml-0.5">{sf.hint}</p>}
+
+                  {sf.type === "textarea" ? (
+                    <textarea
+                      value={val}
+                      onChange={(e) => setDraft((d) => ({ ...d, [sf.id]: e.target.value }))}
+                      placeholder={sf.placeholder}
+                      rows={sf.rows ?? 3}
+                      className="block w-full px-4 py-3 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 outline-none transition-all"
+                      style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties}
+                    />
+                  ) : sf.type === "select" ? (
+                    <select
+                      value={val}
+                      onChange={(e) => setDraft((d) => ({ ...d, [sf.id]: e.target.value }))}
+                      className="block w-full px-4 py-3 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 outline-none transition-all"
+                      style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties}
+                    >
+                      <option value="">Select...</option>
+                      {(sf.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : sf.type === "radio" ? (
+                    <div className="space-y-1.5">
+                      {(sf.options ?? []).map((o) => (
+                        <label key={o} className="flex items-center gap-3 py-2.5 px-3 rounded-lg border transition-all cursor-pointer" style={val === o ? { borderColor: primaryColor, backgroundColor: primaryColor + "08" } : { borderColor: "var(--color-outline-variant)" }}>
+                          <input type="radio" name={`${field.id}_${sf.id}`} value={o} checked={val === o} onChange={() => setDraft((d) => ({ ...d, [sf.id]: o }))} className="h-3.5 w-3.5" style={{ accentColor: primaryColor }} />
+                          <span className="text-sm text-on-surface">{o}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <input
+                      type={sf.type === "email" ? "email" : sf.type === "tel" ? "tel" : sf.type === "url" ? "url" : sf.type === "number" ? "number" : sf.type === "date" ? "date" : "text"}
+                      value={val}
+                      onChange={(e) => setDraft((d) => ({ ...d, [sf.id]: e.target.value }))}
+                      placeholder={sf.placeholder}
+                      className="block w-full px-4 py-3 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 outline-none transition-all"
+                      style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties}
+                    />
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={saveEntry}
+                className="px-6 py-2.5 font-bold rounded-xl text-sm transition-all"
+                style={{ backgroundColor: primaryColor, color: lightBg ? "#1a1c25" : "#ffffff" }}
+              >
+                {editingIdx === -1 ? `Save ${cfg.entryLabel || "Entry"}` : "Update"}
+              </button>
+              <button type="button" onClick={closeEditor} className="px-4 py-2.5 text-sm text-on-surface-variant hover:text-on-surface transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add button */}
+      {editingIdx === null && (
+        <button
+          type="button"
+          onClick={openNew}
+          disabled={!!atMax}
+          className="mt-3 px-5 py-2.5 font-bold rounded-xl text-sm transition-all disabled:opacity-40"
+          style={{ backgroundColor: primaryColor, color: lightBg ? "#1a1c25" : "#ffffff" }}
+        >
+          <i className="fa-solid fa-plus text-xs mr-1.5" />
+          {cfg.addButtonLabel || `Add ${cfg.entryLabel || "Entry"}`}
+        </button>
+      )}
+
+      {error && (
+        <p className="text-sm text-error mt-2 sl-fade-up flex items-center gap-1.5">
+          <i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function evaluatePackageRules(
