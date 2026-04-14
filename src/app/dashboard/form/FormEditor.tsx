@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule } from "@/lib/forms";
 import { saveFormSchemaAction } from "./actions";
 
 /* ── Field type catalogue ──────────────────────────────────── */
@@ -29,6 +29,7 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "heading", label: "Section Heading", icon: "fa-heading", group: "advanced" },
   { type: "file", label: "File Upload", icon: "fa-paperclip", group: "advanced" },
   { type: "files", label: "Multi-File", icon: "fa-folder-open", group: "advanced" },
+  { type: "package", label: "Package Selector", icon: "fa-box-open", group: "advanced" },
 ];
 
 function iconFor(type: FieldType) {
@@ -56,6 +57,24 @@ function makeField(type: FieldType, label: string): FieldDef {
   if (type === "textarea") base.rows = 4;
   if (type === "color") base.placeholder = "#c0c1ff";
   if (type === "heading") base.content = "";
+  if (type === "package") {
+    base.packageConfig = {
+      packages: [
+        { id: `pkg_${uid()}`, name: "Basic", price: 0, description: "Get started for free" },
+        { id: `pkg_${uid()}`, name: "Pro", price: 149, description: "For growing businesses", badge: "Most Popular" },
+        { id: `pkg_${uid()}`, name: "Enterprise", price: 399, description: "Full power, unlimited scale" },
+      ],
+      features: [
+        { label: "Pages", values: {} },
+        { label: "Custom Domain", values: {} },
+      ],
+      rules: [],
+    };
+    // Pre-fill feature values for the default packages
+    const pkgs = base.packageConfig.packages;
+    base.packageConfig.features[0].values = { [pkgs[0].id]: "Up to 5", [pkgs[1].id]: "Up to 20", [pkgs[2].id]: "Unlimited" };
+    base.packageConfig.features[1].values = { [pkgs[0].id]: false, [pkgs[1].id]: true, [pkgs[2].id]: true };
+  }
   return base;
 }
 
@@ -610,6 +629,10 @@ function FieldSettingsPanel({ field, onUpdate, onClose }: {
           </section>
         )}
 
+        {field.type === "package" && field.packageConfig && (
+          <PackageSettingsPanel config={field.packageConfig} onUpdate={(cfg) => onUpdate({ packageConfig: cfg })} />
+        )}
+
         <section className="space-y-3">
           <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Logic &amp; Rules</div>
           <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
@@ -632,5 +655,322 @@ function FieldSettingsPanel({ field, onUpdate, onClose }: {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Package settings panel (inside field inspector) ──────── */
+
+function PackageSettingsPanel({ config, onUpdate }: {
+  config: PackageConfig;
+  onUpdate: (cfg: PackageConfig) => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"packages" | "features" | "rules">("packages");
+
+  function updatePackage(pkgId: string, patch: Partial<PackageOption>) {
+    onUpdate({
+      ...config,
+      packages: config.packages.map((p) => (p.id === pkgId ? { ...p, ...patch } : p)),
+    });
+  }
+
+  function addPackage() {
+    const newPkg: PackageOption = { id: `pkg_${uid()}`, name: "New Package", price: 0, description: "" };
+    onUpdate({ ...config, packages: [...config.packages, newPkg] });
+  }
+
+  function removePackage(pkgId: string) {
+    if (config.packages.length <= 1) return;
+    const packages = config.packages.filter((p) => p.id !== pkgId);
+    // Clean up feature values and rules referencing this package
+    const features = config.features.map((f) => {
+      const values = { ...f.values };
+      delete values[pkgId];
+      return { ...f, values };
+    });
+    const rules = config.rules.filter((r) => r.recommendedPackageId !== pkgId);
+    onUpdate({ ...config, packages, features, rules });
+  }
+
+  function addFeature() {
+    const newFeature: PackageFeature = {
+      label: "New Feature",
+      values: Object.fromEntries(config.packages.map((p) => [p.id, false])),
+    };
+    onUpdate({ ...config, features: [...config.features, newFeature] });
+  }
+
+  function removeFeature(idx: number) {
+    onUpdate({ ...config, features: config.features.filter((_, i) => i !== idx) });
+  }
+
+  function updateFeatureLabel(idx: number, label: string) {
+    onUpdate({
+      ...config,
+      features: config.features.map((f, i) => (i === idx ? { ...f, label } : f)),
+    });
+  }
+
+  function updateFeatureValue(featureIdx: number, pkgId: string, value: boolean | string) {
+    onUpdate({
+      ...config,
+      features: config.features.map((f, i) => {
+        if (i !== featureIdx) return f;
+        return { ...f, values: { ...f.values, [pkgId]: value } };
+      }),
+    });
+  }
+
+  function addRule() {
+    const newRule: PackageRule = {
+      fieldId: "",
+      operator: "equals",
+      value: "",
+      recommendedPackageId: config.packages[0]?.id ?? "",
+    };
+    onUpdate({ ...config, rules: [...config.rules, newRule] });
+  }
+
+  function removeRule(idx: number) {
+    onUpdate({ ...config, rules: config.rules.filter((_, i) => i !== idx) });
+  }
+
+  function updateRule(idx: number, patch: Partial<PackageRule>) {
+    onUpdate({
+      ...config,
+      rules: config.rules.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
+    });
+  }
+
+  const tabs = [
+    { key: "packages" as const, label: "Packages", icon: "fa-box-open" },
+    { key: "features" as const, label: "Features", icon: "fa-list-check" },
+    { key: "rules" as const, label: "Rules", icon: "fa-wand-magic-sparkles" },
+  ];
+
+  return (
+    <section className="space-y-3">
+      <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Package Configuration</div>
+
+      {/* Tabs */}
+      <div className="flex bg-surface-container rounded-lg p-0.5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${
+              activeTab === t.key
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-on-surface-variant/50 hover:text-on-surface-variant"
+            }`}
+          >
+            <i className={`fa-solid ${t.icon} text-[9px]`} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Packages tab */}
+      {activeTab === "packages" && (
+        <div className="space-y-3">
+          {config.packages.map((pkg) => (
+            <div key={pkg.id} className="bg-surface-container rounded-xl p-3 space-y-2 border border-outline-variant/10">
+              <div className="flex items-center justify-between gap-2">
+                <input
+                  value={pkg.name}
+                  onChange={(e) => updatePackage(pkg.id, { name: e.target.value })}
+                  className={`${INPUT_CLS} text-xs font-bold`}
+                  placeholder="Package name"
+                />
+                <button
+                  onClick={() => removePackage(pkg.id)}
+                  disabled={config.packages.length <= 1}
+                  className="p-1 text-on-surface-variant/40 hover:text-error disabled:opacity-30 shrink-0"
+                >
+                  <i className="fa-solid fa-trash text-[10px]" />
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <label className="flex-1">
+                  <span className="text-[10px] text-on-surface-variant mb-0.5 block">Price/mo ($)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={pkg.price}
+                    onChange={(e) => updatePackage(pkg.id, { price: Number(e.target.value) || 0 })}
+                    className={`${INPUT_CLS} text-xs`}
+                  />
+                </label>
+                <label className="flex-1">
+                  <span className="text-[10px] text-on-surface-variant mb-0.5 block">Badge</span>
+                  <input
+                    value={pkg.badge ?? ""}
+                    onChange={(e) => updatePackage(pkg.id, { badge: e.target.value || undefined })}
+                    placeholder="e.g. Popular"
+                    className={`${INPUT_CLS} text-xs`}
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-[10px] text-on-surface-variant mb-0.5 block">Description</span>
+                <input
+                  value={pkg.description ?? ""}
+                  onChange={(e) => updatePackage(pkg.id, { description: e.target.value || undefined })}
+                  placeholder="Short tagline..."
+                  className={`${INPUT_CLS} text-xs`}
+                />
+              </label>
+            </div>
+          ))}
+          <button
+            onClick={addPackage}
+            className="w-full py-2 border border-dashed border-outline-variant/20 rounded-xl text-xs font-bold text-on-surface-variant hover:border-primary/40 hover:text-primary transition-all"
+          >
+            <i className="fa-solid fa-plus text-[10px] mr-1" /> Add Package
+          </button>
+        </div>
+      )}
+
+      {/* Features tab */}
+      {activeTab === "features" && (
+        <div className="space-y-3">
+          <p className="text-[10px] text-on-surface-variant/60">Define features that differ across packages. Use text for custom values or toggle for checkmarks.</p>
+          {config.features.map((feature, fi) => (
+            <div key={fi} className="bg-surface-container rounded-xl p-3 space-y-2 border border-outline-variant/10">
+              <div className="flex items-center gap-2">
+                <input
+                  value={feature.label}
+                  onChange={(e) => updateFeatureLabel(fi, e.target.value)}
+                  className={`${INPUT_CLS} text-xs font-bold flex-1`}
+                  placeholder="Feature name"
+                />
+                <button onClick={() => removeFeature(fi)} className="p-1 text-on-surface-variant/40 hover:text-error shrink-0">
+                  <i className="fa-solid fa-trash text-[10px]" />
+                </button>
+              </div>
+              {config.packages.map((pkg) => {
+                const val = feature.values[pkg.id];
+                const isText = typeof val === "string";
+                return (
+                  <div key={pkg.id} className="flex items-center gap-2">
+                    <span className="text-[10px] text-on-surface-variant/60 w-16 truncate shrink-0">{pkg.name}</span>
+                    <select
+                      value={isText ? "text" : val ? "yes" : "no"}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "text") updateFeatureValue(fi, pkg.id, "");
+                        else updateFeatureValue(fi, pkg.id, v === "yes");
+                      }}
+                      className="text-[10px] bg-surface-container-highest/50 border-0 rounded px-1.5 py-1 text-on-surface outline-none"
+                    >
+                      <option value="yes">✓ Yes</option>
+                      <option value="no">✗ No</option>
+                      <option value="text">Custom</option>
+                    </select>
+                    {isText && (
+                      <input
+                        value={val}
+                        onChange={(e) => updateFeatureValue(fi, pkg.id, e.target.value)}
+                        placeholder="e.g. Up to 10"
+                        className="flex-1 text-[10px] bg-surface-container-highest/50 border-0 rounded px-2 py-1 text-on-surface outline-none"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          <button
+            onClick={addFeature}
+            className="w-full py-2 border border-dashed border-outline-variant/20 rounded-xl text-xs font-bold text-on-surface-variant hover:border-primary/40 hover:text-primary transition-all"
+          >
+            <i className="fa-solid fa-plus text-[10px] mr-1" /> Add Feature
+          </button>
+        </div>
+      )}
+
+      {/* Rules tab */}
+      {activeTab === "rules" && (
+        <div className="space-y-3">
+          <p className="text-[10px] text-on-surface-variant/60">
+            Recommend a package based on answers from previous steps. Rules are evaluated top to bottom — first match wins.
+          </p>
+
+          <label className="block">
+            <span className="text-[10px] text-on-surface-variant mb-0.5 block">Default recommendation (if no rules match)</span>
+            <select
+              value={config.defaultPackageId ?? ""}
+              onChange={(e) => onUpdate({ ...config, defaultPackageId: e.target.value || undefined })}
+              className={`${INPUT_CLS} text-xs`}
+            >
+              <option value="">None</option>
+              {config.packages.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </label>
+
+          {config.rules.map((rule, ri) => (
+            <div key={ri} className="bg-surface-container rounded-xl p-3 space-y-2 border border-outline-variant/10">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Rule {ri + 1}</span>
+                <button onClick={() => removeRule(ri)} className="p-1 text-on-surface-variant/40 hover:text-error">
+                  <i className="fa-solid fa-trash text-[10px]" />
+                </button>
+              </div>
+              <label className="block">
+                <span className="text-[10px] text-on-surface-variant mb-0.5 block">Field ID to check</span>
+                <input
+                  value={rule.fieldId}
+                  onChange={(e) => updateRule(ri, { fieldId: e.target.value })}
+                  placeholder="e.g. field_abc123"
+                  className={`${INPUT_CLS} text-xs font-mono`}
+                />
+              </label>
+              <div className="flex gap-2">
+                <label className="flex-1">
+                  <span className="text-[10px] text-on-surface-variant mb-0.5 block">Operator</span>
+                  <select
+                    value={rule.operator}
+                    onChange={(e) => updateRule(ri, { operator: e.target.value as PackageRule["operator"] })}
+                    className={`${INPUT_CLS} text-xs`}
+                  >
+                    <option value="equals">Equals</option>
+                    <option value="contains">Contains</option>
+                    <option value="greater_than">Greater than</option>
+                    <option value="less_than">Less than</option>
+                  </select>
+                </label>
+                <label className="flex-1">
+                  <span className="text-[10px] text-on-surface-variant mb-0.5 block">Value</span>
+                  <input
+                    value={rule.value}
+                    onChange={(e) => updateRule(ri, { value: e.target.value })}
+                    className={`${INPUT_CLS} text-xs`}
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-[10px] text-on-surface-variant mb-0.5 block">Recommend package</span>
+                <select
+                  value={rule.recommendedPackageId}
+                  onChange={(e) => updateRule(ri, { recommendedPackageId: e.target.value })}
+                  className={`${INPUT_CLS} text-xs`}
+                >
+                  {config.packages.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ))}
+          <button
+            onClick={addRule}
+            className="w-full py-2 border border-dashed border-outline-variant/20 rounded-xl text-xs font-bold text-on-surface-variant hover:border-primary/40 hover:text-primary transition-all"
+          >
+            <i className="fa-solid fa-plus text-[10px] mr-1" /> Add Rule
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

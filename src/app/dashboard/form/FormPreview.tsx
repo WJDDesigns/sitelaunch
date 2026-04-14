@@ -200,12 +200,114 @@ export default function FormPreview({ schema, primaryColor }: Props) {
 }
 
 function PreviewField({ field, primaryColor, delay }: { field: FieldDef; primaryColor: string; delay: number }) {
+  const [selectedPkg, setSelectedPkg] = useState<string>("");
+  const lightBg = isLightColor(primaryColor);
+
   if (field.type === "heading") {
     return (
       <div className="py-4 border-b border-on-surface-variant/20">
         <h3 className="text-lg font-headline font-bold text-on-surface">{field.label}</h3>
         {field.content && <p className="text-sm text-on-surface-variant mt-1 leading-relaxed">{field.content}</p>}
         {field.hint && <p className="text-xs text-on-surface-variant/60 mt-1">{field.hint}</p>}
+      </div>
+    );
+  }
+
+  if (field.type === "package" && field.packageConfig) {
+    const cfg = field.packageConfig;
+    // In preview, show the default recommendation if set
+    const recommendedId = cfg.defaultPackageId ?? null;
+
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-3 ml-1">{field.hint}</p>}
+
+        <div className={`grid gap-4 grid-cols-1 ${cfg.packages.length === 2 ? "sm:grid-cols-2" : cfg.packages.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3" : ""}`}>
+          {cfg.packages.map((pkg) => {
+            const isSelected = selectedPkg === pkg.id;
+            const isRecommended = recommendedId === pkg.id;
+            return (
+              <button
+                key={pkg.id}
+                type="button"
+                onClick={() => setSelectedPkg(pkg.id)}
+                className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 ${
+                  isSelected
+                    ? "shadow-lg scale-[1.02]"
+                    : "border-outline-variant/30 hover:border-primary/40 bg-surface-container-lowest"
+                }`}
+                style={isSelected ? { borderColor: primaryColor, backgroundColor: primaryColor + "08", boxShadow: `0 8px 25px ${primaryColor}20` } : undefined}
+              >
+                {isRecommended && (
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest whitespace-nowrap"
+                    style={{ backgroundColor: primaryColor, color: lightBg ? "#1a1c25" : "#ffffff" }}
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-[8px] mr-1" />
+                    Recommended
+                  </div>
+                )}
+                {pkg.badge && !isRecommended && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-surface-container-highest text-on-surface-variant whitespace-nowrap border border-outline-variant/20">
+                    {pkg.badge}
+                  </div>
+                )}
+
+                <div className="mb-3 mt-1">
+                  <h3 className="text-lg font-bold text-on-surface font-headline">{pkg.name}</h3>
+                  {pkg.description && <p className="text-xs text-on-surface-variant/60 mt-0.5">{pkg.description}</p>}
+                </div>
+
+                <div className="mb-4">
+                  {pkg.price === 0 ? (
+                    <span className="text-2xl font-extrabold text-on-surface font-headline">Free</span>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-on-surface font-headline">${pkg.price}</span>
+                      <span className="text-xs text-on-surface-variant/60">/mo</span>
+                    </div>
+                  )}
+                </div>
+
+                {cfg.features.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t border-outline-variant/15">
+                    {cfg.features.map((feat, fi) => {
+                      const val = feat.values[pkg.id];
+                      const isIncluded = val === true || (typeof val === "string" && val !== "");
+                      return (
+                        <div key={fi} className="flex items-center gap-2 text-xs">
+                          {val === false ? (
+                            <i className="fa-solid fa-xmark text-on-surface-variant/30 w-4 text-center" />
+                          ) : (
+                            <i className="fa-solid fa-check w-4 text-center" style={{ color: primaryColor }} />
+                          )}
+                          <span className={isIncluded ? "text-on-surface" : "text-on-surface-variant/40 line-through"}>
+                            {feat.label}
+                            {typeof val === "string" && val && (
+                              <span className="ml-1 font-semibold" style={{ color: primaryColor }}>({val})</span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-4 flex items-center justify-center py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all" style={isSelected ? { backgroundColor: primaryColor, color: lightBg ? "#1a1c25" : "#ffffff" } : { backgroundColor: "transparent", border: "1px solid var(--color-outline-variant)", color: "var(--color-on-surface-variant)" }}>
+                  {isSelected ? (
+                    <><i className="fa-solid fa-check text-[10px] mr-1.5" /> Selected</>
+                  ) : (
+                    "Select"
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }

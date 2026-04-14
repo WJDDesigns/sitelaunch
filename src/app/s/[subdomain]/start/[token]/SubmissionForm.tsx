@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
-import type { FormSchema, FieldDef, UploadedFile } from "@/lib/forms";
+import type { FormSchema, FieldDef, UploadedFile, PackageRule } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
 import FileField from "./FileField";
 
@@ -340,7 +340,7 @@ export default function SubmissionForm({
                 </div>
               ) : (
                 <div key={f.id} className={`sl-fade-up sl-d${Math.min(i + 2, 5)}`}>
-                  <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} />
+                  <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} />
                 </div>
               ),
             )}
@@ -384,10 +384,30 @@ function Spinner() {
   return <i className="fa-solid fa-spinner fa-spin text-sm" />;
 }
 
+function evaluatePackageRules(
+  rules: PackageRule[],
+  allData: Record<string, unknown>,
+  defaultId?: string,
+): string | null {
+  for (const rule of rules) {
+    const fieldVal = String(allData[rule.fieldId] ?? "");
+    if (!fieldVal) continue;
+    let match = false;
+    switch (rule.operator) {
+      case "equals": match = fieldVal === rule.value; break;
+      case "contains": match = fieldVal.toLowerCase().includes(rule.value.toLowerCase()); break;
+      case "greater_than": match = Number(fieldVal) > Number(rule.value); break;
+      case "less_than": match = Number(fieldVal) < Number(rule.value); break;
+    }
+    if (match) return rule.recommendedPackageId;
+  }
+  return defaultId ?? null;
+}
+
 function CelestialField({
-  field, value, error, onChange, primaryColor,
+  field, value, error, onChange, primaryColor, allData,
 }: {
-  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string;
+  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>;
 }) {
   const str = (value as string) ?? "";
   const focusRing = { "--tw-ring-color": primaryColor + "66" } as React.CSSProperties;
@@ -400,6 +420,120 @@ function CelestialField({
         <h3 className="text-lg font-bold text-on-surface font-headline">{field.label}</h3>
         {field.content && <p className="text-sm text-on-surface-variant mt-1 leading-relaxed">{field.content}</p>}
         {field.hint && <p className="text-xs text-on-surface-variant/60 mt-1">{field.hint}</p>}
+      </div>
+    );
+  }
+
+  /* Package selector */
+  if (field.type === "package" && field.packageConfig) {
+    const cfg = field.packageConfig;
+    const selectedPkgId = (value as string) ?? "";
+    const recommendedId = evaluatePackageRules(cfg.rules, allData, cfg.defaultPackageId);
+
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-3 ml-1">{field.hint}</p>}
+
+        {/* Package cards */}
+        <div className={`grid gap-4 grid-cols-1 ${cfg.packages.length === 2 ? "sm:grid-cols-2" : cfg.packages.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3" : ""}`}>
+          {cfg.packages.map((pkg) => {
+            const isSelected = selectedPkgId === pkg.id;
+            const isRecommended = recommendedId === pkg.id;
+            return (
+              <button
+                key={pkg.id}
+                type="button"
+                onClick={() => onChange(pkg.id)}
+                className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 ${
+                  isSelected
+                    ? "shadow-lg scale-[1.02]"
+                    : "border-outline-variant/30 hover:border-primary/40 bg-surface-container-lowest"
+                }`}
+                style={isSelected ? { borderColor: primaryColor, backgroundColor: primaryColor + "08", boxShadow: `0 8px 25px ${primaryColor}20` } : undefined}
+              >
+                {/* Recommended badge */}
+                {isRecommended && (
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest whitespace-nowrap"
+                    style={{ backgroundColor: primaryColor, color: isLightColor(primaryColor) ? "#1a1c25" : "#ffffff" }}
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-[8px] mr-1" />
+                    Recommended
+                  </div>
+                )}
+                {/* Package badge */}
+                {pkg.badge && !isRecommended && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-surface-container-highest text-on-surface-variant whitespace-nowrap border border-outline-variant/20">
+                    {pkg.badge}
+                  </div>
+                )}
+
+                <div className="mb-3 mt-1">
+                  <h3 className="text-lg font-bold text-on-surface font-headline">{pkg.name}</h3>
+                  {pkg.description && <p className="text-xs text-on-surface-variant/60 mt-0.5">{pkg.description}</p>}
+                </div>
+
+                <div className="mb-4">
+                  {pkg.price === 0 ? (
+                    <span className="text-2xl font-extrabold text-on-surface font-headline">Free</span>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-on-surface font-headline">${pkg.price}</span>
+                      <span className="text-xs text-on-surface-variant/60">/mo</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Feature list for this package */}
+                {cfg.features.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t border-outline-variant/15">
+                    {cfg.features.map((feat, fi) => {
+                      const val = feat.values[pkg.id];
+                      const isIncluded = val === true || (typeof val === "string" && val !== "");
+                      return (
+                        <div key={fi} className="flex items-center gap-2 text-xs">
+                          {val === false ? (
+                            <i className="fa-solid fa-xmark text-on-surface-variant/30 w-4 text-center" />
+                          ) : val === true ? (
+                            <i className="fa-solid fa-check w-4 text-center" style={{ color: primaryColor }} />
+                          ) : (
+                            <i className="fa-solid fa-check w-4 text-center" style={{ color: primaryColor }} />
+                          )}
+                          <span className={isIncluded ? "text-on-surface" : "text-on-surface-variant/40 line-through"}>
+                            {feat.label}
+                            {typeof val === "string" && val && (
+                              <span className="ml-1 font-semibold" style={{ color: primaryColor }}>({val})</span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Selection indicator */}
+                <div className="mt-4 flex items-center justify-center py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all" style={isSelected ? { backgroundColor: primaryColor, color: isLightColor(primaryColor) ? "#1a1c25" : "#ffffff" } : { backgroundColor: "transparent", border: `1px solid var(--color-outline-variant)`, color: "var(--color-on-surface-variant)" }}>
+                  {isSelected ? (
+                    <><i className="fa-solid fa-check text-[10px] mr-1.5" /> Selected</>
+                  ) : (
+                    "Select"
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {error && (
+          <p className="text-sm text-error mt-2 sl-fade-up flex items-center gap-1.5">
+            <i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />
+            {error}
+          </p>
+        )}
       </div>
     );
   }
