@@ -68,6 +68,9 @@ export default function SubmissionForm({
   const [submitting, startSubmit] = useTransition();
   const [transitioning, setTransitioning] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [devMode, setDevMode] = useState(false);
+  const logoClickRef = useRef(0);
+  const logoTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { ensureStyles(); }, []);
@@ -92,6 +95,17 @@ export default function SubmissionForm({
     if (errors[id]) setErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
   }
 
+  function handleLogoClick() {
+    logoClickRef.current += 1;
+    clearTimeout(logoTimerRef.current);
+    if (logoClickRef.current >= 10) {
+      logoClickRef.current = 0;
+      setDevMode((prev) => !prev);
+    } else {
+      logoTimerRef.current = setTimeout(() => { logoClickRef.current = 0; }, 2000);
+    }
+  }
+
   const animateTransition = useCallback((cb: () => void) => {
     setTransitioning(true);
     setTimeout(() => { cb(); setTimeout(() => setTransitioning(false), 50); }, 300);
@@ -100,6 +114,19 @@ export default function SubmissionForm({
   function handleNext(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+
+    // Dev mode: skip validation, just move to next step
+    if (devMode) {
+      setErrors({});
+      setCompletedSteps((prev) => new Set(prev).add(stepIdx));
+      if (isLast) {
+        setShowDone(true);
+      } else {
+        animateTransition(() => setStepIdx((i) => Math.min(schema.steps.length - 1, i + 1)));
+      }
+      return;
+    }
+
     startTransition(async () => {
       const res = await saveStep(step.id, fd);
       if (res.errors) { setErrors(res.errors); return; }
@@ -117,8 +144,8 @@ export default function SubmissionForm({
 
   function goToStep(idx: number) {
     if (idx === stepIdx) return;
-    // Only allow navigating to completed steps
-    if (!completedSteps.has(idx)) return;
+    // Dev mode allows navigating to any step
+    if (!devMode && !completedSteps.has(idx)) return;
     animateTransition(() => setStepIdx(idx));
   }
 
@@ -143,11 +170,11 @@ export default function SubmissionForm({
       <aside className="hidden md:flex flex-col w-[300px] lg:w-[340px] shrink-0 border-r border-outline-variant/15 bg-surface-container/50 sticky top-0 h-screen overflow-y-auto">
         {/* Partner branding */}
         <div className="px-6 pt-8 pb-6 border-b border-outline-variant/10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-default select-none" onClick={handleLogoClick}>
             {partnerLogoUrl ? (
               <div className="h-10 rounded-xl flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={partnerLogoUrl} alt={partnerName} className="h-8 w-auto object-contain" />
+                <img src={partnerLogoUrl} alt={partnerName} className="h-8 w-auto object-contain" draggable={false} />
               </div>
             ) : (
               <div
@@ -160,6 +187,11 @@ export default function SubmissionForm({
               </div>
             )}
             <span className="text-base font-bold text-on-surface font-headline tracking-tight">{partnerName}</span>
+            {devMode && (
+              <span className="ml-auto text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                dev
+              </span>
+            )}
           </div>
         </div>
 
@@ -190,11 +222,11 @@ export default function SubmissionForm({
                 key={s.id}
                 type="button"
                 onClick={() => goToStep(i)}
-                disabled={!isCompleted && !isCurrent}
+                disabled={!devMode && !isCompleted && !isCurrent}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 group ${
                   isCurrent
                     ? "bg-surface-container-high"
-                    : isCompleted
+                    : isCompleted || devMode
                     ? "hover:bg-surface-container-high/60 cursor-pointer"
                     : "opacity-50 cursor-default"
                 }`}
@@ -264,11 +296,11 @@ export default function SubmissionForm({
       <div className="md:hidden sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-outline-variant/15">
         {/* Partner row */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 cursor-default select-none" onClick={handleLogoClick}>
             {partnerLogoUrl ? (
               <div className="h-8 flex items-center justify-center shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={partnerLogoUrl} alt={partnerName} className="h-6 w-auto object-contain" />
+                <img src={partnerLogoUrl} alt={partnerName} className="h-6 w-auto object-contain" draggable={false} />
               </div>
             ) : (
               <div
@@ -281,6 +313,11 @@ export default function SubmissionForm({
               </div>
             )}
             <span className="text-sm font-bold text-on-surface font-headline truncate">{partnerName}</span>
+            {devMode && (
+              <span className="text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20 shrink-0">
+                dev
+              </span>
+            )}
           </div>
           <span className="text-xs font-bold font-headline shrink-0 ml-2" style={{ color: primaryColor }}>
             {stepIdx + 1}/{schema.steps.length}
