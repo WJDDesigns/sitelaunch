@@ -30,7 +30,15 @@ function resolveTheme(mode: ThemeMode): "light" | "dark" {
   return mode;
 }
 
+/** Returns true when a partner-controlled theme is active (client-facing /s/ pages). */
+function hasPartnerTheme(): boolean {
+  return typeof document !== "undefined" && document.documentElement.hasAttribute("data-partner-theme");
+}
+
 function applyTheme(resolved: "light" | "dark") {
+  // Never override the partner's theme on client-facing pages
+  if (hasPartnerTheme()) return;
+
   const root = document.documentElement;
   if (resolved === "dark") {
     root.classList.add("dark");
