@@ -13,7 +13,7 @@ const WORKSPACE_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "fa-table-cells" },
   { href: "/dashboard/form", label: "Form Builder", icon: "fa-pen-ruler" },
   { href: "/dashboard/submissions", label: "Submissions", icon: "fa-inbox" },
-  { href: "/dashboard/billing", label: "Settings", icon: "fa-gear" },
+  { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
 ];
 
 const ADMIN_NAV = [
