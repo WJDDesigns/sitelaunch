@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function isHexColor(v: string) {
   return /^#[0-9a-f]{6}$/i.test(v);
@@ -59,8 +60,9 @@ export async function updatePartnerAction(partnerId: string, formData: FormData)
     custom_domain,
   };
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  // Use admin client — authorization was already verified above.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("partners")
     .update(updatePayload)
     .eq("id", partnerId);
@@ -93,8 +95,9 @@ export async function updateWhiteLabelAction(partnerId: string, formData: FormDa
   const logo_size = String(formData.get("logo_size") ?? "default");
   const theme_mode = String(formData.get("theme_mode") ?? "dark");
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  // Use admin client — authorization was already verified above.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("partners")
     .update({ hide_branding, custom_footer_text, logo_size, theme_mode })
     .eq("id", partnerId);
@@ -120,8 +123,8 @@ export async function uploadLogoAction(partnerId: string, formData: FormData) {
   }
 
   // Authorize
-  const supabase = await createClient();
   if (session.role !== "superadmin") {
+    const supabase = await createClient();
     const { data: membership } = await supabase
       .from("partner_members")
       .select("role")
@@ -133,11 +136,12 @@ export async function uploadLogoAction(partnerId: string, formData: FormData) {
     }
   }
 
+  const admin = createAdminClient();
   const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
   const path = `${partnerId}/logo-${Date.now()}.${ext}`;
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await admin.storage
     .from("logos")
     .upload(path, bytes, {
       contentType: file.type,
@@ -145,9 +149,9 @@ export async function uploadLogoAction(partnerId: string, formData: FormData) {
     });
   if (uploadError) throw new Error(uploadError.message);
 
-  const { data: pub } = supabase.storage.from("logos").getPublicUrl(path);
+  const { data: pub } = admin.storage.from("logos").getPublicUrl(path);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await admin
     .from("partners")
     .update({ logo_url: pub.publicUrl })
     .eq("id", partnerId);
@@ -159,11 +163,11 @@ export async function uploadLogoAction(partnerId: string, formData: FormData) {
 
 export async function deletePartnerAction(partnerId: string) {
   const session = await requireSession();
-  const supabase = await createClient();
 
   // Superadmin can delete any partner. Otherwise caller must be a
   // partner_owner on this specific partner.
   if (session.role !== "superadmin") {
+    const supabase = await createClient();
     const { data: membership } = await supabase
       .from("partner_members")
       .select("role")
@@ -175,7 +179,8 @@ export async function deletePartnerAction(partnerId: string) {
     }
   }
 
-  const { error } = await supabase.from("partners").delete().eq("id", partnerId);
+  const admin = createAdminClient();
+  const { error } = await admin.from("partners").delete().eq("id", partnerId);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/partners");
   revalidatePath("/dashboard");

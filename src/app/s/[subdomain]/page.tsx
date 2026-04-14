@@ -7,10 +7,10 @@ interface Props {
   params: Promise<{ subdomain: string }>;
 }
 
-const LOGO_DIMS: Record<string, { wrapper: string; img: string }> = {
-  default: { wrapper: "w-10 h-10 rounded-xl", img: "h-8 w-auto" },
-  large: { wrapper: "w-16 h-16 rounded-2xl", img: "h-12 w-auto" },
-  "full-width": { wrapper: "h-14 w-auto rounded-2xl px-3", img: "h-10 w-auto" },
+const LOGO_DIMS: Record<string, { wrapper: string; img: string; fallback: string }> = {
+  default: { wrapper: "h-10 rounded-xl", img: "h-8 w-auto", fallback: "w-10 h-10 rounded-xl" },
+  large: { wrapper: "h-16 rounded-2xl", img: "h-14 w-auto", fallback: "w-16 h-16 rounded-2xl" },
+  "full-width": { wrapper: "h-14 rounded-2xl", img: "h-12 w-auto", fallback: "h-14 px-4 rounded-2xl" },
 };
 
 export default async function PartnerHomePage({ params }: Props) {
@@ -39,12 +39,12 @@ export default async function PartnerHomePage({ params }: Props) {
       <header className="fixed top-0 w-full z-50 flex justify-between items-center px-8 py-6 bg-background/60 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           {partner.logo_url ? (
-            <div className={`${dims.wrapper} overflow-hidden flex items-center justify-center`} style={{ backgroundColor: `${primary}20` }}>
+            <div className={`${dims.wrapper} flex items-center justify-center`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={partner.logo_url} alt={partner.name} className={dims.img} />
+              <img src={partner.logo_url} alt={partner.name} className={`${dims.img} object-contain`} />
             </div>
           ) : (
-            <div className={`${dims.wrapper} flex items-center justify-center`} style={{ backgroundColor: primary }}>
+            <div className={`${dims.fallback} flex items-center justify-center`} style={{ backgroundColor: primary }}>
               <span className="text-on-primary font-bold text-lg">{partner.name.slice(0, 1).toUpperCase()}</span>
             </div>
           )}
