@@ -2,10 +2,9 @@
 
 import { useTransition } from "react";
 import { createCheckoutAction } from "./actions";
-import type { BillingTier } from "@/lib/stripe";
 
 interface Props {
-  tier: BillingTier;
+  tier: string;  // plan slug
   label: string;
   highlight?: boolean;
 }

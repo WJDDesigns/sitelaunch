@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { requireSuperadmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { PLANS } from "@/lib/stripe";
+import { getAllPlans } from "@/lib/plans";
 import AdminPlanChanger from "./AdminPlanChanger";
 import RefundButton from "./RefundButton";
 import SetupStripeButton from "./SetupStripeButton";
+import PlanManager from "./PlanManager";
 
 const TIER_BADGES: Record<string, { label: string; color: string; bg: string; border: string }> = {
   free: { label: "Free", color: "text-on-surface-variant/60", bg: "bg-surface-container-high", border: "border-outline-variant/15" },
@@ -27,13 +28,17 @@ export default async function AdminBillingPage() {
     .select("id, plan_tier, stripe_price_id, status")
     .in("status", ["active", "trialing"]);
 
+  // Fetch plans from DB
+  const dbPlans = await getAllPlans();
+  const planPriceMap: Record<string, number> = {};
+  for (const p of dbPlans) {
+    planPriceMap[p.slug] = p.priceMonthly;
+  }
+
   // Calculate MRR
   let mrr = 0;
   for (const sub of activeSubs ?? []) {
-    const tier = sub.plan_tier as keyof typeof PLANS;
-    if (PLANS[tier]) {
-      mrr += PLANS[tier].priceMonthly;
-    }
+    mrr += planPriceMap[sub.plan_tier] ?? 0;
   }
 
   // Tier breakdown
@@ -211,7 +216,12 @@ export default async function AdminBillingPage() {
                   </div>
                   <p className="text-xs text-on-surface-variant/60">{p.slug}</p>
                 </div>
-                <AdminPlanChanger partnerId={p.id} partnerName={p.name} currentTier={p.plan_tier ?? "free"} />
+                <AdminPlanChanger
+                  partnerId={p.id}
+                  partnerName={p.name}
+                  currentTier={p.plan_tier ?? "free"}
+                  plans={dbPlans.map(pl => ({ slug: pl.slug, name: pl.name, priceMonthly: pl.priceMonthly }))}
+                />
               </div>
             );
           })}
@@ -333,6 +343,19 @@ export default async function AdminBillingPage() {
           </div>
         </section>
       )}
+
+      {/* ── Plan Management ── */}
+      <section className="glass-panel rounded-2xl border border-outline-variant/15 overflow-hidden">
+        <div className="px-6 py-4 border-b border-outline-variant/10">
+          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+            Manage Plans
+          </h2>
+          <p className="text-xs text-on-surface-variant/60 mt-0.5">
+            Add, edit, or remove plans. Changes auto-sync with Stripe (creates products/prices, archives old prices).
+          </p>
+        </div>
+        <PlanManager plans={dbPlans} />
+      </section>
 
       {/* ── Stripe Setup ── */}
       <section className="glass-panel rounded-2xl border border-outline-variant/15 p-6">

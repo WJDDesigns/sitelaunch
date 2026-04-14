@@ -1,43 +1,10 @@
 import { requireSession, getCurrentAccount, getAccountUsage } from "@/lib/auth";
-import { PLANS, mapLegacyTier, type BillingTier } from "@/lib/stripe";
+import { mapLegacyTier } from "@/lib/stripe";
+import { getPlans } from "@/lib/plans";
 import { createAdminClient } from "@/lib/supabase/admin";
 import TestEmailButton from "./TestEmailButton";
 import UpgradeButton from "./UpgradeButton";
 import ManageSubscriptionButton from "./ManageSubscriptionButton";
-
-interface TierCard {
-  tier: BillingTier;
-  name: string;
-  price: string;
-  submissions: string;
-  features: string[];
-  highlight?: boolean;
-}
-
-const TIER_CARDS: TierCard[] = [
-  {
-    tier: "free",
-    name: PLANS.free.name,
-    price: "Free",
-    submissions: "1 submission / month",
-    features: PLANS.free.features,
-  },
-  {
-    tier: "pro",
-    name: PLANS.pro.name,
-    price: `$${PLANS.pro.priceMonthly / 100}/mo`,
-    submissions: "Unlimited submissions",
-    features: PLANS.pro.features,
-    highlight: true,
-  },
-  {
-    tier: "enterprise",
-    name: PLANS.enterprise.name,
-    price: `$${PLANS.enterprise.priceMonthly / 100}/mo`,
-    submissions: "Unlimited submissions",
-    features: PLANS.enterprise.features,
-  },
-];
 
 export default async function BillingPage() {
   const session = await requireSession();
@@ -56,6 +23,10 @@ export default async function BillingPage() {
 
   const usage = await getAccountUsage(account.id);
   const currentTier = mapLegacyTier(account.planTier);
+  const plans = await getPlans();
+
+  // Find the current plan from DB
+  const currentPlan = plans.find((p) => p.slug === currentTier) ?? plans[0];
 
   // Fetch active subscription and recent invoices
   const admin = createAdminClient();
@@ -97,7 +68,7 @@ export default async function BillingPage() {
             </div>
             <div className="mt-1 flex items-center gap-3">
               <span className="text-xl font-bold text-on-surface font-headline">
-                {PLANS[currentTier].name}
+                {currentPlan?.name ?? currentTier}
               </span>
               {isPastDue && (
                 <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-error/10 text-error border border-error/20">
@@ -132,36 +103,41 @@ export default async function BillingPage() {
         </div>
       </section>
 
-      {/* Plan cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {TIER_CARDS.map((t) => {
-          const isCurrent = t.tier === currentTier;
-          const isDowngrade = t.tier === "free" && currentTier !== "free";
-          const isUpgrade = !isCurrent && !isDowngrade;
+      {/* Plan cards — dynamically from DB */}
+      <section className={`grid grid-cols-1 ${plans.length <= 3 ? "md:grid-cols-3" : plans.length === 4 ? "md:grid-cols-4" : "md:grid-cols-3"} gap-6`}>
+        {plans.map((plan) => {
+          const isCurrent = plan.slug === currentTier;
+          const currentOrder = currentPlan?.sortOrder ?? 0;
+          const isDowngrade = plan.sortOrder < currentOrder;
+          const isUpgrade = plan.sortOrder > currentOrder;
+          const priceLabel = plan.priceMonthly === 0 ? "Free" : `$${(plan.priceMonthly / 100).toFixed(0)}/mo`;
+          const submissionsLabel = plan.submissionsMonthlyLimit === null
+            ? "Unlimited submissions"
+            : `${plan.submissionsMonthlyLimit} submission${plan.submissionsMonthlyLimit !== 1 ? "s" : ""} / month`;
 
           return (
             <div
-              key={t.tier}
+              key={plan.id}
               className={`rounded-2xl p-6 flex flex-col ${
-                t.highlight
+                plan.highlight
                   ? "glass-panel border-2 border-primary relative scale-105 z-10 shadow-2xl"
                   : "bg-surface-container-low border border-outline-variant/10"
               }`}
             >
-              {t.highlight && (
+              {plan.highlight && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] uppercase font-bold tracking-widest px-4 py-1 rounded-full">
                   Most Popular
                 </div>
               )}
               <div className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 font-label">
-                {t.name}
+                {plan.name}
               </div>
-              <div className={`mt-1 text-3xl font-bold font-headline ${t.highlight ? "text-primary" : ""}`}>
-                {t.price}
+              <div className={`mt-1 text-3xl font-bold font-headline ${plan.highlight ? "text-primary" : ""}`}>
+                {priceLabel}
               </div>
-              <div className="text-sm mt-1 text-on-surface-variant">{t.submissions}</div>
+              <div className="text-sm mt-1 text-on-surface-variant">{submissionsLabel}</div>
               <ul className="mt-4 space-y-2 text-sm flex-grow">
-                {t.features.map((f) => (
+                {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <i className="fa-solid fa-check text-tertiary text-xs" />
                     <span className="text-on-surface-variant">{f}</span>
@@ -183,11 +159,11 @@ export default async function BillingPage() {
                       Free tier
                     </div>
                   )
-                ) : isUpgrade && t.tier !== "free" ? (
+                ) : isUpgrade && plan.priceMonthly > 0 ? (
                   <UpgradeButton
-                    tier={t.tier}
-                    label={currentTier === "free" ? "Upgrade" : `Switch to ${t.name}`}
-                    highlight={t.highlight}
+                    tier={plan.slug as "pro" | "enterprise"}
+                    label={currentTier === "free" ? "Upgrade" : `Switch to ${plan.name}`}
+                    highlight={plan.highlight}
                   />
                 ) : null}
               </div>

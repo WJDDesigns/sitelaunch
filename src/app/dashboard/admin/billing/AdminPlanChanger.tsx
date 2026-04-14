@@ -4,52 +4,56 @@ import { useState, useTransition } from "react";
 import { adminChangePlanAction } from "./actions";
 import type { BillingTier } from "@/lib/stripe";
 
+interface PlanOption {
+  slug: string;
+  name: string;
+  priceMonthly: number;
+}
+
 interface Props {
   partnerId: string;
   partnerName: string;
   currentTier: string;
+  plans: PlanOption[];
 }
 
-const TIERS: { value: BillingTier; label: string }[] = [
-  { value: "free", label: "Free (Starlink)" },
-  { value: "pro", label: "Pro (Supernova) — $149/mo" },
-  { value: "enterprise", label: "Enterprise (Galactic) — $399/mo" },
-];
-
-export default function AdminPlanChanger({ partnerId, partnerName, currentTier }: Props) {
-  const [selected, setSelected] = useState<BillingTier>(
-    currentTier === "paid" || currentTier === "unlimited" ? "pro" : currentTier as BillingTier
-  );
+export default function AdminPlanChanger({ partnerId, partnerName, currentTier, plans }: Props) {
+  // Map legacy tier names
+  const mappedCurrent = currentTier === "paid" || currentTier === "unlimited" ? "pro" : currentTier;
+  const [selected, setSelected] = useState(mappedCurrent);
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const hasChanged = selected !== mappedCurrent;
 
   function handleSave() {
     setShowConfirm(false);
     setMsg(null);
     startTransition(async () => {
       try {
-        await adminChangePlanAction(partnerId, selected);
-        setMsg("Plan updated successfully!");
+        await adminChangePlanAction(partnerId, selected as BillingTier);
+        setMsg("Plan updated!");
       } catch (err) {
         setMsg(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
       }
     });
   }
 
-  const mappedCurrent = currentTier === "paid" || currentTier === "unlimited" ? "pro" : currentTier;
-  const hasChanged = selected !== mappedCurrent;
+  const selectedPlan = plans.find((p) => p.slug === selected);
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <select
         value={selected}
-        onChange={(e) => { setSelected(e.target.value as BillingTier); setMsg(null); }}
+        onChange={(e) => { setSelected(e.target.value); setMsg(null); }}
         disabled={pending}
         className="px-3 py-2 text-xs bg-surface-container-lowest border-0 rounded-lg text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
       >
-        {TIERS.map((t) => (
-          <option key={t.value} value={t.value}>{t.label}</option>
+        {plans.map((p) => (
+          <option key={p.slug} value={p.slug}>
+            {p.name}{p.priceMonthly > 0 ? ` — $${(p.priceMonthly / 100).toFixed(0)}/mo` : ""}
+          </option>
         ))}
       </select>
 
@@ -59,14 +63,14 @@ export default function AdminPlanChanger({ partnerId, partnerName, currentTier }
           disabled={pending}
           className="px-3 py-2 text-xs font-bold bg-primary text-on-primary rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
         >
-          Apply Change
+          Apply
         </button>
       )}
 
       {showConfirm && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-amber-400">
-            Change {partnerName} to {TIERS.find(t => t.value === selected)?.label}?
+            Change {partnerName} to {selectedPlan?.name}?
           </span>
           <button
             onClick={handleSave}

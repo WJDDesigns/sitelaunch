@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe, PLANS, getOrCreateCustomer, tierToDbEnum, type BillingTier } from "@/lib/stripe";
+import { stripe, getOrCreateCustomer, tierToDbEnum, type BillingTier } from "@/lib/stripe";
+import { getPlanBySlug } from "@/lib/plans";
 
 /**
  * Superadmin: manually change a partner's plan tier.
  * Updates the DB directly and optionally creates/cancels Stripe subscription.
  */
-export async function adminChangePlanAction(partnerId: string, newTier: BillingTier) {
+export async function adminChangePlanAction(partnerId: string, newTier: BillingTier | string) {
   const session = await requireSuperadmin();
   const admin = createAdminClient();
 
@@ -21,8 +22,11 @@ export async function adminChangePlanAction(partnerId: string, newTier: BillingT
 
   if (!partner) throw new Error("Partner not found");
 
-  const plan = PLANS[newTier];
-  const dbTier = tierToDbEnum(newTier);
+  // Fetch plan from DB
+  const plan = await getPlanBySlug(newTier);
+  if (!plan) throw new Error("Plan not found");
+
+  const dbTier = tierToDbEnum(newTier as BillingTier);
 
   // Update the DB plan_tier and limits
   await admin

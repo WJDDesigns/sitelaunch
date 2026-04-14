@@ -3,18 +3,21 @@
 import { redirect } from "next/navigation";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe, PLANS, getOrCreateCustomer, tierToDbEnum, type BillingTier } from "@/lib/stripe";
+import { stripe, getOrCreateCustomer } from "@/lib/stripe";
+import { getPlanBySlug } from "@/lib/plans";
 
 /**
  * Create a Stripe Checkout session for upgrading to a paid plan.
+ * Now reads the plan from the DB instead of hardcoded config.
  */
-export async function createCheckoutAction(tier: BillingTier) {
+export async function createCheckoutAction(planSlug: string) {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
   if (!account) throw new Error("No account found");
 
-  const plan = PLANS[tier];
-  if (!plan.stripePriceId) throw new Error("No Stripe price configured for this tier");
+  const plan = await getPlanBySlug(planSlug);
+  if (!plan) throw new Error("Plan not found");
+  if (!plan.stripePriceId) throw new Error("No Stripe price configured for this plan. Ask your admin to set up Stripe.");
 
   // Get or create Stripe customer
   const customerId = await getOrCreateCustomer(account.id, account.name, session.email);
@@ -37,7 +40,7 @@ export async function createCheckoutAction(tier: BillingTier) {
     subscription_data: {
       metadata: {
         sitelaunch_partner_id: account.id,
-        sitelaunch_tier: tier,
+        sitelaunch_tier: plan.slug,
       },
     },
     metadata: {
