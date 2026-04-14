@@ -48,8 +48,6 @@ export async function updateWorkspaceSettingsAction(formData: FormData) {
     String(formData.get("support_email") ?? "").trim() || null;
   const support_phone =
     String(formData.get("support_phone") ?? "").trim() || null;
-  const custom_domain_raw = String(formData.get("custom_domain") ?? "");
-  const custom_domain = custom_domain_raw ? sanitizeDomain(custom_domain_raw) : null;
 
   if (!name) throw new Error("Name is required");
   if (!isHexColor(primary_color)) throw new Error("Invalid primary color");
@@ -76,7 +74,6 @@ export async function updateWorkspaceSettingsAction(formData: FormData) {
     accent_color,
     support_email,
     support_phone,
-    custom_domain,
   };
 
   const admin = createAdminClient();
@@ -152,5 +149,26 @@ export async function updateWorkspaceWhiteLabelAction(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard");
+}
+
+export async function saveWorkspaceDomainAction(formData: FormData) {
+  const session = await requireSession();
+  const account = await getCurrentAccount(session.userId);
+  if (!account) throw new Error("No workspace found");
+
+  const custom_domain_raw = String(formData.get("custom_domain") ?? "").trim();
+  const custom_domain = custom_domain_raw ? sanitizeDomain(custom_domain_raw) : null;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("partners")
+    .update({ custom_domain })
+    .eq("id", account.id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/form");
   revalidatePath("/dashboard");
 }

@@ -11,7 +11,6 @@ interface WorkspaceData {
   accent_color: string | null;
   support_email: string | null;
   support_phone: string | null;
-  custom_domain: string | null;
 }
 
 interface Props {
@@ -80,18 +79,6 @@ export default function WorkspaceBrandingForm({ workspace, rootHost }: Props) {
             .{rootHost}
           </span>
         </div>
-      </Field>
-
-      <Field
-        label="Custom domain"
-        hint="Point a CNAME to cname.mysitelaunch.com after saving."
-      >
-        <input
-          name="custom_domain"
-          defaultValue={workspace.custom_domain ?? ""}
-          className={INPUT_CLS}
-          placeholder="onboard.yourdomain.com"
-        />
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

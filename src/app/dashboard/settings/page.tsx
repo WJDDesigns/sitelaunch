@@ -12,6 +12,7 @@ import WorkspaceBrandingForm from "./WorkspaceBrandingForm";
 import {
   uploadWorkspaceLogoAction,
   updateWorkspaceWhiteLabelAction,
+  saveWorkspaceDomainAction,
 } from "./actions";
 
 export default async function SettingsPage() {
@@ -101,11 +102,12 @@ export default async function SettingsPage() {
           <WorkspaceBrandingForm workspace={partner} rootHost={rootHost} />
         )}
 
-        {/* ─── Domain Setup (shown when custom domain is set) ─── */}
-        {partner?.custom_domain && (
+        {/* ─── Custom Domain ─── */}
+        {partner && (
           <DomainSetup
             partnerId={account.id}
-            domain={partner.custom_domain}
+            currentDomain={partner.custom_domain ?? null}
+            saveAction={saveWorkspaceDomainAction}
           />
         )}
 

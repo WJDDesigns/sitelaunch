@@ -7,7 +7,7 @@ import BrandingForm from "./BrandingForm";
 import DeletePartnerButton from "./DeletePartnerButton";
 import DomainSetup from "./DomainSetup";
 import WhiteLabelSection from "./WhiteLabelSection";
-import { updatePartnerAction, updateWhiteLabelAction, uploadLogoAction, deletePartnerAction } from "./actions";
+import { updatePartnerAction, updateWhiteLabelAction, uploadLogoAction, savePartnerDomainAction, deletePartnerAction } from "./actions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,6 +41,7 @@ export default async function PartnerDetailPage({ params }: PageProps) {
   const boundUpdate = updatePartnerAction.bind(null, id);
   const boundWhiteLabel = updateWhiteLabelAction.bind(null, id);
   const boundUpload = uploadLogoAction.bind(null, id);
+  const boundDomain = savePartnerDomainAction.bind(null, id);
   const storefrontHost = partner.custom_domain || `${partner.slug}.${rootHost}`;
 
   return (
@@ -103,11 +104,12 @@ export default async function PartnerDetailPage({ params }: PageProps) {
       {/* Branding + details form */}
       <BrandingForm partner={partner} rootHost={rootHost} canEdit={canEdit} updateAction={boundUpdate} />
 
-      {/* Domain setup instructions — shown when a custom domain is set */}
-      {partner.custom_domain && (
+      {/* Custom domain setup */}
+      {canEdit && (
         <DomainSetup
           partnerId={id}
-          domain={partner.custom_domain}
+          currentDomain={partner.custom_domain ?? null}
+          saveAction={boundDomain}
         />
       )}
 

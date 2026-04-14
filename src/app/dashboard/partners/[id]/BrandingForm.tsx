@@ -10,7 +10,6 @@ interface Partner {
   accent_color: string | null;
   support_email: string | null;
   support_phone: string | null;
-  custom_domain: string | null;
 }
 
 interface Props {
@@ -104,19 +103,6 @@ export default function BrandingForm({ partner, rootHost, canEdit, updateAction 
           />
         </Field>
       </div>
-
-      <Field
-        label="Custom domain"
-        hint="Point a CNAME to cname.mysitelaunch.com after saving."
-      >
-        <input
-          name="custom_domain"
-          defaultValue={partner.custom_domain ?? ""}
-          disabled={!canEdit}
-          className={INPUT_CLS}
-          placeholder="onboard.example.com"
-        />
-      </Field>
 
       {canEdit && (
         <div className="flex items-center justify-end gap-3 pt-2">

@@ -44,8 +44,6 @@ export async function updatePartnerAction(partnerId: string, formData: FormData)
     String(formData.get("support_email") ?? "").trim() || null;
   const support_phone =
     String(formData.get("support_phone") ?? "").trim() || null;
-  const custom_domain_raw = String(formData.get("custom_domain") ?? "");
-  const custom_domain = custom_domain_raw ? sanitizeDomain(custom_domain_raw) : null;
 
   if (!name) throw new Error("Name is required");
   if (!isHexColor(primary_color)) throw new Error("Invalid primary color");
@@ -57,7 +55,6 @@ export async function updatePartnerAction(partnerId: string, formData: FormData)
     accent_color,
     support_email,
     support_phone,
-    custom_domain,
   };
 
   // Use admin client — authorization was already verified above.
@@ -159,6 +156,44 @@ export async function uploadLogoAction(partnerId: string, formData: FormData) {
 
   revalidatePath(`/dashboard/partners/${partnerId}`);
   revalidatePath("/dashboard/partners");
+}
+
+export async function savePartnerDomainAction(partnerId: string, formData: FormData) {
+  const session = await requireSession();
+  if (session.role !== "superadmin") {
+    const supabase = await createClient();
+    const { data: membership } = await supabase
+      .from("partner_members")
+      .select("role")
+      .eq("partner_id", partnerId)
+      .eq("user_id", session.userId)
+      .maybeSingle();
+    if (!membership || membership.role !== "partner_owner") {
+      throw new Error("Not authorized");
+    }
+  }
+
+  const custom_domain_raw = String(formData.get("custom_domain") ?? "").trim();
+  let custom_domain: string | null = null;
+  if (custom_domain_raw) {
+    const v = custom_domain_raw.toLowerCase();
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(v)) {
+      throw new Error("Invalid custom domain");
+    }
+    custom_domain = v;
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("partners")
+    .update({ custom_domain })
+    .eq("id", partnerId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/dashboard/partners/${partnerId}`);
+  revalidatePath("/dashboard/partners");
+  revalidatePath("/dashboard");
 }
 
 export async function deletePartnerAction(partnerId: string) {
