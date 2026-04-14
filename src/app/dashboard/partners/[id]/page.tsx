@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import ColorInput from "@/components/ColorInput";
 import LogoUploadForm from "./LogoUploadForm";
 import DeletePartnerButton from "./DeletePartnerButton";
+import DomainSetup from "./DomainSetup";
 import { updatePartnerAction, uploadLogoAction, deletePartnerAction } from "./actions";
 
 const INPUT_CLS =
@@ -188,6 +189,14 @@ export default async function PartnerDetailPage({ params }: PageProps) {
           </div>
         )}
       </form>
+
+      {/* Domain setup instructions — shown when a custom domain is set */}
+      {partner.custom_domain && (
+        <DomainSetup
+          partnerId={id}
+          domain={partner.custom_domain}
+        />
+      )}
 
       {/* Danger zone */}
       {canEdit && (
