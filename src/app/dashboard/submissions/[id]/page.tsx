@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { FormSchema } from "@/lib/forms";
+import SubmissionActions from "./SubmissionActions";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -70,9 +71,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
               {sub.client_email || "\u2014"} &middot; {partner?.name ?? "Unknown partner"}
             </p>
           </div>
-          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter bg-primary/10 text-primary border border-primary/20">
-            {sub.status}
-          </span>
+          <SubmissionActions submissionId={sub.id} currentStatus={sub.status} />
         </div>
       </header>
 
