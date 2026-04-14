@@ -18,6 +18,7 @@ const WORKSPACE_NAV = [
 
 const ADMIN_NAV = [
   { href: "/dashboard/admin", label: "Platform", icon: "fa-chart-line" },
+  { href: "/dashboard/admin/billing", label: "Billing", icon: "fa-credit-card" },
   { href: "/dashboard/admin/team", label: "Team", icon: "fa-user-shield" },
   { href: "/dashboard/admin/partners", label: "All Partners", icon: "fa-sitemap" },
   { href: "/dashboard/admin/activity", label: "Activity Log", icon: "fa-timeline" },

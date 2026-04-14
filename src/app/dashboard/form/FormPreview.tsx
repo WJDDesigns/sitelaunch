@@ -14,7 +14,9 @@ const INPUT_CLS =
 
 export default function FormPreview({ schema, primaryColor }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
+  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
   const step = schema.steps[stepIdx];
+  const lightBg = isLightColor(primaryColor);
 
   if (!step) {
     return (
@@ -24,97 +26,175 @@ export default function FormPreview({ schema, primaryColor }: Props) {
     );
   }
 
+  function goToStep(idx: number) {
+    setVisitedSteps((prev) => new Set(prev).add(idx));
+    setStepIdx(idx);
+  }
+
   return (
-    <div className="min-h-full bg-background">
-      {/* Fake header bar */}
-      <div className="px-6 py-5 border-b border-on-surface/10 bg-background/60 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: primaryColor, color: isLightColor(primaryColor) ? "#1a1c25" : "#ffffff" }}>
-            <span className="font-bold text-xs">P</span>
+    <div className="flex h-full min-h-[500px] bg-background">
+      {/* Sidebar */}
+      <aside className="w-[240px] shrink-0 border-r border-outline-variant/15 bg-surface-container/50 flex flex-col overflow-y-auto">
+        {/* Fake partner branding */}
+        <div className="px-5 pt-6 pb-4 border-b border-outline-variant/10">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <span className="font-bold text-xs" style={{ color: lightBg ? "#1a1c25" : "#ffffff" }}>P</span>
+            </div>
+            <span className="text-sm font-bold text-on-surface font-headline">Preview Mode</span>
           </div>
-          <span className="text-sm font-bold text-on-surface font-headline">Preview Mode</span>
         </div>
-      </div>
 
-      {/* Progress bar */}
-      <div className="px-6 pt-8 pb-4">
-        <div className="flex items-center gap-3 max-w-2xl mx-auto">
-          {schema.steps.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-3 flex-1">
+        {/* Progress */}
+        <div className="px-5 pt-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60">Progress</span>
+            <span className="text-[10px] font-bold font-headline" style={{ color: primaryColor }}>
+              {Math.round(((Math.max(0, stepIdx)) / schema.steps.length) * 100)}%
+            </span>
+          </div>
+          <div className="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all duration-500 ease-out rounded-full"
+              style={{
+                width: `${(stepIdx / schema.steps.length) * 100}%`,
+                backgroundColor: primaryColor,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Step list */}
+        <nav className="flex-1 px-3 py-3 space-y-0.5">
+          {schema.steps.map((s, i) => {
+            const isCurrent = i === stepIdx;
+            const isCompleted = i < stepIdx;
+            const isVisited = visitedSteps.has(i);
+            return (
               <button
-                onClick={() => setStepIdx(i)}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${
-                  i === stepIdx
-                    ? "shadow-lg"
-                    : i < stepIdx
-                      ? "opacity-70"
-                      : "bg-surface-container-high text-on-surface-variant/40"
+                key={s.id}
+                type="button"
+                onClick={() => goToStep(i)}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-left transition-all duration-200 ${
+                  isCurrent
+                    ? "bg-surface-container-high"
+                    : isVisited
+                    ? "hover:bg-surface-container-high/60 cursor-pointer"
+                    : "opacity-50 cursor-pointer hover:opacity-70"
                 }`}
-                style={i <= stepIdx ? { backgroundColor: primaryColor, color: isLightColor(primaryColor) ? "#1a1c25" : "#ffffff" } : undefined}
               >
-                {i < stepIdx ? <i className="fa-solid fa-check text-[10px]" /> : i + 1}
-              </button>
-              {i < schema.steps.length - 1 && (
-                <div className="flex-1 h-0.5 rounded-full bg-surface-container-highest">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: i < stepIdx ? "100%" : "0%",
-                      backgroundColor: primaryColor,
-                    }}
-                  />
+                {/* Step indicator */}
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+                    isCompleted
+                      ? ""
+                      : isCurrent
+                      ? "ring-2 ring-offset-1 ring-offset-surface-container/50"
+                      : "bg-surface-container-highest"
+                  }`}
+                  style={
+                    isCompleted
+                      ? { backgroundColor: primaryColor }
+                      : isCurrent
+                      ? { backgroundColor: primaryColor + "18", "--tw-ring-color": primaryColor } as React.CSSProperties
+                      : undefined
+                  }
+                >
+                  {isCompleted ? (
+                    <i className="fa-solid fa-check text-[8px]" style={{ color: lightBg ? "#1a1c25" : "#ffffff" }} />
+                  ) : (
+                    <span
+                      className={`text-[10px] font-bold ${isCurrent ? "" : "text-on-surface-variant/60"}`}
+                      style={isCurrent ? { color: primaryColor } : undefined}
+                    >
+                      {i + 1}
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Step content */}
-      <div className="px-6 pb-12 max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h2 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight">
-            {step.title}
-          </h2>
-          {step.description && (
-            <p className="text-on-surface-variant mt-1 text-sm">{step.description}</p>
-          )}
-        </div>
+                {/* Step title */}
+                <span
+                  className={`text-xs truncate ${
+                    isCurrent
+                      ? "text-on-surface font-semibold"
+                      : isCompleted
+                      ? "text-on-surface-variant"
+                      : "text-on-surface-variant/60"
+                  }`}
+                >
+                  {s.title}
+                </span>
 
-        <div className="space-y-6">
-          {step.fields.map((field, fi) => (
-            <PreviewField key={field.id} field={field} primaryColor={primaryColor} delay={fi} />
-          ))}
+                {/* Active dot */}
+                {isCurrent && (
+                  <div className="w-1 h-1 rounded-full shrink-0 ml-auto" style={{ backgroundColor: primaryColor }} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-          {step.fields.length === 0 && (
-            <div className="text-center py-8 text-sm text-on-surface-variant/40 border-2 border-dashed border-outline-variant/20 rounded-xl">
-              This step has no fields yet.
-            </div>
-          )}
-        </div>
-
-        {/* Navigation buttons */}
-        <div className="flex items-center justify-between mt-10 pt-6 border-t border-on-surface/10">
-          <button
-            onClick={() => setStepIdx(Math.max(0, stepIdx - 1))}
-            disabled={stepIdx === 0}
-            className="flex items-center gap-2 px-5 py-3 text-sm font-bold text-on-surface-variant rounded-xl hover:bg-surface-container-high disabled:opacity-30 transition-all"
-          >
-            <i className="fa-solid fa-chevron-left text-xs" /> Back
-          </button>
-          <span className="text-xs text-on-surface-variant/40">
+        {/* Sidebar footer */}
+        <div className="px-5 py-3 border-t border-outline-variant/10">
+          <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-widest">
             Step {stepIdx + 1} of {schema.steps.length}
-          </span>
-          <button
-            onClick={() => setStepIdx(Math.min(schema.steps.length - 1, stepIdx + 1))}
-            disabled={stepIdx === schema.steps.length - 1}
-            className="flex items-center gap-2 px-5 py-3 text-sm font-bold rounded-xl disabled:opacity-30 transition-all"
-            style={{ backgroundColor: primaryColor, color: isLightColor(primaryColor) ? "#1a1c25" : "#ffffff" }}
-          >
-            {stepIdx === schema.steps.length - 1 ? "Submit" : "Continue"} <i className="fa-solid fa-chevron-right text-xs" />
-          </button>
+          </p>
         </div>
-      </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto min-w-0">
+        <div className="max-w-2xl mx-auto px-8 py-8">
+          {/* Step header */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight">
+              {step.title}
+            </h2>
+            {step.description && (
+              <p className="text-on-surface-variant mt-1.5 text-sm leading-relaxed">{step.description}</p>
+            )}
+          </div>
+
+          {/* Fields */}
+          <div className="space-y-6">
+            {step.fields.map((field, fi) => (
+              <PreviewField key={field.id} field={field} primaryColor={primaryColor} delay={fi} />
+            ))}
+
+            {step.fields.length === 0 && (
+              <div className="text-center py-8 text-sm text-on-surface-variant/40 border-2 border-dashed border-outline-variant/20 rounded-xl">
+                This step has no fields yet.
+              </div>
+            )}
+          </div>
+
+          {/* Navigation buttons */}
+          <div className="flex items-center justify-between mt-10 pt-6 border-t border-on-surface/10">
+            <button
+              onClick={() => goToStep(Math.max(0, stepIdx - 1))}
+              disabled={stepIdx === 0}
+              className="flex items-center gap-2 text-on-surface-variant hover:text-on-surface disabled:opacity-0 transition-all text-sm uppercase tracking-widest font-label"
+            >
+              <i className="fa-solid fa-chevron-left text-xs" /> Previous
+            </button>
+            <button
+              onClick={() => goToStep(Math.min(schema.steps.length - 1, stepIdx + 1))}
+              disabled={stepIdx === schema.steps.length - 1}
+              className="flex items-center gap-2 px-8 py-3.5 font-headline font-bold rounded-xl shadow-[0_10px_30px_rgba(192,193,255,0.2)] hover:shadow-[0_15px_40px_rgba(192,193,255,0.35)] hover:-translate-y-1 transition-all disabled:opacity-60"
+              style={{ backgroundColor: primaryColor, color: lightBg ? "#1a1c25" : "#ffffff" }}
+            >
+              {stepIdx === schema.steps.length - 1 ? (
+                <>Submit <i className="fa-solid fa-check text-xs ml-1" /></>
+              ) : (
+                <>Next Step <i className="fa-solid fa-chevron-right text-xs ml-1" /></>
+              )}
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
@@ -122,9 +202,9 @@ export default function FormPreview({ schema, primaryColor }: Props) {
 function PreviewField({ field, primaryColor, delay }: { field: FieldDef; primaryColor: string; delay: number }) {
   if (field.type === "heading") {
     return (
-      <div className="pt-2">
+      <div className="py-4 border-b border-on-surface-variant/20">
         <h3 className="text-lg font-headline font-bold text-on-surface">{field.label}</h3>
-        {field.content && <p className="text-sm text-on-surface-variant mt-1">{field.content}</p>}
+        {field.content && <p className="text-sm text-on-surface-variant mt-1 leading-relaxed">{field.content}</p>}
         {field.hint && <p className="text-xs text-on-surface-variant/60 mt-1">{field.hint}</p>}
       </div>
     );
@@ -151,26 +231,27 @@ function PreviewField({ field, primaryColor, delay }: { field: FieldDef; primary
           {(field.options ?? []).map((o) => <option key={o}>{o}</option>)}
         </select>
       ) : field.type === "radio" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="space-y-2">
           {(field.options ?? []).map((o) => (
-            <div key={o} className="px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest text-sm text-on-surface cursor-default">
+            <div key={o} className="flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-outline-variant/20 text-sm text-on-surface cursor-default">
+              <div className="w-4 h-4 rounded-full border-2 border-outline-variant/30 shrink-0" />
               {o}
             </div>
           ))}
         </div>
       ) : field.type === "checkbox" && field.options && field.options.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="space-y-2">
           {field.options.map((o) => (
-            <div key={o} className="px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest text-sm text-on-surface cursor-default flex items-center gap-2">
-              <div className="w-4 h-4 rounded border border-outline-variant/30" />
+            <div key={o} className="flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-outline-variant/20 text-sm text-on-surface cursor-default">
+              <div className="w-4 h-4 rounded border-2 border-outline-variant/30 shrink-0" />
               {o}
             </div>
           ))}
         </div>
       ) : field.type === "checkbox" ? (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest">
-          <div className="w-4 h-4 rounded border border-outline-variant/30" />
-          <span className="text-sm text-on-surface">{field.label}</span>
+        <div className="flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-outline-variant/20">
+          <div className="w-5 h-5 rounded border-2 border-outline-variant/30 shrink-0" />
+          <span className="text-sm text-on-surface">{field.placeholder || "Yes"}</span>
         </div>
       ) : field.type === "color" ? (
         <div className="flex items-center gap-3">
