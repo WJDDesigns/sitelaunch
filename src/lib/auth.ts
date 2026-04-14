@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+
+export const IMPERSONATE_COOKIE = "sl_impersonate";
 
 export type AppRole = "superadmin" | "partner_owner" | "partner_member" | "client";
 export type PlanType = "agency" | "agency_plus_partners";
@@ -104,11 +107,56 @@ export async function getVisiblePartners() {
 }
 
 /**
+ * Check if superadmin is currently impersonating a partner.
+ * Returns the partner ID or null.
+ */
+export async function getImpersonatingPartnerId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get(IMPERSONATE_COOKIE)?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Resolve the current user's primary account — i.e. the top-level partner
  * tree they belong to. Superadmin users who don't own a partner return null.
+ *
+ * If the user is a superadmin with an active impersonation cookie, returns
+ * the impersonated partner's context instead.
  */
 export async function getCurrentAccount(userId: string): Promise<AccountContext | null> {
   const supabase = await createClient();
+
+  // Check for superadmin impersonation
+  const impersonateId = await getImpersonatingPartnerId();
+  if (impersonateId) {
+    // Verify caller is actually a superadmin before honoring the cookie
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single();
+    if (profile?.role === "superadmin") {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("id, slug, name, plan_type, plan_tier, submissions_monthly_limit")
+        .eq("id", impersonateId)
+        .maybeSingle();
+      if (partner) {
+        return {
+          id: partner.id,
+          slug: partner.slug,
+          name: partner.name,
+          planType: (partner.plan_type ?? "agency") as PlanType,
+          planTier: (partner.plan_tier ?? "free") as PlanTier,
+          submissionsMonthlyLimit: partner.submissions_monthly_limit,
+        };
+      }
+    }
+  }
+
   const { data: memberships } = await supabase
     .from("partner_members")
     .select("partner_id, created_at")

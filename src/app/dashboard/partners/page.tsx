@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireSession, getVisiblePartners } from "@/lib/auth";
+import ImpersonateButton from "./ImpersonateButton";
 
 export default async function PartnersListPage() {
   const session = await requireSession();
@@ -62,7 +63,10 @@ export default async function PartnersListPage() {
                   <div className="col-span-4 text-sm text-on-surface-variant">
                     {p.custom_domain || `${p.slug}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`}
                   </div>
-                  <div className="col-span-1 text-right">
+                  <div className="col-span-1 flex items-center justify-end gap-3">
+                    {session.role === "superadmin" && (
+                      <ImpersonateButton partnerId={p.id} />
+                    )}
                     <Link
                       href={`/dashboard/partners/${p.id}`}
                       className="text-xs font-bold text-primary hover:underline"

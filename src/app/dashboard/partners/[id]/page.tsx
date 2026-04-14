@@ -8,6 +8,7 @@ import DeletePartnerButton from "./DeletePartnerButton";
 import DomainSetup from "./DomainSetup";
 import WhiteLabelSection from "./WhiteLabelSection";
 import { updatePartnerAction, updateWhiteLabelAction, uploadLogoAction, savePartnerDomainAction, deletePartnerAction } from "./actions";
+import ImpersonateButton from "../ImpersonateButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -70,14 +71,19 @@ export default async function PartnerDetailPage({ params }: PageProps) {
               <p className="text-xs text-on-surface-variant font-mono mt-0.5">{storefrontHost}</p>
             </div>
           </div>
-          <a
-            href={`http://${storefrontHost}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs font-bold text-primary hover:underline"
-          >
-            View storefront <i className="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1" />
-          </a>
+          <div className="flex items-center gap-3">
+            {session.role === "superadmin" && (
+              <ImpersonateButton partnerId={id} size="md" />
+            )}
+            <a
+              href={`http://${storefrontHost}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View storefront <i className="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1" />
+            </a>
+          </div>
         </div>
       </header>
 

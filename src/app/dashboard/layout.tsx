@@ -1,5 +1,7 @@
-import { requireSession, getCurrentAccount, getAccountUsage } from "@/lib/auth";
+import { requireSession, getCurrentAccount, getAccountUsage, getImpersonatingPartnerId } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import SidebarNav from "./SidebarNav";
+import ImpersonationBanner from "./ImpersonationBanner";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const TIER_LABELS: Record<string, string> = {
@@ -30,6 +32,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const account = await getCurrentAccount(session.userId);
   const showPartners = isAdmin || account?.planType === "agency_plus_partners";
 
+  // Check for active impersonation
+  let impersonatingName: string | null = null;
+  if (isAdmin) {
+    const impersonateId = await getImpersonatingPartnerId();
+    if (impersonateId) {
+      const admin = createAdminClient();
+      const { data: imp } = await admin
+        .from("partners")
+        .select("name")
+        .eq("id", impersonateId)
+        .maybeSingle();
+      impersonatingName = imp?.name ?? null;
+    }
+  }
+
   let usageLine: string | null = null;
   let usageRatio = 0;
   if (account) {
@@ -45,9 +62,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-surface flex">
+    <div className="min-h-screen bg-surface flex flex-col">
+      {/* Impersonation banner */}
+      {impersonatingName && <ImpersonationBanner partnerName={impersonatingName} />}
+
+      <div className="flex flex-1">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col h-screen fixed left-0 border-r border-on-surface/10 bg-background z-40">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col h-screen fixed left-0 border-r border-on-surface/10 bg-background z-40" style={impersonatingName ? { top: "40px", height: "calc(100vh - 40px)" } : undefined}>
         {/* Logo */}
         <div className="px-6 py-6 mb-2">
           <div className="flex items-center gap-3">
@@ -56,7 +77,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </div>
             <div>
               <h2 className="text-lg font-bold text-on-surface font-headline tracking-tight">
-                {isAdmin ? "SiteLaunch" : (account?.name ?? "SiteLaunch")}
+                {impersonatingName ?? (isAdmin ? "SiteLaunch" : (account?.name ?? "SiteLaunch"))}
               </h2>
               <p className="text-[10px] text-primary/60 uppercase tracking-widest font-semibold">
                 {account ? (TIER_LABELS[account.planTier] ?? account.planTier) : "Platform"}
@@ -122,6 +143,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 md:ml-64 min-h-screen">
         {children}
       </main>
+      </div>
     </div>
   );
 }
