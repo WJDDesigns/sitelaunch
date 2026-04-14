@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 interface Props {
   partnerId: string;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function DeletePartnerButton({ partnerId, partnerName, deleteAction }: Props) {
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function DeletePartnerButton({ partnerId, partnerName, deleteActi
           startTransition(async () => {
             try {
               await deleteAction(partnerId);
-              window.location.href = "/dashboard";
+              router.replace("/dashboard/partners");
             } catch (err) {
               setError(err instanceof Error ? err.message : "Delete failed");
             }

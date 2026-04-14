@@ -15,6 +15,13 @@ const NAV_ITEMS = [
   { href: "/dashboard/billing", label: "Settings", icon: "fa-gear" },
 ];
 
+const ADMIN_NAV = [
+  { href: "/dashboard/admin", label: "Platform", icon: "fa-chart-line" },
+  { href: "/dashboard/admin/team", label: "Team", icon: "fa-user-shield" },
+  { href: "/dashboard/admin/partners", label: "All Partners", icon: "fa-sitemap" },
+  { href: "/dashboard/admin/activity", label: "Activity Log", icon: "fa-timeline" },
+];
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   const isAdmin = session.role === "superadmin";
@@ -76,6 +83,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <i className="fa-solid fa-users w-5 text-center" />
               {isAdmin ? "Partners" : "Sub-partners"}
             </Link>
+          )}
+
+          {isAdmin && (
+            <>
+              <div className="mt-4 mb-2 px-4">
+                <span className="text-[10px] uppercase tracking-widest text-on-surface-variant/40 font-bold">
+                  Admin
+                </span>
+              </div>
+              {ADMIN_NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 px-4 py-3 text-on-surface/60 hover:bg-on-surface/5 hover:text-on-surface transition-all duration-200 rounded-lg text-sm font-medium"
+                >
+                  <i className={`fa-solid ${item.icon} w-5 text-center`} />
+                  {item.label}
+                </Link>
+              ))}
+            </>
           )}
         </nav>
 

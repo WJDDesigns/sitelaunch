@@ -36,5 +36,24 @@ export default async function FormEditorPage() {
   const schema: FormSchema | null = (tpl?.schema as FormSchema) ?? null;
   const hasForm = !!pf && !!schema;
 
-  return <FormEditorShell initialSchema={schema} hasForm={hasForm} />;
+  // Get partner details for public link
+  const { data: partner } = await supabase
+    .from("partners")
+    .select("slug, custom_domain, primary_color")
+    .eq("id", account.id)
+    .maybeSingle();
+
+  const rootHost = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "mysitelaunch.com";
+  const storefrontHost = partner?.custom_domain || `${partner?.slug ?? account.slug}.${rootHost}`;
+  const publicUrl = hasForm ? `https://${storefrontHost}` : null;
+  const primaryColor = partner?.primary_color || "#c0c1ff";
+
+  return (
+    <FormEditorShell
+      initialSchema={schema}
+      hasForm={hasForm}
+      publicUrl={publicUrl}
+      primaryColor={primaryColor}
+    />
+  );
 }
