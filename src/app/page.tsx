@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 import HomePricingTeaser from "./HomePricingTeaser";
 
 export default function LandingPage() {
@@ -18,6 +19,7 @@ export default function LandingPage() {
           <Link className="text-sm text-on-surface-variant hover:text-on-surface transition-colors duration-300" href="/pricing">Pricing</Link>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link href="/login" className="hidden sm:inline-flex text-sm text-on-surface-variant hover:text-on-surface transition-colors">
             Sign in
           </Link>

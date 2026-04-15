@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 import PricingCards from "./PricingCards";
 
 export const metadata: Metadata = {
@@ -110,6 +111,7 @@ export default function PricingPage() {
           <Link className="text-sm text-primary font-semibold transition-colors duration-300" href="/pricing">Pricing</Link>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link href="/login" className="hidden sm:inline-flex text-sm text-on-surface-variant hover:text-on-surface transition-colors">
             Sign in
           </Link>
