@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getFormsLimitForTier } from "@/lib/plans";
 import type { FormSchema } from "@/lib/forms";
 import CreateFormButton from "./CreateFormButton";
+import LandingModeToggle from "./LandingModeToggle";
 
 export default async function FormsListPage() {
   const session = await requireSession();
@@ -38,10 +39,10 @@ export default async function FormsListPage() {
   const formsLimit = getFormsLimitForTier(account.planTier);
   const canCreateMore = formsLimit === null || formsList.length < formsLimit;
 
-  // Get partner for storefront link
+  // Get partner for storefront link + landing mode
   const { data: partner } = await supabase
     .from("partners")
-    .select("slug, custom_domain")
+    .select("slug, custom_domain, show_all_forms")
     .eq("id", account.id)
     .maybeSingle();
 
@@ -80,6 +81,13 @@ export default async function FormsListPage() {
           <CreateFormButton canCreate={canCreateMore} formsLimit={formsLimit} />
         </div>
       </header>
+
+      {formsList.length > 1 && (
+        <LandingModeToggle
+          showAllForms={partner?.show_all_forms ?? false}
+          storefrontUrl={`https://${storefrontHost}`}
+        />
+      )}
 
       {formsList.length === 0 ? (
         <div className="bg-surface-container rounded-2xl p-12 text-center shadow-2xl shadow-black/20">

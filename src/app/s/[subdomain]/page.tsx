@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { contrastText } from "@/lib/color-utils";
 import { startSubmissionAction } from "./actions";
@@ -23,7 +24,7 @@ export default async function PartnerHomePage({ params }: Props) {
 
   const { data: partner } = await supabase
     .from("partners")
-    .select("id, slug, name, custom_domain, logo_url, primary_color, accent_color, support_email, plan_tier, hide_branding, custom_footer_text, logo_size, theme_mode")
+    .select("id, slug, name, custom_domain, logo_url, primary_color, accent_color, support_email, plan_tier, hide_branding, custom_footer_text, logo_size, theme_mode, show_all_forms")
     .or(`slug.eq.${identifier},custom_domain.eq.${identifier}`)
     .maybeSingle();
 
@@ -36,6 +37,22 @@ export default async function PartnerHomePage({ params }: Props) {
   const dims = LOGO_DIMS[partner.logo_size] ?? LOGO_DIMS.default;
   const isFullWidth = partner.logo_size === "full-width";
 
+  // If "show all forms" is enabled, fetch all active forms for the grid
+  let activeForms: { id: string; name: string; slug: string; description: string | null; is_default: boolean }[] = [];
+  if (partner.show_all_forms) {
+    const admin = createAdminClient();
+    const { data: forms } = await admin
+      .from("partner_forms")
+      .select("id, name, slug, description, is_default")
+      .eq("partner_id", partner.id)
+      .eq("is_active", true)
+      .order("is_default", { ascending: false })
+      .order("name", { ascending: true });
+    activeForms = forms ?? [];
+  }
+
+  const showGrid = partner.show_all_forms && activeForms.length > 1;
+
   return (
     <main className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       {/* Ambient glows using partner color */}
@@ -45,80 +62,132 @@ export default async function PartnerHomePage({ params }: Props) {
         <div className="absolute top-[50%] left-[60%] w-[20%] h-[20%] rounded-full blur-[100px] animate-glow-breathe" style={{ backgroundColor: `${primary}06`, animationDelay: "-4s" }} />
       </div>
 
-      {/* Header — hidden in full-width layout */}
-      {!isFullWidth && (
-        <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 md:px-8 py-5 bg-background/70 backdrop-blur-2xl border-b border-on-surface/[0.04]">
-          <div className="flex items-center gap-3">
-            {partner.logo_url ? (
-              <div className={`${dims.wrapper} flex items-center justify-center`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={partner.logo_url} alt={partner.name} className={`${dims.img} object-contain`} />
-              </div>
-            ) : (
-              <div className={`${dims.fallback} flex items-center justify-center shadow-lg`} style={{ backgroundColor: primary, boxShadow: `0 8px 24px ${primary}30` }}>
-                <span className="text-on-primary font-bold text-lg" style={{ color: contrastText(primary) }}>{partner.name.slice(0, 1).toUpperCase()}</span>
-              </div>
-            )}
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-on-surface font-headline tracking-tight">{partner.name}</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: `${primary}99` }}>Client Onboarding Portal</span>
+      {/* Header */}
+      <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 md:px-8 py-5 bg-background/70 backdrop-blur-2xl border-b border-on-surface/[0.04]">
+        <div className="flex items-center gap-3">
+          {partner.logo_url ? (
+            <div className={`${dims.wrapper} flex items-center justify-center`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={partner.logo_url} alt={partner.name} className={`${dims.img} object-contain`} />
             </div>
-          </div>
-        </header>
-      )}
-
-      {/* Content */}
-      <section className={`flex-1 flex flex-col items-center justify-center px-6 ${isFullWidth ? "pt-16 pb-20" : "pt-36 pb-20"} max-w-4xl mx-auto text-center relative`}>
-        <div className="space-y-6 animate-fade-up">
-          {/* Full-width layout: large centered logo + name */}
-          {isFullWidth && (
-            <div className="flex flex-col items-center gap-4 mb-4">
-              {partner.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={partner.logo_url} alt={partner.name} className="h-24 md:h-32 w-auto object-contain" />
-              ) : (
-                <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl flex items-center justify-center shadow-2xl" style={{ backgroundColor: primary, boxShadow: `0 20px 60px ${primary}30` }}>
-                  <span style={{ color: contrastText(primary) }} className="font-bold text-5xl md:text-6xl">{partner.name.slice(0, 1).toUpperCase()}</span>
-                </div>
-              )}
-              <div className="text-center">
-                <h2 className="text-2xl md:text-3xl font-headline font-extrabold text-on-surface tracking-tight">{partner.name}</h2>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: `${primary}99` }}>Client Onboarding Portal</span>
-              </div>
+          ) : (
+            <div className={`${dims.fallback} flex items-center justify-center shadow-lg`} style={{ backgroundColor: primary, boxShadow: `0 8px 24px ${primary}30` }}>
+              <span className="text-on-primary font-bold text-lg" style={{ color: contrastText(primary) }}>{partner.name.slice(0, 1).toUpperCase()}</span>
             </div>
           )}
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-on-surface font-headline tracking-tight">{partner.name}</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: `${primary}99` }}>Client Onboarding Portal</span>
+          </div>
+        </div>
+      </header>
 
-          <h1 className="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface max-w-2xl leading-tight">
-            {isFullWidth ? "Let\u2019s get started" : `Welcome to ${partner.name} onboarding`}
-          </h1>
-          <p className="text-lg text-on-surface-variant/70 font-body leading-relaxed max-w-xl mx-auto">
-            {isFullWidth
-              ? "This onboarding form takes about 10 minutes. You can come back to it anytime with your unique link."
-              : "Let\u2019s get your project started. This form takes about 10 minutes and you can come back to it anytime with your unique link."}
-          </p>
-          <form action={startSubmissionAction} className="pt-4">
-            <input type="hidden" name="partner_id" value={partner.id} />
-            <input type="hidden" name="subdomain" value={identifier} />
-            <button
-              type="submit"
-              className="group px-10 py-4 font-headline font-bold rounded-xl shadow-xl hover:-translate-y-1 transition-all duration-500 flex items-center gap-3 mx-auto"
-              style={{
-                backgroundColor: primary,
-                color: contrastText(primary),
-                boxShadow: `0 10px 40px ${primary}30`,
-              }}
-            >
-              Start onboarding
-              <i className="fa-solid fa-arrow-right text-sm group-hover:translate-x-1 transition-transform" />
-            </button>
-          </form>
+      {/* Content */}
+      {showGrid ? (
+        /* ── Multi-form grid landing ── */
+        <section className="flex-1 flex flex-col items-center px-6 pt-32 pb-20 max-w-5xl mx-auto w-full relative">
+          <div className="text-center mb-10 animate-fade-up">
+            {isFullWidth && partner.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={partner.logo_url} alt={partner.name} className="h-20 md:h-28 w-auto object-contain mx-auto mb-6" />
+            )}
+            <h1 className="text-3xl md:text-4xl font-headline font-extrabold tracking-tight text-on-surface">
+              Welcome to {partner.name}
+            </h1>
+            <p className="text-base text-on-surface-variant/70 font-body mt-2 max-w-lg mx-auto">
+              Choose a form below to get started.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full animate-fade-up" style={{ animationDelay: "100ms" }}>
+            {activeForms.map((form) => (
+              <Link
+                key={form.id}
+                href={`/f/${form.slug}`}
+                className="group bg-surface-container rounded-2xl border border-outline-variant/[0.06] p-6 shadow-lg shadow-black/10 hover:border-primary/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors" style={{ backgroundColor: `${primary}15` }}>
+                  <i className="fa-solid fa-file-lines text-lg" style={{ color: primary }} />
+                </div>
+                <h3 className="text-lg font-bold text-on-surface group-hover:text-primary transition-colors font-headline">
+                  {form.name}
+                </h3>
+                {form.description && (
+                  <p className="text-xs text-on-surface-variant/60 mt-1.5 line-clamp-2">{form.description}</p>
+                )}
+                <div className="mt-auto pt-4">
+                  <span
+                    className="inline-flex items-center gap-2 text-xs font-bold transition-colors"
+                    style={{ color: primary }}
+                  >
+                    Get started
+                    <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
           {partner.support_email && (
-            <p className="text-xs text-on-surface-variant/50 pt-4">
+            <p className="text-xs text-on-surface-variant/50 mt-10">
               Questions? <a href={`mailto:${partner.support_email}`} style={{ color: primary }} className="hover:underline">{partner.support_email}</a>
             </p>
           )}
-        </div>
-      </section>
+        </section>
+      ) : (
+        /* ── Single default form landing (original) ── */
+        <section className={`flex-1 flex flex-col items-center justify-center px-6 ${isFullWidth ? "pt-16 pb-20" : "pt-36 pb-20"} max-w-4xl mx-auto text-center relative`}>
+          <div className="space-y-6 animate-fade-up">
+            {/* Full-width layout: large centered logo + name */}
+            {isFullWidth && (
+              <div className="flex flex-col items-center gap-4 mb-4">
+                {partner.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={partner.logo_url} alt={partner.name} className="h-24 md:h-32 w-auto object-contain" />
+                ) : (
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl flex items-center justify-center shadow-2xl" style={{ backgroundColor: primary, boxShadow: `0 20px 60px ${primary}30` }}>
+                    <span style={{ color: contrastText(primary) }} className="font-bold text-5xl md:text-6xl">{partner.name.slice(0, 1).toUpperCase()}</span>
+                  </div>
+                )}
+                <div className="text-center">
+                  <h2 className="text-2xl md:text-3xl font-headline font-extrabold text-on-surface tracking-tight">{partner.name}</h2>
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: `${primary}99` }}>Client Onboarding Portal</span>
+                </div>
+              </div>
+            )}
+
+            <h1 className="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface max-w-2xl leading-tight">
+              {isFullWidth ? "Let\u2019s get started" : `Welcome to ${partner.name} onboarding`}
+            </h1>
+            <p className="text-lg text-on-surface-variant/70 font-body leading-relaxed max-w-xl mx-auto">
+              {isFullWidth
+                ? "This onboarding form takes about 10 minutes. You can come back to it anytime with your unique link."
+                : "Let\u2019s get your project started. This form takes about 10 minutes and you can come back to it anytime with your unique link."}
+            </p>
+            <form action={startSubmissionAction} className="pt-4">
+              <input type="hidden" name="partner_id" value={partner.id} />
+              <input type="hidden" name="subdomain" value={identifier} />
+              <button
+                type="submit"
+                className="group px-10 py-4 font-headline font-bold rounded-xl shadow-xl hover:-translate-y-1 transition-all duration-500 flex items-center gap-3 mx-auto"
+                style={{
+                  backgroundColor: primary,
+                  color: contrastText(primary),
+                  boxShadow: `0 10px 40px ${primary}30`,
+                }}
+              >
+                Start onboarding
+                <i className="fa-solid fa-arrow-right text-sm group-hover:translate-x-1 transition-transform" />
+              </button>
+            </form>
+            {partner.support_email && (
+              <p className="text-xs text-on-surface-variant/50 pt-4">
+                Questions? <a href={`mailto:${partner.support_email}`} style={{ color: primary }} className="hover:underline">{partner.support_email}</a>
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="w-full py-12 px-8 flex flex-col items-center gap-4 border-t border-on-surface/[0.06]">
