@@ -405,10 +405,38 @@ h1, h2, h3, h4, .headline {
   100% { background-position: 0% 50%; }
 }
 
+@keyframes skeleton-wave {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
 @property --shimmer-angle {
   syntax: "<angle>";
   initial-value: 135deg;
   inherits: false;
+}
+
+/* Skeleton wave shimmer — MUI-style */
+.skeleton-wave {
+  position: relative;
+  overflow: hidden;
+  background: rgb(var(--color-on-surface) / 0.06);
+}
+.skeleton-wave::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--color-on-surface) / 0.04),
+    rgb(var(--color-on-surface) / 0.08),
+    rgb(var(--color-on-surface) / 0.04),
+    transparent
+  );
+  animation: skeleton-wave 1.8s ease-in-out infinite;
 }
 
 .animate-fade-up {
