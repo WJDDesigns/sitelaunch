@@ -101,7 +101,8 @@ function makeStep(): StepDef {
 
 type DragPayload =
   | { kind: "palette"; fieldType: FieldType; label: string }
-  | { kind: "field"; sourceStepId: string; fieldId: string };
+  | { kind: "field"; sourceStepId: string; fieldId: string }
+  | { kind: "step"; stepId: string };
 
 /* ── Input classes ─────────────────────────────────────────── */
 
@@ -124,6 +125,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
 
   const dragPayload = useRef<DragPayload | null>(null);
   const [dropTarget, setDropTarget] = useState<{ stepId: string; index: number } | null>(null);
+  const [stepDropTarget, setStepDropTarget] = useState<number | null>(null);
 
   /* ── Undo / Redo history ───────────────────────────────── */
   const MAX_HISTORY = 50;
@@ -196,6 +198,11 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
   function selectField(stepId: string, fieldId: string) {
     setSelectedStepId(stepId);
     setSelectedFieldId(fieldId);
+    setMobilePanel("settings");
+  }
+  function selectStep(stepId: string) {
+    setSelectedStepId(stepId);
+    setSelectedFieldId(null);
     setMobilePanel("settings");
   }
   function clearSelection() {
@@ -280,9 +287,35 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
     const step = schema.steps.find((s) => s.id === stepId);
     setDropTarget({ stepId, index: step?.fields.length ?? 0 });
   }
+  function startDragStep(stepId: string) {
+    dragPayload.current = { kind: "step", stepId };
+  }
+  function handleDragOverStepSlot(e: React.DragEvent, index: number) {
+    if (dragPayload.current?.kind !== "step") return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setStepDropTarget(index);
+  }
+  function handleDropStep(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    const payload = dragPayload.current;
+    if (!payload || payload.kind !== "step") return;
+    updateSteps((steps) => {
+      const oldIdx = steps.findIndex((s) => s.id === payload.stepId);
+      if (oldIdx < 0) return steps;
+      const [moved] = steps.splice(oldIdx, 1);
+      const insertAt = oldIdx < index ? index - 1 : index;
+      steps.splice(insertAt, 0, moved);
+      return steps;
+    });
+    dragPayload.current = null;
+    setStepDropTarget(null);
+  }
   function handleDragEnd() {
     dragPayload.current = null;
     setDropTarget(null);
+    setStepDropTarget(null);
   }
   function handleDrop(e: React.DragEvent, stepId: string, index: number) {
     e.preventDefault();
@@ -294,7 +327,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
       const field = makeField(payload.fieldType, payload.label);
       insertField(stepId, index, field);
       selectField(stepId, field.id);
-    } else {
+    } else if (payload.kind === "field") {
       const sourceStep = schema.steps.find((s) => s.id === payload.sourceStepId);
       const field = sourceStep?.fields.find((f) => f.id === payload.fieldId);
       if (!field) return;
@@ -486,12 +519,35 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
             <div className="w-full max-w-2xl space-y-6">
               {schema.steps.map((step, si) => {
                 const isExpanded = expandedSteps.has(step.id);
+                const isStepSelected = selectedStepId === step.id && !selectedFieldId;
+                const isStepDropBefore = stepDropTarget === si;
                 return (
                   <div key={step.id} className="relative flex flex-col items-center">
-                    <div className="w-full bg-surface-container border border-outline-variant/15 rounded-2xl shadow-lg shadow-black/10 overflow-hidden">
+                    {/* Step drop indicator */}
+                    {isStepDropBefore && (
+                      <div className="w-full h-1 bg-primary rounded-full mb-2" />
+                    )}
+                    <div
+                      draggable
+                      onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; startDragStep(step.id); }}
+                      onDragOver={(e) => handleDragOverStepSlot(e, si)}
+                      onDrop={(e) => handleDropStep(e, si)}
+                      onDragEnd={handleDragEnd}
+                      className={`w-full bg-surface-container border rounded-2xl shadow-lg shadow-black/10 overflow-hidden transition-all ${
+                        isStepSelected
+                          ? "border-primary/40 ring-1 ring-primary/20"
+                          : "border-outline-variant/15"
+                      }`}
+                    >
                       {/* Step header */}
-                      <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-4">
-                        <button onClick={() => toggleStep(step.id)} className="text-on-surface-variant hover:text-on-surface text-sm w-5 shrink-0">
+                      <div
+                        className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-4 cursor-grab active:cursor-grabbing"
+                        onClick={() => selectStep(step.id)}
+                      >
+                        <div className="text-on-surface-variant/40 hover:text-on-surface-variant select-none shrink-0">
+                          <i className="fa-solid fa-grip-vertical text-[10px]" />
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleStep(step.id); }} className="text-on-surface-variant hover:text-on-surface text-sm w-5 shrink-0">
                           <i className={`fa-solid ${isExpanded ? "fa-chevron-down" : "fa-chevron-right"} text-[10px]`} />
                         </button>
                         <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] text-on-primary font-bold shrink-0">
@@ -500,6 +556,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
                         <input
                           value={step.title}
                           onChange={(e) => updateStepMeta(step.id, { title: e.target.value })}
+                          onClick={(e) => e.stopPropagation()}
                           className="text-sm font-bold text-on-surface bg-transparent border-none outline-none flex-1 min-w-0"
                           placeholder="Step title"
                         />
@@ -511,11 +568,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
                         <span className="text-xs text-on-surface-variant/60 whitespace-nowrap shrink-0 hidden sm:inline">
                           {step.fields.length} field{step.fields.length !== 1 ? "s" : ""}
                         </span>
-                        <div className="flex items-center gap-0.5 shrink-0">
-                          <button disabled={si === 0} onClick={() => moveStep(step.id, -1)} className="p-1 text-on-surface-variant hover:text-on-surface disabled:opacity-30" aria-label="Move step up"><i className="fa-solid fa-arrow-up text-xs" aria-hidden="true" /></button>
-                          <button disabled={si === schema.steps.length - 1} onClick={() => moveStep(step.id, 1)} className="p-1 text-on-surface-variant hover:text-on-surface disabled:opacity-30" aria-label="Move step down"><i className="fa-solid fa-arrow-down text-xs" aria-hidden="true" /></button>
-                          <button disabled={schema.steps.length <= 1} onClick={() => removeStep(step.id)} className="p-1 text-on-surface-variant hover:text-error disabled:opacity-30 ml-0.5" aria-label="Remove step"><i className="fa-solid fa-xmark text-xs" aria-hidden="true" /></button>
-                        </div>
+                        <button disabled={schema.steps.length <= 1} onClick={(e) => { e.stopPropagation(); removeStep(step.id); }} className="p-1 text-on-surface-variant hover:text-error disabled:opacity-30 shrink-0" aria-label="Remove step"><i className="fa-solid fa-xmark text-xs" aria-hidden="true" /></button>
                       </div>
 
                       {/* Step body */}
@@ -525,23 +578,6 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
                           onDragOver={(e) => handleDragOverStep(e, step.id)}
                           onDrop={(e) => handleDrop(e, step.id, step.fields.length)}
                         >
-                          <input
-                            value={step.description ?? ""}
-                            onChange={(e) => updateStepMeta(step.id, { description: e.target.value })}
-                            placeholder="Step description (optional)"
-                            className="w-full text-xs text-on-surface-variant bg-transparent border-none outline-none mb-2"
-                          />
-
-                          {/* Page-level condition */}
-                          <div className="mb-3">
-                            <ConditionBuilder
-                              condition={step.showCondition}
-                              onChange={(c) => updateStepMeta(step.id, { showCondition: c })}
-                              allFields={schema.steps.flatMap((s) => s.fields)}
-                              label="Show this page when"
-                            />
-                          </div>
-
                           {step.fields.length === 0 && !dropTarget && (
                             <div className="text-center py-8 text-sm text-on-surface-variant border-2 border-dashed border-outline-variant/20 rounded-xl">
                               Drag a field here or click one from the panel
@@ -609,16 +645,26 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
                 );
               })}
 
-              {/* Add step */}
-              <button
-                onClick={addStep}
-                className="w-full h-16 border-2 border-dashed border-outline-variant/20 rounded-2xl flex items-center justify-center gap-2 group hover:border-primary/40 transition-all cursor-pointer"
+              {/* Drop zone after last step */}
+              {stepDropTarget === schema.steps.length && (
+                <div className="w-full h-1 bg-primary rounded-full" />
+              )}
+              <div
+                onDragOver={(e) => handleDragOverStepSlot(e, schema.steps.length)}
+                onDrop={(e) => handleDropStep(e, schema.steps.length)}
+                className="w-full"
               >
-                <div className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
-                  <i className="fa-solid fa-plus text-sm" />
-                </div>
-                <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Add Step</span>
-              </button>
+                {/* Add step */}
+                <button
+                  onClick={addStep}
+                  className="w-full h-16 border-2 border-dashed border-outline-variant/20 rounded-2xl flex items-center justify-center gap-2 group hover:border-primary/40 transition-all cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
+                    <i className="fa-solid fa-plus text-sm" />
+                  </div>
+                  <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Add Step</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -636,12 +682,21 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
                 onClose={clearSelection}
                 allFields={schema.steps.flatMap((s) => s.fields)}
               />
+            ) : selectedStep && !selectedFieldId ? (
+              <StepSettingsPanel
+                step={selectedStep}
+                onUpdate={(patch) => updateStepMeta(selectedStep.id, patch)}
+                onDelete={() => removeStep(selectedStep.id)}
+                onClose={clearSelection}
+                allFields={schema.steps.flatMap((s) => s.fields)}
+                canDelete={schema.steps.length > 1}
+              />
             ) : (
               <div className="space-y-4">
                 <div className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Quick Info</div>
                 <div className="glass-panel rounded-xl p-4 border border-outline-variant/10">
                   <p className="text-sm text-on-surface-variant leading-relaxed">
-                    Click a field on the canvas to edit its settings here. Drag fields from the left panel to add them to steps.
+                    Click a field on the canvas to edit its settings here. Click a page header to configure page settings. Drag fields from the left panel to add them to steps.
                   </p>
                 </div>
                 <div className="glass-panel rounded-xl p-4 border border-outline-variant/10 space-y-2">
@@ -1186,6 +1241,86 @@ function PackageSettingsPanel({ config, onUpdate }: {
         </div>
       )}
     </section>
+  );
+}
+
+/* ── Step settings panel (right pane when step selected) ── */
+
+function StepSettingsPanel({
+  step,
+  onUpdate,
+  onDelete,
+  onClose,
+  allFields,
+  canDelete,
+}: {
+  step: StepDef;
+  onUpdate: (patch: Partial<StepDef>) => void;
+  onDelete: () => void;
+  onClose: () => void;
+  allFields: FieldDef[];
+  canDelete: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-6">
+        <i className="fa-solid fa-layer-group text-primary text-lg" />
+        <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider flex-1">Page Settings</h3>
+        <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-1 transition-colors" aria-label="Close page settings"><i className="fa-solid fa-xmark text-xs" aria-hidden="true" /></button>
+      </div>
+      <div className="space-y-5">
+        <section className="space-y-3">
+          <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Page Info</div>
+          <label className="block">
+            <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Page Title</span>
+            <input
+              value={step.title}
+              onChange={(e) => onUpdate({ title: e.target.value })}
+              className={INPUT_CLS}
+              placeholder="Step title"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Description</span>
+            <textarea
+              value={step.description ?? ""}
+              onChange={(e) => onUpdate({ description: e.target.value || undefined })}
+              placeholder="Optional description shown below the page title..."
+              rows={3}
+              className={INPUT_CLS}
+            />
+          </label>
+        </section>
+
+        <section className="space-y-3">
+          <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Visibility</div>
+          <ConditionBuilder
+            condition={step.showCondition}
+            onChange={(c) => onUpdate({ showCondition: c })}
+            allFields={allFields}
+            label="Show page when"
+          />
+        </section>
+
+        <section className="space-y-3">
+          <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Summary</div>
+          <div className="glass-panel rounded-xl p-4 border border-outline-variant/10 text-sm text-on-surface">
+            {step.fields.length} field{step.fields.length !== 1 ? "s" : ""} on this page
+          </div>
+        </section>
+
+        {canDelete && (
+          <div className="pt-4">
+            <button
+              onClick={onDelete}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-error-container/20 text-error rounded-xl font-bold text-xs uppercase tracking-widest border border-error/20 hover:bg-error-container/40 transition-all"
+            >
+              <i className="fa-solid fa-trash text-[10px]" /> Delete Page
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
