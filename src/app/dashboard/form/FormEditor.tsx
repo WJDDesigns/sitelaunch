@@ -553,13 +553,9 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
                         <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] text-on-primary font-bold shrink-0">
                           {si + 1}
                         </div>
-                        <input
-                          value={step.title}
-                          onChange={(e) => updateStepMeta(step.id, { title: e.target.value })}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-sm font-bold text-on-surface bg-transparent border-none outline-none flex-1 min-w-0"
-                          placeholder="Step title"
-                        />
+                        <span className="text-sm font-bold text-on-surface flex-1 min-w-0 truncate select-none">
+                          {step.title || "Untitled Step"}
+                        </span>
                         {step.showCondition?.fieldId && (
                           <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20 shrink-0" title="This page has a visibility condition">
                             <i className="fa-solid fa-eye text-[8px] mr-0.5" /> Conditional

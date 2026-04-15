@@ -17,6 +17,7 @@ interface Props {
   accountName: string | null;
   workspaceItems: NavItem[];
   adminItems: NavItem[];
+  collapsed?: boolean;
 }
 
 export default function SidebarNav({
@@ -26,6 +27,7 @@ export default function SidebarNav({
   accountName,
   workspaceItems,
   adminItems,
+  collapsed,
 }: Props) {
   const pathname = usePathname();
 
@@ -47,7 +49,7 @@ export default function SidebarNav({
   return (
     <nav className="flex-1 px-3 flex flex-col min-h-0">
       {/* Mode toggle — only for superadmins */}
-      {isAdmin && (
+      {isAdmin && !collapsed && (
         <div className="mb-3 mx-1">
           <div className="flex bg-surface-container rounded-lg p-0.5">
             <button
@@ -75,6 +77,17 @@ export default function SidebarNav({
           </div>
         </div>
       )}
+      {isAdmin && collapsed && (
+        <div className="mb-3 flex justify-center">
+          <button
+            onClick={() => setMode(mode === "workspace" ? "admin" : "workspace")}
+            title={mode === "workspace" ? "Switch to Admin" : "Switch to Workspace"}
+            className="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+          >
+            <i className={`fa-solid ${mode === "workspace" ? "fa-briefcase" : "fa-shield-halved"} text-xs`} />
+          </button>
+        </div>
+      )}
 
       {/* Nav items */}
       <div className="space-y-1 flex-1">
@@ -87,14 +100,15 @@ export default function SidebarNav({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+              title={collapsed ? item.label : undefined}
+              className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} ${collapsed ? "px-0 mx-auto w-10 h-10" : "px-4"} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
                 active
                   ? "bg-primary/10 text-primary shadow-sm shadow-primary/5"
                   : "text-on-surface-variant/60 hover:bg-on-surface/[0.04] hover:text-on-surface"
               }`}
             >
               <i className={`fa-solid ${item.icon} w-5 text-center text-[13px]`} />
-              {item.label}
+              {!collapsed && item.label}
             </Link>
           );
         })}
@@ -103,14 +117,15 @@ export default function SidebarNav({
         {mode === "workspace" && showPartners && !isPartnerMember && (
           <Link
             href="/dashboard/partners"
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+            title={collapsed ? "Partners" : undefined}
+            className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} ${collapsed ? "px-0 mx-auto w-10 h-10" : "px-4"} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
               pathname.startsWith("/dashboard/partners")
                 ? "bg-primary/10 text-primary shadow-sm shadow-primary/5"
                 : "text-on-surface-variant/60 hover:bg-on-surface/[0.04] hover:text-on-surface"
             }`}
           >
             <i className="fa-solid fa-handshake w-5 text-center text-[13px]" />
-            Partners
+            {!collapsed && "Partners"}
           </Link>
         )}
       </div>
