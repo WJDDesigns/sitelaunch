@@ -110,8 +110,9 @@ export default function PricingPage() {
           <Link className="text-sm text-on-surface-variant hover:text-on-surface transition-colors duration-300" href="/#how-it-works">How It Works</Link>
           <Link className="text-sm text-primary font-semibold transition-colors duration-300" href="/pricing">Pricing</Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <ThemeToggle showAuto={false} />
+          <div className="h-5 w-px bg-on-surface/10 hidden sm:block" />
           <Link href="/login" className="hidden sm:inline-flex text-sm text-on-surface-variant hover:text-on-surface transition-colors">
             Sign in
           </Link>
