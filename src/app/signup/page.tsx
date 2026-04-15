@@ -18,7 +18,7 @@ export default function SignupPage() {
       <div className="relative w-full max-w-md space-y-6 animate-scale-in">
         {/* Logo */}
         <div className="flex items-center justify-center mb-2">
-          <SiteLaunchLogo className="w-12 h-12 text-primary" ringClassName="text-on-surface/60" />
+          <SiteLaunchLogo className="h-14 w-auto text-primary" ringClassName="text-on-surface/60" />
         </div>
 
         <div className="text-center">

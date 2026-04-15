@@ -17,7 +17,7 @@ interface Props {
 export default function SiteLaunchLogo({ className = "w-8 h-8", ringClassName }: Props) {
   return (
     <svg
-      viewBox="0 0 612 792"
+      viewBox="130 170 360 480"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-label="SiteLaunch logo"

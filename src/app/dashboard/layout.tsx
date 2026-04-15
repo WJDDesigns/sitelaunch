@@ -73,7 +73,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Logo */}
         <div className="px-6 py-6 mb-2">
           <div className="flex items-center gap-3">
-            <SiteLaunchLogo className="w-9 h-9 text-primary" ringClassName="text-on-surface/60" />
+            <SiteLaunchLogo className="h-10 w-auto text-primary" ringClassName="text-on-surface/60" />
             <div>
               <h2 className="text-lg font-bold text-on-surface font-headline tracking-tight">
                 {impersonatingName ?? (isAdmin ? "SiteLaunch" : (account?.name ?? "SiteLaunch"))}

@@ -101,7 +101,7 @@ export default function PricingPage() {
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-6 md:px-8 py-4 bg-background/70 backdrop-blur-2xl border-b border-on-surface/[0.04]">
         <Link href="/" className="flex items-center gap-2.5">
-          <SiteLaunchLogo className="w-8 h-8 text-primary" ringClassName="text-on-surface/70" />
+          <SiteLaunchLogo className="h-7 w-auto text-primary" ringClassName="text-on-surface/70" />
           <span className="text-lg font-bold font-headline text-on-surface tracking-tight">SiteLaunch</span>
         </Link>
         <div className="hidden md:flex items-center gap-8">
@@ -235,7 +235,7 @@ export default function PricingPage() {
       <footer className="w-full py-12 px-8 border-t border-on-surface/[0.06]">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <SiteLaunchLogo className="w-6 h-6 text-primary" ringClassName="text-on-surface/50" />
+            <SiteLaunchLogo className="h-5 w-auto text-primary" ringClassName="text-on-surface/50" />
             <span className="text-sm font-bold text-on-surface font-headline">SiteLaunch</span>
           </Link>
           <div className="flex flex-wrap justify-center gap-8 text-xs text-on-surface-variant/40 uppercase tracking-widest font-label">

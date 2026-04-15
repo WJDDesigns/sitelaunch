@@ -131,7 +131,7 @@ export default async function PartnerHomePage({ params }: Props) {
               <p className="text-xs text-on-surface/60">{footerText}</p>
             ) : null}
             <div className="flex items-center gap-2">
-              <SiteLaunchLogo className="w-5 h-5 text-primary" ringClassName="text-on-surface/50" />
+              <SiteLaunchLogo className="h-5 w-auto text-primary" ringClassName="text-on-surface/50" />
               <span className="text-sm font-bold text-on-surface font-headline">SiteLaunch</span>
             </div>
             <p className="text-[10px] uppercase tracking-[0.3em] text-on-surface/30">

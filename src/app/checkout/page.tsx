@@ -21,7 +21,7 @@ export default async function CheckoutPage({ searchParams }: Props) {
       {/* Nav */}
       <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 py-5 max-w-5xl mx-auto">
         <Link href="/" className="flex items-center gap-2.5">
-          <SiteLaunchLogo className="w-8 h-8 text-primary" ringClassName="text-on-surface/70" />
+          <SiteLaunchLogo className="h-7 w-auto text-primary" ringClassName="text-on-surface/70" />
           <span className="text-lg font-extrabold font-headline text-on-surface tracking-tight">
             SiteLaunch
           </span>
