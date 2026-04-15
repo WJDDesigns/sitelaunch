@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { addDomainToVercel, removeDomainFromVercel, isVercelConfigured } from "@/lib/vercel-domains";
 
 function isHexColor(v: string) {
   return /^#[0-9a-f]{6}$/i.test(v);
@@ -53,18 +54,20 @@ export async function updateWorkspaceSettingsAction(formData: FormData) {
   if (!isHexColor(primary_color)) throw new Error("Invalid primary color");
   if (!isHexColor(accent_color)) throw new Error("Invalid accent color");
 
-  const slug = sanitizeSlug(slug_raw || account.slug);
-
-  // If slug changed, check uniqueness
-  if (slug !== account.slug) {
-    const admin = createAdminClient();
-    const { data: existing } = await admin
-      .from("partners")
-      .select("id")
-      .eq("slug", slug)
-      .neq("id", account.id)
-      .maybeSingle();
-    if (existing) throw new Error(`The slug "${slug}" is already taken`);
+  // Slug can only be changed by superadmin — regular users keep their existing slug
+  let slug = account.slug;
+  if (session.role === "superadmin" && slug_raw) {
+    slug = sanitizeSlug(slug_raw);
+    if (slug !== account.slug) {
+      const adminCheck = createAdminClient();
+      const { data: existing } = await adminCheck
+        .from("partners")
+        .select("id")
+        .eq("slug", slug)
+        .neq("id", account.id)
+        .maybeSingle();
+      if (existing) throw new Error(`The slug "${slug}" is already taken`);
+    }
   }
 
   const updatePayload: Record<string, unknown> = {
@@ -161,6 +164,29 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
   const custom_domain = custom_domain_raw ? sanitizeDomain(custom_domain_raw) : null;
 
   const admin = createAdminClient();
+
+  // Get the old domain so we can remove it from Vercel if it changed
+  const { data: current } = await admin
+    .from("partners")
+    .select("custom_domain")
+    .eq("id", account.id)
+    .maybeSingle();
+
+  const oldDomain = current?.custom_domain ?? null;
+
+  // Register/remove domain with Vercel (SSL + routing)
+  if (isVercelConfigured()) {
+    if (oldDomain && oldDomain !== custom_domain) {
+      await removeDomainFromVercel(oldDomain);
+    }
+    if (custom_domain) {
+      const result = await addDomainToVercel(custom_domain);
+      if (!result.ok) {
+        throw new Error(result.error ?? "Failed to register domain with hosting provider.");
+      }
+    }
+  }
+
   const { error } = await admin
     .from("partners")
     .update({ custom_domain })

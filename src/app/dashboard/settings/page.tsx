@@ -99,7 +99,7 @@ export default async function SettingsPage() {
 
         {/* ─── Workspace Branding ─── */}
         {partner && (
-          <WorkspaceBrandingForm workspace={partner} rootHost={rootHost} />
+          <WorkspaceBrandingForm workspace={partner} rootHost={rootHost} isSuperadmin={session.role === "superadmin"} />
         )}
 
         {/* ─── Custom Domain ─── */}
