@@ -5,12 +5,47 @@ import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, getOrCreateCustomer } from "@/lib/stripe";
 import { getPlanBySlug } from "@/lib/plans";
+import { validateCoupon, redeemCoupon } from "@/lib/coupons";
+
+/**
+ * Validate a coupon code for a billing plan (client-side validation before checkout).
+ */
+export async function validateBillingCouponAction(
+  code: string,
+  planSlug: string,
+): Promise<{
+  valid: boolean;
+  message: string;
+  discountLabel?: string;
+  discountCents?: number;
+}> {
+  const plan = await getPlanBySlug(planSlug);
+  if (!plan) return { valid: false, message: "Plan not found." };
+
+  const result = await validateCoupon(code, plan.priceMonthly);
+  if (!result.valid) {
+    return { valid: false, message: result.reason };
+  }
+
+  const label =
+    result.coupon.type === "percentage"
+      ? `${result.coupon.value}% off`
+      : `$${(result.coupon.value / 100).toFixed(2)} off`;
+
+  return {
+    valid: true,
+    message: `Coupon applied: ${label}`,
+    discountLabel: label,
+    discountCents: result.discountCents,
+  };
+}
 
 /**
  * Create a Stripe Checkout session for upgrading to a paid plan.
  * Now reads the plan from the DB instead of hardcoded config.
+ * Supports optional coupon code for discounts.
  */
-export async function createCheckoutAction(planSlug: string) {
+export async function createCheckoutAction(planSlug: string, couponCode?: string) {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
   if (!account) throw new Error("No account found");
@@ -18,6 +53,25 @@ export async function createCheckoutAction(planSlug: string) {
   const plan = await getPlanBySlug(planSlug);
   if (!plan) throw new Error("Plan not found");
   if (!plan.stripePriceId) throw new Error("No Stripe price configured for this plan. Ask your admin to set up Stripe.");
+
+  // Validate and redeem coupon if provided
+  let stripeCouponId: string | null = null;
+
+  if (couponCode) {
+    const couponResult = await validateCoupon(couponCode, plan.priceMonthly);
+    if (!couponResult.valid) {
+      throw new Error(couponResult.reason);
+    }
+    stripeCouponId = couponResult.coupon.stripeCouponId;
+
+    // Record redemption
+    await redeemCoupon(
+      couponResult.coupon.id,
+      account.id,
+      planSlug,
+      couponResult.discountCents,
+    );
+  }
 
   // Get or create Stripe customer
   const customerId = await getOrCreateCustomer(account.id, account.name, session.email);
@@ -31,7 +85,7 @@ export async function createCheckoutAction(planSlug: string) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
@@ -46,7 +100,14 @@ export async function createCheckoutAction(planSlug: string) {
     metadata: {
       sitelaunch_partner_id: account.id,
     },
-  });
+  };
+
+  // Apply Stripe coupon/discount
+  if (stripeCouponId) {
+    checkoutParams.discounts = [{ coupon: stripeCouponId }];
+  }
+
+  const checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
 
   if (checkoutSession.url) {
     redirect(checkoutSession.url);
@@ -62,6 +123,7 @@ export async function createCheckoutAction(planSlug: string) {
  */
 export async function switchPlanAction(
   targetSlug: string,
+  couponCode?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
@@ -86,7 +148,7 @@ export async function switchPlanAction(
 
   if (!activeSub) {
     // No active subscription — redirect to checkout for new subscription
-    await createCheckoutAction(targetSlug);
+    await createCheckoutAction(targetSlug, couponCode);
     return { ok: true }; // won't reach here due to redirect
   }
 
