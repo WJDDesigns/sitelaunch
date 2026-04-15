@@ -915,6 +915,31 @@ function CelestialField({
           <input id={field.id} name={field.id} required={field.required} placeholder={field.placeholder || "#c0c1ff"} value={str} onChange={(e) => onChange(e.target.value)} className={`${INPUT_CLS} flex-1`} style={{ ...focusRing, borderColor: errBorder }} />
         </div>
 
+      ) : field.type === "consent" ? (
+        <div className="space-y-3">
+          {/* Scrollable agreement text */}
+          <div
+            className="max-h-48 overflow-y-auto rounded-xl border-2 p-4 text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap bg-surface-container-lowest/50 custom-scrollbar"
+            style={{ borderColor: errBorder || "var(--color-outline-variant)" }}
+          >
+            {field.consentText || "No agreement text provided."}
+          </div>
+          {/* Consent checkbox */}
+          <label className="flex items-start gap-3 cursor-pointer py-3 px-4 rounded-xl border-2 transition-all duration-200" style={str === "yes" ? { borderColor: primaryColor, backgroundColor: primaryColor + "08" } : { borderColor: "var(--color-outline-variant)" }}>
+            <input
+              name={field.id}
+              type="checkbox"
+              checked={str === "yes"}
+              onChange={(e) => onChange(e.target.checked ? "yes" : "")}
+              className="h-5 w-5 rounded mt-0.5 shrink-0"
+              style={{ accentColor: primaryColor }}
+            />
+            <span className="text-sm text-on-surface">
+              {field.consentCheckboxLabel || "I have read and agree to the terms above"}
+            </span>
+          </label>
+        </div>
+
       ) : field.type === "address" ? (
         <textarea id={field.id} name={field.id} required={field.required} placeholder={field.placeholder || "Street address, City, State, ZIP"} rows={3} value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
 

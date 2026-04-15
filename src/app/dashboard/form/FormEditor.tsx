@@ -31,6 +31,7 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "files", label: "Multi-File", icon: "fa-folder-open", group: "advanced" },
   { type: "package", label: "Package Selector", icon: "fa-box-open", group: "advanced" },
   { type: "repeater", label: "Repeater / Pages", icon: "fa-layer-group", group: "advanced" },
+  { type: "consent", label: "Consent / Terms", icon: "fa-file-contract", group: "advanced" },
 ];
 
 function iconFor(type: FieldType) {
@@ -89,6 +90,12 @@ function makeField(type: FieldType, label: string): FieldDef {
       entryLabel: "Page",
     };
     base.label = "Which pages will your site have?";
+  }
+  if (type === "consent") {
+    base.label = "Terms & Conditions";
+    base.required = true;
+    base.consentText = "Please read and agree to our terms and conditions before proceeding.\n\nBy submitting this form you acknowledge that the information provided is accurate and complete to the best of your knowledge.";
+    base.consentCheckboxLabel = "I have read and agree to the terms above";
   }
   return base;
 }
@@ -850,6 +857,32 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields }: {
 
         {field.type === "repeater" && field.repeaterConfig && (
           <RepeaterSettingsPanel config={field.repeaterConfig} onUpdate={(cfg) => onUpdate({ repeaterConfig: cfg })} />
+        )}
+
+        {field.type === "consent" && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Consent Configuration</div>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Agreement Text</span>
+              <textarea
+                value={field.consentText ?? ""}
+                onChange={(e) => onUpdate({ consentText: e.target.value })}
+                placeholder="Enter the terms, privacy policy, or agreement text that users must read before consenting..."
+                rows={8}
+                className={INPUT_CLS}
+              />
+              <span className="text-[9px] text-on-surface-variant/50 mt-0.5 block">This text will appear in a scrollable box. Users must scroll through it before checking the consent box.</span>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Checkbox Label</span>
+              <input
+                value={field.consentCheckboxLabel ?? ""}
+                onChange={(e) => onUpdate({ consentCheckboxLabel: e.target.value || undefined })}
+                placeholder='e.g. "I have read and agree to the terms above"'
+                className={INPUT_CLS}
+              />
+            </label>
+          </section>
         )}
 
         <section className="space-y-3">

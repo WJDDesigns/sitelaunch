@@ -17,7 +17,8 @@ export type FieldType =
   | "file"
   | "files"
   | "package"
-  | "repeater";
+  | "repeater"
+  | "consent";
 
 /* ── Package Selector types ─────────────────────────────── */
 
@@ -131,6 +132,10 @@ export interface FieldDef {
   packageConfig?: PackageConfig;
   /** For repeater fields — sub-fields and entry config */
   repeaterConfig?: RepeaterConfig;
+  /** For consent fields — the scrollable agreement text (plain text or HTML) */
+  consentText?: string;
+  /** For consent fields — label next to the checkbox, e.g. "I agree to the terms above" */
+  consentCheckboxLabel?: string;
   /** Show this field only when the condition is met */
   showCondition?: ShowCondition;
 }
@@ -221,6 +226,11 @@ export function validateStepData(
     // Package fields store selected package id — validated as required if set.
     if (f.type === "package") {
       if (f.required && (!v || v === "")) errors[f.id] = "Please select a package";
+      continue;
+    }
+    // Consent fields must be checked ("yes") when required.
+    if (f.type === "consent") {
+      if (f.required && v !== "yes") errors[f.id] = "You must agree to continue";
       continue;
     }
     if (f.required) {
