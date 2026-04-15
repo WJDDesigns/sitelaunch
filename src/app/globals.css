@@ -434,6 +434,143 @@ h1, h2, h3, h4, .headline {
 .delay-7 { animation-delay: 0.4s; }
 .delay-8 { animation-delay: 0.5s; }
 
+/* ── Holographic card effect ───────────────────── */
+
+.holo-card {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --card-opacity: 0;
+  --pointer-from-center: 0;
+  --glow-color: rgba(var(--color-primary), 0.4);
+  perspective: 600px;
+  position: relative;
+  z-index: 1;
+}
+
+.holo-card--active {
+  z-index: 10;
+}
+
+.holo-card__rotator {
+  display: grid;
+  border-radius: inherit;
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+  transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y));
+  will-change: transform;
+}
+
+.holo-card:not(.holo-card--active) .holo-card__rotator {
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* Glow on hover */
+.holo-card--active .holo-card__rotator {
+  box-shadow:
+    0 0 6px -1px white,
+    0 0 12px 2px var(--glow-color),
+    0 20px 40px -10px rgba(0, 0, 0, 0.35),
+    0 0 60px -20px var(--glow-color);
+}
+
+.holo-card--featured.holo-card--active .holo-card__rotator {
+  box-shadow:
+    0 0 8px -1px white,
+    0 0 16px 4px var(--glow-color),
+    0 20px 50px -10px rgba(0, 0, 0, 0.4),
+    0 0 80px -20px var(--glow-color);
+}
+
+.holo-card__content,
+.holo-card__shine,
+.holo-card__glare {
+  grid-area: 1 / 1;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.holo-card__content {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Rainbow shimmer layer ── */
+.holo-card__shine {
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+  opacity: var(--card-opacity);
+  transition: opacity 0.3s ease;
+  background-image:
+    repeating-linear-gradient(
+      110deg,
+      hsl(283, 100%, 73%) 0%,
+      hsl(228, 100%, 74%) 7%,
+      hsl(176, 100%, 76%) 14%,
+      hsl(93, 100%, 69%) 21%,
+      hsl(53, 100%, 69%) 28%,
+      hsl(2, 100%, 73%) 35%,
+      hsl(283, 100%, 73%) 42%,
+      hsl(228, 100%, 74%) 49%,
+      hsl(176, 100%, 76%) 56%,
+      hsl(93, 100%, 69%) 63%,
+      hsl(53, 100%, 69%) 70%,
+      hsl(2, 100%, 73%) 77%
+    );
+  background-position:
+    calc(((50% - var(--pointer-x)) * 2) + 50%)
+    calc(((50% - var(--pointer-y)) * 2) + 50%);
+  background-size: 300% 300%;
+  filter: brightness(0.7) contrast(2.5) saturate(0.6);
+}
+
+.holo-card__shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsla(0, 0%, 90%, 0.8) 0%,
+    hsla(0, 0%, 70%, 0.15) 30%,
+    hsl(0, 0%, 0%) 90%
+  );
+  mix-blend-mode: luminosity;
+  filter: brightness(0.6) contrast(3);
+}
+
+/* ── Glare / specular highlight ── */
+.holo-card__glare {
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: var(--card-opacity);
+  transition: opacity 0.3s ease;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsla(0, 0%, 100%, 0.7) 10%,
+    hsla(0, 0%, 100%, 0.5) 25%,
+    hsla(0, 0%, 0%, 0.4) 90%
+  );
+}
+
+.holo-card__glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    hsl(180, 100%, 95%) 5%,
+    hsla(0, 0%, 39%, 0.2) 55%,
+    hsla(0, 0%, 0%, 0.3) 110%
+  );
+  mix-blend-mode: overlay;
+  filter: brightness(0.6) contrast(2.5);
+}
+
 /* ── Scrollbar styling ──────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import HomePricingTeaser from "./HomePricingTeaser";
 
 export default function LandingPage() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "/login";
@@ -356,26 +357,7 @@ export default function LandingPage() {
             Start free with Comet, grow with Nova, and go unlimited with Supernova.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-12">
-            <div className="glass-panel rounded-2xl border border-outline-variant/[0.08] p-6 text-center hover:border-outline-variant/20 transition-all duration-500 glow-card">
-              <h3 className="text-lg font-bold font-headline mb-1">Comet</h3>
-              <div className="text-3xl font-extrabold font-headline mb-2">Free</div>
-              <p className="text-xs text-on-surface-variant/60">1 submission/mo &middot; 1 GB</p>
-            </div>
-            <div className="gradient-border rounded-2xl">
-              <div className="glass-panel rounded-2xl p-6 text-center relative glow-card">
-                <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-                <h3 className="text-lg font-bold font-headline mb-1 text-primary">Nova</h3>
-                <div className="text-3xl font-extrabold font-headline gradient-text mb-2">$99<span className="text-base font-normal text-on-surface-variant">/mo</span></div>
-                <p className="text-xs text-on-surface-variant/60">25 submissions/mo &middot; 50 GB</p>
-              </div>
-            </div>
-            <div className="glass-panel rounded-2xl border border-outline-variant/[0.08] p-6 text-center hover:border-outline-variant/20 transition-all duration-500 glow-card">
-              <h3 className="text-lg font-bold font-headline mb-1">Supernova</h3>
-              <div className="text-3xl font-extrabold font-headline mb-2">$249<span className="text-base font-normal text-on-surface-variant">/mo</span></div>
-              <p className="text-xs text-on-surface-variant/60">Unlimited &middot; 500 GB</p>
-            </div>
-          </div>
+          <HomePricingTeaser />
 
           <Link
             href="/pricing"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import PricingCards from "./PricingCards";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -145,76 +146,7 @@ export default function PricingPage() {
         <div className="absolute inset-0 bg-crosshatch pointer-events-none" />
         <div className="absolute inset-0 bg-aurora pointer-events-none" />
         <div className="max-w-5xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-start">
-            {TIERS.map((tier, i) => (
-              <div
-                key={tier.name}
-                className={`animate-fade-up relative rounded-2xl flex flex-col transition-all duration-500 ${
-                  tier.highlight ? "md:-mt-4 md:mb-4" : ""
-                }`}
-                style={{ animationDelay: `${0.1 + i * 0.1}s` }}
-              >
-                {tier.highlight ? (
-                  <div className="gradient-border rounded-2xl h-full">
-                    <div className="relative glass-panel noise-overlay rounded-2xl p-8 md:p-10 flex flex-col h-full">
-                      <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-                      <div className="inline-flex self-start items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-6">
-                        <i className="fa-solid fa-star text-[8px] text-primary" />
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Most Popular</span>
-                      </div>
-                      <h3 className="text-2xl font-bold font-headline">{tier.name}</h3>
-                      <p className="text-sm text-on-surface-variant/60 mt-1 mb-6">{tier.tagline}</p>
-                      <div className="flex items-baseline gap-1 mb-8">
-                        <span className="text-5xl font-headline font-extrabold gradient-text">{tier.price}</span>
-                        <span className="text-on-surface-variant">{tier.period}</span>
-                      </div>
-                      <ul className="space-y-3.5 mb-8 flex-grow">
-                        {tier.features.map((f) => (
-                          <li key={f.text} className="flex items-center gap-3 text-sm">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${f.included ? "bg-tertiary/10" : "bg-surface-container-high/50"}`}>
-                              <i className={`fa-solid ${f.included ? "fa-check text-tertiary" : "fa-minus text-on-surface-variant/30"} text-[9px]`} />
-                            </div>
-                            <span className={f.included ? "" : "text-on-surface-variant/40"}>{f.text}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <Link
-                        href={tier.href}
-                        className="w-full py-3.5 text-center rounded-xl font-bold text-sm bg-primary text-on-primary hover:shadow-[0_0_30px_rgba(var(--color-primary),0.4)] transition-all duration-500"
-                      >
-                        {tier.cta}
-                      </Link>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-surface-container-low/60 border border-outline-variant/10 rounded-2xl p-8 md:p-10 flex flex-col h-full hover:border-primary/15 transition-all duration-500 glow-card">
-                    <h3 className="text-2xl font-bold font-headline">{tier.name}</h3>
-                    <p className="text-sm text-on-surface-variant/60 mt-1 mb-6">{tier.tagline}</p>
-                    <div className="flex items-baseline gap-1 mb-8">
-                      <span className="text-5xl font-headline font-extrabold">{tier.price}</span>
-                      <span className="text-on-surface-variant">{tier.period}</span>
-                    </div>
-                    <ul className="space-y-3.5 mb-8 flex-grow">
-                      {tier.features.map((f) => (
-                        <li key={f.text} className="flex items-center gap-3 text-sm">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${f.included ? "bg-surface-container-high" : "bg-surface-container-high/50"}`}>
-                            <i className={`fa-solid ${f.included ? "fa-check text-on-surface-variant/60" : "fa-minus text-on-surface-variant/20"} text-[9px]`} />
-                          </div>
-                          <span className={f.included ? "text-on-surface-variant" : "text-on-surface-variant/30"}>{f.text}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Link
-                      href={tier.href}
-                      className="w-full py-3.5 text-center rounded-xl font-bold text-sm border border-outline-variant/20 hover:border-primary/30 hover:bg-primary/5 transition-all duration-300"
-                    >
-                      {tier.cta}
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <PricingCards tiers={TIERS} />
         </div>
       </section>
 
