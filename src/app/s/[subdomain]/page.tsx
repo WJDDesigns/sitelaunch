@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { contrastText } from "@/lib/color-utils";
 import { startSubmissionAction } from "./actions";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import FormGrid from "./FormGrid";
 import Link from "next/link";
 
 interface Props {
@@ -99,34 +100,7 @@ export default async function PartnerHomePage({ params }: Props) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full animate-fade-up" style={{ animationDelay: "100ms" }}>
-            {activeForms.map((form) => (
-              <Link
-                key={form.id}
-                href={`/f/${form.slug}`}
-                className="group bg-surface-container rounded-2xl border border-outline-variant/[0.06] p-6 shadow-lg shadow-black/10 hover:border-primary/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
-              >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors" style={{ backgroundColor: `${primary}15` }}>
-                  <i className="fa-solid fa-file-lines text-lg" style={{ color: primary }} />
-                </div>
-                <h3 className="text-lg font-bold text-on-surface group-hover:text-primary transition-colors font-headline">
-                  {form.name}
-                </h3>
-                {form.description && (
-                  <p className="text-xs text-on-surface-variant/60 mt-1.5 line-clamp-2">{form.description}</p>
-                )}
-                <div className="mt-auto pt-4">
-                  <span
-                    className="inline-flex items-center gap-2 text-xs font-bold transition-colors"
-                    style={{ color: primary }}
-                  >
-                    Get started
-                    <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <FormGrid forms={activeForms} primaryColor={primary} />
 
           {partner.support_email && (
             <p className="text-xs text-on-surface-variant/50 mt-10">
