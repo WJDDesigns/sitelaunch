@@ -201,6 +201,47 @@ export async function getCurrentAccount(userId: string): Promise<AccountContext 
 }
 
 /**
+ * For partner_member users: get their directly-assigned partner context.
+ * Returns the partner they were invited to manage (not the root account).
+ */
+export async function getPartnerMemberContext(userId: string): Promise<{
+  partnerId: string;
+  partnerName: string;
+  partnerSlug: string;
+  partnerLogoUrl: string | null;
+  allowFormEditing: boolean;
+} | null> {
+  const supabase = await createClient();
+
+  const { data: membership } = await supabase
+    .from("partner_members")
+    .select("partner_id, role")
+    .eq("user_id", userId)
+    .eq("role", "partner_member")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!membership) return null;
+
+  const { data: partner } = await supabase
+    .from("partners")
+    .select("id, name, slug, logo_url, allow_partner_form_editing")
+    .eq("id", membership.partner_id)
+    .maybeSingle();
+
+  if (!partner) return null;
+
+  return {
+    partnerId: partner.id,
+    partnerName: partner.name,
+    partnerSlug: partner.slug,
+    partnerLogoUrl: partner.logo_url,
+    allowFormEditing: partner.allow_partner_form_editing ?? false,
+  };
+}
+
+/**
  * Monthly submission count for an account (rolled up across its sub-partners).
  */
 export async function getAccountUsage(accountId: string): Promise<number> {

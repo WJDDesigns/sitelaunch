@@ -2,12 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import LogoUploadForm from "./LogoUploadForm";
 import BrandingForm from "./BrandingForm";
 import DeletePartnerButton from "./DeletePartnerButton";
 import DomainSetup from "./DomainSetup";
 import WhiteLabelSection from "./WhiteLabelSection";
+import InvitePartnerSection from "./InvitePartnerSection";
 import { updatePartnerAction, updateWhiteLabelAction, uploadLogoAction, savePartnerDomainAction, deletePartnerAction } from "./actions";
+import { sendPartnerInviteAction, revokePartnerInviteAction, removePartnerMemberAction, toggleFormEditingAction } from "./invite-actions";
 import ImpersonateButton from "../ImpersonateButton";
 
 interface PageProps {
@@ -43,7 +46,45 @@ export default async function PartnerDetailPage({ params }: PageProps) {
   const boundWhiteLabel = updateWhiteLabelAction.bind(null, id);
   const boundUpload = uploadLogoAction.bind(null, id);
   const boundDomain = savePartnerDomainAction.bind(null, id);
+  const boundSendInvite = sendPartnerInviteAction.bind(null, id);
+  const boundRevokeInvite = revokePartnerInviteAction.bind(null, id);
+  const boundRemoveMember = removePartnerMemberAction.bind(null, id);
+  const boundToggleFormEditing = toggleFormEditingAction.bind(null, id);
   const storefrontHost = partner.custom_domain || `${partner.slug}.${rootHost}`;
+
+  // Fetch invites and members for this partner
+  const admin = createAdminClient();
+  const { data: invites } = await admin
+    .from("invites")
+    .select("id, email, accepted_at, expires_at, created_at")
+    .eq("partner_id", id)
+    .order("created_at", { ascending: false });
+
+  const { data: memberRows } = await admin
+    .from("partner_members")
+    .select("user_id, role")
+    .eq("partner_id", id);
+
+  // Resolve member profiles
+  const memberProfiles = [];
+  if (memberRows && memberRows.length > 0) {
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", memberRows.map((m) => m.user_id));
+
+    for (const m of memberRows) {
+      const p = profiles?.find((pr) => pr.id === m.user_id);
+      if (p) {
+        memberProfiles.push({
+          user_id: m.user_id,
+          email: p.email,
+          full_name: p.full_name,
+          role: m.role,
+        });
+      }
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-6 md:px-10 py-8"><div className="max-w-3xl space-y-6">
@@ -121,6 +162,21 @@ export default async function PartnerDetailPage({ params }: PageProps) {
 
       {/* White-label branding */}
       <WhiteLabelSection partner={partner} canEdit={canEdit} updateAction={boundWhiteLabel} />
+
+      {/* Partner members & invites */}
+      {canEdit && (
+        <InvitePartnerSection
+          partnerId={id}
+          partnerName={partner.name}
+          invites={invites ?? []}
+          members={memberProfiles}
+          sendInviteAction={boundSendInvite}
+          revokeInviteAction={boundRevokeInvite}
+          removeMemberAction={boundRemoveMember}
+          toggleFormEditingAction={boundToggleFormEditing}
+          allowFormEditing={partner.allow_partner_form_editing ?? false}
+        />
+      )}
 
       {/* Danger zone */}
       {canEdit && (

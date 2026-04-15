@@ -12,6 +12,7 @@ interface NavItem {
 
 interface Props {
   isAdmin: boolean;
+  isPartnerMember?: boolean;
   showPartners: boolean;
   accountName: string | null;
   workspaceItems: NavItem[];
@@ -20,6 +21,7 @@ interface Props {
 
 export default function SidebarNav({
   isAdmin,
+  isPartnerMember,
   showPartners,
   accountName,
   workspaceItems,
@@ -97,8 +99,8 @@ export default function SidebarNav({
           );
         })}
 
-        {/* Partners link — workspace mode only */}
-        {mode === "workspace" && showPartners && (
+        {/* Partners link — workspace mode only, hidden for partner_member */}
+        {mode === "workspace" && showPartners && !isPartnerMember && (
           <Link
             href="/dashboard/partners"
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${

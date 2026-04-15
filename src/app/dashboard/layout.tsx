@@ -1,4 +1,4 @@
-import { requireSession, getCurrentAccount, getAccountUsage, getImpersonatingPartnerId } from "@/lib/auth";
+import { requireSession, getCurrentAccount, getAccountUsage, getImpersonatingPartnerId, getPartnerMemberContext } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import SidebarNav from "./SidebarNav";
 import ImpersonationBanner from "./ImpersonationBanner";
@@ -28,11 +28,32 @@ const ADMIN_NAV = [
   { href: "/dashboard/admin/activity", label: "Activity Log", icon: "fa-timeline" },
 ];
 
+/** Scoped nav for partner_member users — they only see their own partner's stuff */
+function getPartnerMemberNav(partnerId: string, allowFormEditing: boolean) {
+  const nav = [
+    { href: "/dashboard", label: "Dashboard", icon: "fa-table-cells" },
+    { href: `/dashboard/partners/${partnerId}`, label: "Branding", icon: "fa-palette" },
+    { href: "/dashboard/submissions", label: "Submissions", icon: "fa-inbox" },
+    { href: "/dashboard/settings", label: "Profile", icon: "fa-user" },
+  ];
+  if (allowFormEditing) {
+    nav.splice(2, 0, { href: "/dashboard/form", label: "Form Builder", icon: "fa-pen-ruler" });
+  }
+  return nav;
+}
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   const isAdmin = session.role === "superadmin";
+  const isPartnerMember = session.role === "partner_member";
   const account = await getCurrentAccount(session.userId);
   const showPartners = isAdmin || account?.planType === "agency_plus_partners";
+
+  // Partner member scoped context
+  const partnerCtx = isPartnerMember ? await getPartnerMemberContext(session.userId) : null;
+  const partnerMemberNav = partnerCtx
+    ? getPartnerMemberNav(partnerCtx.partnerId, partnerCtx.allowFormEditing)
+    : null;
 
   // Check for active impersonation
   let impersonatingName: string | null = null;
@@ -63,6 +84,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
+  // Sidebar display name
+  const sidebarName = isPartnerMember && partnerCtx
+    ? partnerCtx.partnerName
+    : impersonatingName ?? (isAdmin ? "SiteLaunch" : (account?.name ?? "SiteLaunch"));
+
+  const sidebarLabel = isPartnerMember
+    ? "Partner"
+    : account ? (TIER_LABELS[account.planTier] ?? account.planTier) : "Platform";
+
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       {/* Impersonation banner */}
@@ -77,10 +107,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <SiteLaunchLogo className="h-10 w-auto text-primary" ringClassName="text-on-surface/60" />
             <div>
               <h2 className="text-lg font-bold text-on-surface font-headline tracking-tight">
-                {impersonatingName ?? (isAdmin ? "SiteLaunch" : (account?.name ?? "SiteLaunch"))}
+                {sidebarName}
               </h2>
               <p className="text-[10px] text-primary/60 uppercase tracking-widest font-semibold">
-                {account ? (TIER_LABELS[account.planTier] ?? account.planTier) : "Platform"}
+                {sidebarLabel}
               </p>
             </div>
           </Link>
@@ -89,9 +119,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Nav with mode toggle */}
         <SidebarNav
           isAdmin={isAdmin}
+          isPartnerMember={isPartnerMember}
           showPartners={showPartners}
           accountName={account?.name ?? null}
-          workspaceItems={WORKSPACE_NAV}
+          workspaceItems={partnerMemberNav ?? WORKSPACE_NAV}
           adminItems={ADMIN_NAV}
         />
 

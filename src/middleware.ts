@@ -41,7 +41,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/signup") ||
       pathname.startsWith("/auth") ||
       pathname.startsWith("/pricing") ||
-      pathname.startsWith("/checkout");
+      pathname.startsWith("/checkout") ||
+      pathname.startsWith("/invite");
     if (!user && !isPublicRoute) {
       url.pathname = "/login";
       return NextResponse.redirect(url);
