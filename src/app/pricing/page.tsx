@@ -42,7 +42,7 @@ const TIERS = [
       { text: "Team members", included: true },
     ],
     cta: "Start 14-day Trial",
-    href: "mailto:hello@mysitelaunch.com?subject=Nova%20Plan",
+    href: "/checkout?plan=pro",
     highlight: true,
   },
   {
@@ -60,8 +60,8 @@ const TIERS = [
       { text: "Custom onboarding setup", included: true },
       { text: "SLA guarantee", included: true },
     ],
-    cta: "Contact Sales",
-    href: "mailto:hello@mysitelaunch.com?subject=Supernova%20Plan",
+    cta: "Get Supernova",
+    href: "/checkout?plan=enterprise",
     highlight: false,
   },
 ];

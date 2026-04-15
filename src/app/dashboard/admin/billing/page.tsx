@@ -151,6 +151,17 @@ export default async function AdminBillingPage() {
         </p>
       </header>
 
+      {/* ── Quick Links ── */}
+      <div className="flex items-center gap-3">
+        <Link
+          href="/dashboard/admin/billing/coupons"
+          className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/15 bg-surface-container px-4 py-2.5 text-sm font-medium text-on-surface hover:border-primary/30 hover:text-primary transition-all"
+        >
+          <i className="fa-solid fa-ticket text-xs text-primary" />
+          Manage Coupons
+        </Link>
+      </div>
+
       {/* ── Revenue Metrics ── */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard label="MRR" value={`$${(mrr / 100).toLocaleString()}`} icon="fa-chart-line" />
