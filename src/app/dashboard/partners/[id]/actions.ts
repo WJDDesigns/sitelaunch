@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { addDomainToVercel, removeDomainFromVercel, isVercelConfigured } from "@/lib/vercel-domains";
 
 function isHexColor(v: string) {
   return /^#[0-9a-f]{6}$/i.test(v);
@@ -184,6 +185,32 @@ export async function savePartnerDomainAction(partnerId: string, formData: FormD
   }
 
   const admin = createAdminClient();
+
+  // Get the old domain so we can remove it from Vercel if it changed
+  const { data: current } = await admin
+    .from("partners")
+    .select("custom_domain")
+    .eq("id", partnerId)
+    .maybeSingle();
+
+  const oldDomain = current?.custom_domain ?? null;
+
+  // Register new domain with Vercel (SSL + routing)
+  if (isVercelConfigured()) {
+    // Remove old domain if it changed
+    if (oldDomain && oldDomain !== custom_domain) {
+      await removeDomainFromVercel(oldDomain);
+    }
+
+    // Add new domain
+    if (custom_domain) {
+      const result = await addDomainToVercel(custom_domain);
+      if (!result.ok) {
+        throw new Error(result.error ?? "Failed to register domain with hosting provider.");
+      }
+    }
+  }
+
   const { error } = await admin
     .from("partners")
     .update({ custom_domain })
