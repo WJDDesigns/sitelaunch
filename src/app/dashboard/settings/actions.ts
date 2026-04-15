@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addDomainToVercel, removeDomainFromVercel, isVercelConfigured } from "@/lib/vercel-domains";
+import { stripe } from "@/lib/stripe";
 
 function isHexColor(v: string) {
   return /^#[0-9a-f]{6}$/i.test(v);
@@ -197,4 +198,88 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/form");
   revalidatePath("/dashboard");
+}
+
+/**
+ * Permanently delete the user's account, workspace, and all associated data.
+ * The confirmation phrase must match exactly to proceed.
+ */
+export async function deleteAccountAction(
+  confirmationPhrase: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await requireSession();
+  const account = await getCurrentAccount(session.userId);
+
+  if (!account) return { ok: false, error: "No account found." };
+
+  // Verify the confirmation phrase
+  const expected = `delete ${account.name}`;
+  if (confirmationPhrase.trim().toLowerCase() !== expected.toLowerCase()) {
+    return { ok: false, error: "Confirmation phrase does not match." };
+  }
+
+  const admin = createAdminClient();
+
+  // 1. Cancel active Stripe subscription if any
+  try {
+    const { data: partner } = await admin
+      .from("partners")
+      .select("stripe_customer_id")
+      .eq("id", account.id)
+      .maybeSingle();
+
+    if (partner?.stripe_customer_id) {
+      const subs = await stripe.subscriptions.list({
+        customer: partner.stripe_customer_id,
+        status: "active",
+      });
+      for (const sub of subs.data) {
+        await stripe.subscriptions.cancel(sub.id);
+      }
+      const trialSubs = await stripe.subscriptions.list({
+        customer: partner.stripe_customer_id,
+        status: "trialing",
+      });
+      for (const sub of trialSubs.data) {
+        await stripe.subscriptions.cancel(sub.id);
+      }
+    }
+  } catch {
+    // Stripe errors shouldn't block account deletion
+  }
+
+  // 2. Remove custom domain from Vercel if set
+  try {
+    const { data: partner } = await admin
+      .from("partners")
+      .select("custom_domain")
+      .eq("id", account.id)
+      .maybeSingle();
+
+    if (partner?.custom_domain) {
+      await removeDomainFromVercel(partner.custom_domain);
+    }
+  } catch {
+    // Domain cleanup errors shouldn't block deletion
+  }
+
+  // 3. Delete the partner record — CASCADE handles all child tables:
+  //    partner_members, partner_forms, submissions, subscriptions,
+  //    invoices, billing_events, invites, page_views, etc.
+  const { error: partnerErr } = await admin
+    .from("partners")
+    .delete()
+    .eq("id", account.id);
+
+  if (partnerErr) {
+    return { ok: false, error: `Failed to delete workspace: ${partnerErr.message}` };
+  }
+
+  // 4. Delete the auth user (cascades to profiles table)
+  const { error: authErr } = await admin.auth.admin.deleteUser(session.userId);
+  if (authErr) {
+    return { ok: false, error: `Workspace deleted but failed to remove auth account: ${authErr.message}` };
+  }
+
+  return { ok: true };
 }

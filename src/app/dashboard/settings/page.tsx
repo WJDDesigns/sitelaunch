@@ -9,6 +9,7 @@ import LogoUploadForm from "../partners/[id]/LogoUploadForm";
 import DomainSetup from "../partners/[id]/DomainSetup";
 import WhiteLabelSection from "../partners/[id]/WhiteLabelSection";
 import WorkspaceBrandingForm from "./WorkspaceBrandingForm";
+import DeleteAccountSection from "./DeleteAccountSection";
 import {
   uploadWorkspaceLogoAction,
   updateWorkspaceWhiteLabelAction,
@@ -336,6 +337,9 @@ export default async function SettingsPage() {
           </p>
           <TestEmailButton />
         </section>
+
+        {/* ─── Danger Zone ─── */}
+        <DeleteAccountSection workspaceName={account.name} />
       </div>
     </div>
   );
