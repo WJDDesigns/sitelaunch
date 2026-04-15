@@ -6,7 +6,11 @@ import ImpersonateButton from "./ImpersonateButton";
 export default async function PartnersPage() {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
-  const partners = await getVisiblePartners();
+  const allPartners = await getVisiblePartners();
+  // Filter out the user's own root account — only show sub-partners (invited partners)
+  const partners = account
+    ? allPartners.filter((p) => p.id !== account.id)
+    : allPartners;
   const isSuperadmin = session.role === "superadmin";
 
   // Get pending invites for the account
