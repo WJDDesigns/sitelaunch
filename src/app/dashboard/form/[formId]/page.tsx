@@ -54,7 +54,7 @@ export default async function FormEditorPage({ params }: PageProps) {
 
   const rootHost = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "mysitelaunch.com").replace(/:\d+$/, "");
   const storefrontHost = partner?.custom_domain || `${partner?.slug ?? account.slug}.${rootHost}`;
-  const formPath = pf.is_default ? "" : `/start/${pf.slug}`;
+  const formPath = pf.is_default ? "" : `/f/${pf.slug}`;
   const publicUrl = hasForm ? `https://${storefrontHost}${formPath}` : null;
   const primaryColor = partner?.primary_color || "#c0c1ff";
 
