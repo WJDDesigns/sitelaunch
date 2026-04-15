@@ -470,7 +470,7 @@ function StepCard({ num, title, desc, icon, delay, accent }: { num: number; titl
     <div className={`animate-fade-up ${delay} group relative`}>
       <div className="relative glass-panel noise-overlay rounded-2xl border border-outline-variant/10 p-8 h-full hover:border-primary/20 transition-all duration-500 glow-card">
         <div className="flex items-center gap-4 mb-5">
-          <div className={`relative w-11 h-11 rounded-full ${isPrimary ? "bg-primary/15" : "bg-tertiary/15"} flex items-center justify-center ${isPrimary ? "text-primary" : "text-tertiary"} text-sm font-bold font-headline group-hover:shadow-[0_0_20px_rgba(var(--color-${accent}),0.25)] transition-all duration-500`}>
+          <div className={`relative w-11 h-11 rounded-full ${isPrimary ? "bg-primary/15" : "bg-tertiary/15"} flex items-center justify-center ${isPrimary ? "text-primary" : "text-tertiary"} text-sm font-bold font-headline ${isPrimary ? "group-hover:shadow-[0_0_20px_rgba(var(--color-primary),0.25)]" : "group-hover:shadow-[0_0_20px_rgba(var(--color-tertiary),0.25)]"} transition-all duration-500`}>
             {num}
           </div>
           <div className={`w-11 h-11 rounded-xl ${isPrimary ? "bg-primary/10 group-hover:bg-primary/20" : "bg-tertiary/10 group-hover:bg-tertiary/20"} flex items-center justify-center ${isPrimary ? "text-primary" : "text-tertiary"} transition-all duration-500`}>
