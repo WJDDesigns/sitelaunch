@@ -32,10 +32,11 @@ function projectId(): string {
 /**
  * Add a custom domain to the Vercel project.
  * Vercel will automatically provision an SSL certificate once DNS resolves.
+ * Returns the recommended CNAME target for DNS configuration.
  */
 export async function addDomainToVercel(
   domain: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; cnameTarget?: string }> {
   try {
     const res = await fetch(
       `${API_BASE}/v10/projects/${projectId()}/domains${teamQuery()}`,
@@ -48,23 +49,63 @@ export async function addDomainToVercel(
 
     const data = await res.json();
 
-    if (res.ok) return { ok: true };
+    const isOk = res.ok
+      || data?.error?.code === "domain_already_in_use"
+      || data?.error?.code === "domain_already_exists";
 
-    // Domain already added is fine
-    if (data?.error?.code === "domain_already_in_use" || data?.error?.code === "domain_already_exists") {
-      return { ok: true };
+    if (!isOk) {
+      return {
+        ok: false,
+        error: data?.error?.message ?? `Vercel API error: ${res.status}`,
+      };
     }
 
-    return {
-      ok: false,
-      error: data?.error?.message ?? `Vercel API error: ${res.status}`,
-    };
+    // Fetch the domain config to get the recommended CNAME target
+    const cnameTarget = await getDomainCnameTarget(domain);
+
+    return { ok: true, cnameTarget };
   } catch (err) {
     return {
       ok: false,
       error: `Failed to register domain with hosting: ${(err as Error).message}`,
     };
   }
+}
+
+/**
+ * Get the recommended CNAME target for a domain from Vercel's domain config API.
+ */
+async function getDomainCnameTarget(domain: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/v6/domains/${domain}/config${teamQuery()}`,
+      { headers: headers() },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      // cnames array contains the recommended CNAME targets
+      if (data?.cnames?.length > 0) return data.cnames[0];
+    }
+
+    // Fallback: try the project domain endpoint
+    const projRes = await fetch(
+      `${API_BASE}/v9/projects/${projectId()}/domains/${domain}${teamQuery()}`,
+      { headers: headers() },
+    );
+    if (projRes.ok) {
+      const projData = await projRes.json();
+      if (projData?.apexName) {
+        // Vercel uses a project-specific CNAME like <hash>.vercel-dns-017.com
+        // The verification array may contain it
+        if (projData?.verification?.[0]?.value) {
+          return projData.verification[0].value;
+        }
+      }
+    }
+  } catch {
+    // Non-critical — fall back to default
+  }
+  return undefined;
 }
 
 /**

@@ -196,24 +196,29 @@ export async function savePartnerDomainAction(partnerId: string, formData: FormD
   const oldDomain = current?.custom_domain ?? null;
 
   // Register new domain with Vercel (SSL + routing)
+  let cnameTarget: string | null = null;
   if (isVercelConfigured()) {
     // Remove old domain if it changed
     if (oldDomain && oldDomain !== custom_domain) {
       await removeDomainFromVercel(oldDomain);
     }
 
-    // Add new domain
+    // Add new domain and get the recommended CNAME target
     if (custom_domain) {
       const result = await addDomainToVercel(custom_domain);
       if (!result.ok) {
         throw new Error(result.error ?? "Failed to register domain with hosting provider.");
       }
+      cnameTarget = result.cnameTarget ?? null;
     }
   }
 
+  const updatePayload: Record<string, unknown> = { custom_domain };
+  if (cnameTarget) updatePayload.cname_target = cnameTarget;
+
   const { error } = await admin
     .from("partners")
-    .update({ custom_domain })
+    .update(updatePayload)
     .eq("id", partnerId);
 
   if (error) throw new Error(error.message);

@@ -157,6 +157,7 @@ export default async function PartnerDetailPage({ params }: PageProps) {
           partnerId={id}
           currentDomain={partner.custom_domain ?? null}
           saveAction={boundDomain}
+          cnameTarget={partner.cname_target ?? undefined}
         />
       )}
 

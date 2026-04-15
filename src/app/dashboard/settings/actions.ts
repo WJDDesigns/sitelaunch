@@ -175,6 +175,7 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
   const oldDomain = current?.custom_domain ?? null;
 
   // Register/remove domain with Vercel (SSL + routing)
+  let cnameTarget: string | null = null;
   if (isVercelConfigured()) {
     if (oldDomain && oldDomain !== custom_domain) {
       await removeDomainFromVercel(oldDomain);
@@ -184,12 +185,16 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
       if (!result.ok) {
         throw new Error(result.error ?? "Failed to register domain with hosting provider.");
       }
+      cnameTarget = result.cnameTarget ?? null;
     }
   }
 
+  const updatePayload: Record<string, unknown> = { custom_domain };
+  if (cnameTarget) updatePayload.cname_target = cnameTarget;
+
   const { error } = await admin
     .from("partners")
-    .update({ custom_domain })
+    .update(updatePayload)
     .eq("id", account.id);
 
   if (error) throw new Error(error.message);
