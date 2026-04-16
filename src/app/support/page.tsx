@@ -3,7 +3,7 @@ import SiteLaunchLogo from "@/components/SiteLaunchLogo";
 import SupportForm from "./SupportForm";
 
 export const metadata = {
-  title: "Support — SiteLaunch",
+  title: "Support | SiteLaunch",
   description: "Get help with SiteLaunch. Contact our support team.",
 };
 

@@ -99,7 +99,7 @@ export default function AnalyticsCharts({ chartData, funnelData, topPages, stats
 
       {/* Views chart */}
       <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6">
-        <h2 className="text-sm font-bold text-on-surface mb-4">Page views — last 30 days</h2>
+        <h2 className="text-sm font-bold text-on-surface mb-4">Page views (last 30 days)</h2>
         {stats.totalViews > 0 ? (
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>

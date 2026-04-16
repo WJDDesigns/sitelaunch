@@ -83,8 +83,8 @@ export default async function LandingPage() {
           </h1>
 
           <p className="animate-fade-up delay-2 max-w-2xl mx-auto text-lg md:text-xl text-on-surface-variant/80 font-body mb-12 leading-relaxed">
-            Automate your agency&apos;s client onboarding with a white-label portal that
-            collects assets, feedback, and approvals&mdash;while you sleep.
+            Your agency&apos;s client onboarding on autopilot. A white-label portal that
+            collects assets, feedback, and approvals while you sleep.
           </p>
 
           <div className="animate-fade-up delay-3 flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">

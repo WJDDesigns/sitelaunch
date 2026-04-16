@@ -111,7 +111,7 @@ export async function createPartnerInvite(args: {
         </h2>
         <p style="margin: 0 0 24px; color: #64748b; font-size: 15px; line-height: 1.6;">
           <strong style="color: #0f172a;">${escapeHtml(args.invitedByName)}</strong> has invited you to
-          manage <strong style="color: #0f172a;">${escapeHtml(args.partnerName)}</strong> on SiteLaunch —
+          manage <strong style="color: #0f172a;">${escapeHtml(args.partnerName)}</strong> on SiteLaunch,
           the client onboarding platform for agencies.
         </p>
 

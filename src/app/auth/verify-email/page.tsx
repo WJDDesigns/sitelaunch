@@ -103,7 +103,7 @@ export default function VerifyEmailPage() {
                       Sending...
                     </>
                   ) : cooldown ? (
-                    "Email sent — check your inbox"
+                    "Email sent! Check your inbox"
                   ) : (
                     <>
                       <i className="fa-solid fa-rotate-right mr-1.5" />

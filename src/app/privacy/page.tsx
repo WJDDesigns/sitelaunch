@@ -2,7 +2,7 @@ import Link from "next/link";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
 
 export const metadata = {
-  title: "Privacy Policy — SiteLaunch",
+  title: "Privacy Policy | SiteLaunch",
   description: "Privacy Policy for SiteLaunch, the client onboarding platform.",
 };
 

@@ -38,7 +38,7 @@ export async function sendTestEmailAction(): Promise<TestEmailResult> {
       ok: true,
       skipped: true,
       message:
-        "RESEND_API_KEY not set — email was logged to your server console but not sent.",
+        "RESEND_API_KEY not set. Email was logged to your server console but not sent.",
     };
   }
   if (!result.ok) {

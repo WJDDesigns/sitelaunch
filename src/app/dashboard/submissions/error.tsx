@@ -8,7 +8,7 @@ export default function SubmissionsError({ error, reset }: { error: Error & { di
       error={error}
       reset={reset}
       title="Submissions error"
-      message="Something went wrong loading submissions. Your data is safe — try refreshing."
+      message="Something went wrong loading submissions. Your data is safe. Try refreshing the page."
       backHref="/dashboard"
       backLabel="Back to Dashboard"
     />

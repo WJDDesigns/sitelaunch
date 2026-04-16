@@ -160,7 +160,7 @@ async function handleSubscriptionChange(
   await admin.from("billing_events").insert({
     partner_id: partner.id,
     event_type: eventType,
-    description: `Subscription ${sub.status} — ${tier} plan`,
+    description: `Subscription ${sub.status} - ${tier} plan`,
     stripe_event_id: event.id,
     metadata: { subscription_id: sub.id, status: sub.status, tier },
   });

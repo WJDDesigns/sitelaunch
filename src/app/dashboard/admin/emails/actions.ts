@@ -111,7 +111,7 @@ export async function sendTestTemplateAction(
   }
 
   if (result.skipped) {
-    return { ok: true, error: "RESEND_API_KEY not configured — email logged to console." };
+    return { ok: true, error: "RESEND_API_KEY not configured. Email logged to console." };
   }
 
   return { ok: true };

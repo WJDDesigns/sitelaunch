@@ -88,7 +88,7 @@ const FAQ = [
   },
   {
     q: "Do you offer annual billing?",
-    a: "Yes — annual billing comes with a 20% discount. Contact us at hello@mysitelaunch.com to set up annual billing on Nova or Supernova.",
+    a: "Yes, annual billing comes with a 20% discount. Contact us at hello@mysitelaunch.com to set up annual billing on Nova or Supernova.",
   },
   {
     q: "What file types can clients upload?",
@@ -217,7 +217,7 @@ export default function PricingPage() {
             <div className="relative glass-panel noise-overlay p-12 md:p-16 rounded-3xl overflow-hidden">
               <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-primary/[0.06] rounded-full blur-[80px] pointer-events-none" />
               <h2 className="text-3xl md:text-4xl font-headline font-bold mb-4 relative z-10">
-                Ready to streamline your onboarding?
+                Ready to simplify your onboarding?
               </h2>
               <p className="text-on-surface-variant mb-8 relative z-10 max-w-md mx-auto">
                 Start collecting client content in minutes. No credit card required.

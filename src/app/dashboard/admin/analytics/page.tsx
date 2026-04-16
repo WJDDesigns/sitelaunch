@@ -121,7 +121,7 @@ export default async function AdminAnalyticsPage() {
       <header>
         <h1 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Platform Analytics</h1>
         <p className="text-on-surface-variant mt-1">
-          Platform-wide performance across all partners — last 30 days.
+          Platform-wide performance across all partners over the last 30 days.
         </p>
       </header>
 

@@ -326,7 +326,7 @@ export default function CheckoutForm({ plans, defaultPlan, partnerProfile, partn
                   {plan.submissionsMonthlyLimit
                     ? `${plan.submissionsMonthlyLimit} submissions/month`
                     : "Unlimited submissions"}{" "}
-                  — {plan.features.slice(0, 3).join(", ")}
+                  · {plan.features.slice(0, 3).join(", ")}
                 </p>
               </div>
             </button>
@@ -348,7 +348,7 @@ export default function CheckoutForm({ plans, defaultPlan, partnerProfile, partn
                 {couponCode.toUpperCase()}
               </span>
               <span className="text-xs text-on-surface-variant/60">
-                — {couponStatus.discountLabel}
+                · {couponStatus.discountLabel}
               </span>
             </div>
             <button
@@ -400,7 +400,7 @@ export default function CheckoutForm({ plans, defaultPlan, partnerProfile, partn
         </h2>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="text-on-surface-variant/80">{activePlan?.name} — Monthly</span>
+          <span className="text-on-surface-variant/80">{activePlan?.name} · Monthly</span>
           <span className="text-on-surface font-medium">
             ${(monthlyPrice / 100).toFixed(2)}
           </span>

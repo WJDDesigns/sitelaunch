@@ -283,7 +283,7 @@ export default function CouponManager({ coupons }: { coupons: Coupon[] }) {
                       </span>
                       {coupon.description && (
                         <span className="text-xs text-on-surface-variant/40">
-                          — {coupon.description}
+                          · {coupon.description}
                         </span>
                       )}
                     </div>

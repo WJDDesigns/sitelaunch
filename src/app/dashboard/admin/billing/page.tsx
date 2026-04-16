@@ -298,7 +298,7 @@ export default async function AdminBillingPage() {
                   </p>
                   <p className="text-xs text-on-surface-variant/60">
                     ${(inv.amount_paid / 100).toFixed(2)} {inv.currency.toUpperCase()}
-                    {inv.paid_at && ` — ${new Date(inv.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                    {inv.paid_at && ` · ${new Date(inv.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
                   </p>
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border shrink-0 ${
@@ -339,7 +339,7 @@ export default async function AdminBillingPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-on-surface">
                     <span className="font-medium">{eventPartnerMap[evt.partner_id] ?? "Unknown"}</span>
-                    {" — "}
+                    {" · "}
                     {evt.description}
                   </p>
                   <p className="text-xs text-on-surface-variant/60">

@@ -65,7 +65,7 @@ export async function verifyDomainAction(
     if (match) {
       return {
         status: "verified",
-        message: `CNAME verified — ${domain} points to ${EXPECTED_TARGET}.`,
+        message: `CNAME verified. ${domain} points to ${EXPECTED_TARGET}.`,
         cnameTarget: match.replace(/\.$/, ""),
       };
     }

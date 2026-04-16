@@ -2,7 +2,7 @@ import Link from "next/link";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
 
 export const metadata = {
-  title: "Terms of Service — SiteLaunch",
+  title: "Terms of Service | SiteLaunch",
   description: "Terms of Service for SiteLaunch, the client onboarding platform.",
 };
 

@@ -426,7 +426,7 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
               </select>
             </Field>
 
-            <Field label="Tax ID / EIN" hint="Optional — for invoicing purposes.">
+            <Field label="Tax ID / EIN" hint="Optional. Used for invoicing.">
               <input
                 className={INPUT_CLS}
                 placeholder="e.g. 12-3456789"

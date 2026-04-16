@@ -393,7 +393,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId }: {
       try {
         const parsed = JSON.parse(reader.result as string) as FormSchema;
         if (!parsed.steps || !Array.isArray(parsed.steps)) {
-          setMessage({ kind: "err", text: "Invalid form schema — missing steps array." });
+          setMessage({ kind: "err", text: "Invalid form schema. Missing steps array." });
           return;
         }
         setSchema(parsed);

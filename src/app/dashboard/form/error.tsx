@@ -8,7 +8,7 @@ export default function FormBuilderError({ error, reset }: { error: Error & { di
       error={error}
       reset={reset}
       title="Form builder error"
-      message="Something went wrong with the form builder. Your forms are safe — try refreshing."
+      message="Something went wrong with the form builder. Your forms are safe. Try refreshing the page."
       backHref="/dashboard/form"
       backLabel="Back to Forms"
     />

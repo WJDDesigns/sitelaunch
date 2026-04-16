@@ -52,7 +52,7 @@ export default function AdminPlanChanger({ partnerId, partnerName, currentTier, 
       >
         {plans.map((p) => (
           <option key={p.slug} value={p.slug}>
-            {p.name}{p.priceMonthly > 0 ? ` — $${(p.priceMonthly / 100).toFixed(0)}/mo` : ""}
+            {p.name}{p.priceMonthly > 0 ? ` · $${(p.priceMonthly / 100).toFixed(0)}/mo` : ""}
           </option>
         ))}
       </select>

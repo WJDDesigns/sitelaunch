@@ -183,7 +183,7 @@ export async function deletePlanAction(planId: string) {
     .in("status", ["active", "trialing"]);
 
   if ((count ?? 0) > 0) {
-    throw new Error(`Cannot delete — ${count} active subscriptions are on this plan`);
+    throw new Error(`Cannot delete. ${count} active subscriptions are on this plan.`);
   }
 
   // Archive in Stripe

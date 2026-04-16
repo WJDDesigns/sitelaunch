@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const result = await sendMail({
       to: "support@wjddesigns.com",
-      subject: dbEmail?.subject ?? `[SiteLaunch Support] ${subject} — ${name.trim()}`,
+      subject: dbEmail?.subject ?? `[SiteLaunch Support] ${subject} - ${name.trim()}`,
       html,
       replyTo: email.trim(),
     });

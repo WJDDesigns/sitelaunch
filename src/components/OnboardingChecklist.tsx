@@ -113,7 +113,7 @@ export default function OnboardingChecklist({
               Congratulations! Your workspace is fully set up.
             </p>
             <p className="text-xs text-on-surface-variant/60 mt-1">
-              You can dismiss this card — it won't appear again.
+              You can dismiss this card. It won't appear again.
             </p>
           </div>
         </div>

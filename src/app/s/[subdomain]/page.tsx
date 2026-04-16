@@ -29,10 +29,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!partner) return { title: "Not Found" };
 
   return {
-    title: `${partner.name} — Client Onboarding`,
+    title: `${partner.name} | Client Onboarding`,
     description: `Submit your onboarding information to ${partner.name}. Powered by SiteLaunch.`,
     openGraph: {
-      title: `${partner.name} — Client Onboarding`,
+      title: `${partner.name} | Client Onboarding`,
       description: `Submit your onboarding information to ${partner.name}.`,
       ...(partner.logo_url ? { images: [{ url: partner.logo_url, width: 400, height: 400, alt: partner.name }] } : {}),
     },

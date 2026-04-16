@@ -55,7 +55,7 @@ export default function CreateFormButton({ canCreate, formsLimit, prominent }: P
           href="/dashboard/billing"
           className="text-xs font-bold text-primary hover:underline"
         >
-          Upgrade to unlock more forms
+          Upgrade for more forms
         </Link>
       </div>
     );

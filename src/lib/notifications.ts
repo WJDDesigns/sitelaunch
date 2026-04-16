@@ -51,7 +51,7 @@ export async function sendVerificationEmail(args: {
 
   await sendMail({
     to: args.to,
-    subject: dbEmail?.subject ?? "Verify your email — SiteLaunch",
+    subject: dbEmail?.subject ?? "Verify your email - SiteLaunch",
     html,
   });
 }
@@ -110,7 +110,7 @@ export async function resendVerificationEmail(args: {
 
   await sendMail({
     to: args.email,
-    subject: dbEmail?.subject ?? "Verify your email — SiteLaunch",
+    subject: dbEmail?.subject ?? "Verify your email - SiteLaunch",
     html,
   });
 }
@@ -137,7 +137,7 @@ export async function sendWelcomeEmail(args: {
 
   const planLine =
     args.planType === "agency_plus_partners"
-      ? "Your Agency + Partners workspace is ready — you can spin up sub-partners whenever you want."
+      ? "Your Agency + Partners workspace is ready. You can spin up sub-partners whenever you want."
       : "Your Agency workspace is ready.";
 
   // Try DB template first, fall back to hardcoded
@@ -470,7 +470,7 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
     });
 
     const html = dbClientEmail?.html ?? emailTemplate({
-      heading: `Thanks, ${clientName} — we got it!`,
+      heading: `Thanks, ${clientName}! We got it.`,
       body: `
         <p style="margin: 0 0 0;">
           Your onboarding info has been received by <strong>${escapeHtml(partner.name)}</strong>.
