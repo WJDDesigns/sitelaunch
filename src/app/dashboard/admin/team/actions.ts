@@ -5,10 +5,17 @@ import { requireSuperadmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import crypto from "crypto";
 
+/** Only platform owner(s) listed in SUPERADMIN_EMAILS can grant superadmin. */
+function isPlatformOwner(email: string): boolean {
+  const raw = process.env.SUPERADMIN_EMAILS ?? "";
+  if (!raw) return false;
+  return raw.split(",").map((e) => e.trim().toLowerCase()).includes(email.toLowerCase());
+}
+
 export async function inviteTeamMemberAction(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  await requireSuperadmin();
+  const session = await requireSuperadmin();
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "partner_member");
@@ -16,6 +23,11 @@ export async function inviteTeamMemberAction(
   if (!email) return { ok: false, error: "Email is required." };
   if (!["superadmin", "partner_owner", "partner_member"].includes(role)) {
     return { ok: false, error: "Invalid role." };
+  }
+
+  // Only the platform owner can grant the superadmin role
+  if (role === "superadmin" && !isPlatformOwner(session.email)) {
+    return { ok: false, error: "Only the platform owner can invite Super Admins." };
   }
 
   const admin = createAdminClient();
@@ -66,6 +78,11 @@ export async function updateRoleAction(
 
   if (!["superadmin", "partner_owner", "partner_member"].includes(newRole)) {
     return { ok: false, error: "Invalid role." };
+  }
+
+  // Only the platform owner can grant the superadmin role
+  if (newRole === "superadmin" && !isPlatformOwner(session.email)) {
+    return { ok: false, error: "Only the platform owner can promote to Super Admin." };
   }
 
   // Don't allow demoting yourself
