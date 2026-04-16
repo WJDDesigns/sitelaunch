@@ -96,17 +96,32 @@ export async function getPlanBySlug(slug: string): Promise<Plan | null> {
   return getDefaultPlans().find((p) => p.slug === normalized) ?? getDefaultPlans().find((p) => p.slug === slug) ?? null;
 }
 
+/** Fallback Stripe price IDs from env vars when DB doesn't have them */
+function fallbackStripePriceId(slug: string): string | null {
+  switch (slug) {
+    case "pro":
+    case "nova":
+      return process.env.STRIPE_PRICE_PRO ?? null;
+    case "enterprise":
+    case "supernova":
+      return process.env.STRIPE_PRICE_ENTERPRISE ?? null;
+    default:
+      return null;
+  }
+}
+
 function mapDbPlan(row: Record<string, unknown>): Plan {
+  const slug = row.slug as string;
   return {
     id: row.id as string,
-    slug: row.slug as string,
+    slug,
     name: row.name as string,
     priceMonthly: row.price_monthly as number,
     submissionsMonthlyLimit: row.submissions_monthly_limit as number | null,
     formsLimit: (row.forms_limit as number | null) ?? null,
     features: (row.features as string[]) ?? [],
     stripeProductId: row.stripe_product_id as string | null,
-    stripePriceId: row.stripe_price_id as string | null,
+    stripePriceId: (row.stripe_price_id as string | null) ?? fallbackStripePriceId(slug),
     isActive: row.is_active as boolean,
     highlight: row.highlight as boolean,
     sortOrder: row.sort_order as number,
