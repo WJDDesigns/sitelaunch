@@ -2,6 +2,13 @@ import Link from "next/link";
 import { requireSession, getVisiblePartners, getCurrentAccount } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
+const ROLE_LABELS: Record<string, string> = {
+  superadmin: "Admin",
+  partner_owner: "Owner",
+  partner_member: "Member",
+  client: "Client",
+};
+
 export default async function DashboardOverview() {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
@@ -50,7 +57,7 @@ export default async function DashboardOverview() {
         />
         <StatCard
           label="Role"
-          value={session.role === "superadmin" ? "Admin" : session.role}
+          value={ROLE_LABELS[session.role] ?? session.role}
           icon="fa-shield-halved"
           gradient="from-inverse-primary/10 to-inverse-primary/5"
           iconColor="text-inverse-primary"

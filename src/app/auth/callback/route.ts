@@ -34,6 +34,14 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(`${origin}/login?error=auth`);
 }
 
+/** Check if an email is a platform superadmin */
+function isSuperadminEmail(email: string): boolean {
+  const raw = process.env.SUPERADMIN_EMAILS ?? "";
+  if (!raw) return false;
+  const list = raw.split(",").map((e) => e.trim().toLowerCase());
+  return list.includes(email.toLowerCase());
+}
+
 /**
  * Ensure an OAuth user has a partner account.
  * If they signed up via OAuth (Google/GitHub/Apple), they skip the signup form
@@ -41,6 +49,15 @@ export async function GET(request: NextRequest) {
  */
 async function ensurePartnerExists(userId: string, email: string, fullName: string) {
   const admin = createAdminClient();
+  const isSuperadmin = isSuperadminEmail(email);
+
+  // Always ensure the profile role is correct for superadmins
+  if (isSuperadmin) {
+    await admin
+      .from("profiles")
+      .update({ role: "superadmin" })
+      .eq("id", userId);
+  }
 
   // Check if they already have a partner membership
   const { data: membership } = await admin
@@ -82,12 +99,14 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
     .eq("id", userId)
     .maybeSingle();
 
+  const role = isSuperadmin ? "superadmin" : "partner_owner";
+
   if (!profile) {
     await admin.from("profiles").insert({
       id: userId,
       email,
       full_name: fullName || null,
-      role: "partner_owner",
+      role,
     });
   }
 
@@ -114,5 +133,13 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
 
   if (rpcError) {
     console.error("[auth/callback] bootstrap_account failed:", rpcError.message);
+  }
+
+  // Re-assert superadmin role after bootstrap (in case the RPC overwrote it)
+  if (isSuperadmin) {
+    await admin
+      .from("profiles")
+      .update({ role: "superadmin" })
+      .eq("id", userId);
   }
 }
