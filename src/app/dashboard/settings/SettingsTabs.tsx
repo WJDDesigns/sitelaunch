@@ -5,6 +5,7 @@ import { useState } from "react";
 const TABS = [
   { id: "general", label: "General", icon: "fa-gear" },
   { id: "branding", label: "Branding", icon: "fa-palette" },
+  { id: "integrations", label: "Integrations", icon: "fa-plug" },
   { id: "advanced", label: "Advanced", icon: "fa-sliders" },
 ] as const;
 
@@ -13,15 +14,19 @@ type TabId = (typeof TABS)[number]["id"];
 interface Props {
   generalContent: React.ReactNode;
   brandingContent: React.ReactNode;
+  integrationsContent: React.ReactNode;
   advancedContent: React.ReactNode;
+  defaultTab?: string;
 }
 
-export default function SettingsTabs({ generalContent, brandingContent, advancedContent }: Props) {
-  const [active, setActive] = useState<TabId>("general");
+export default function SettingsTabs({ generalContent, brandingContent, integrationsContent, advancedContent, defaultTab }: Props) {
+  const initial = TABS.find((t) => t.id === defaultTab) ? (defaultTab as TabId) : "general";
+  const [active, setActive] = useState<TabId>(initial);
 
   const panels: Record<TabId, React.ReactNode> = {
     general: generalContent,
     branding: brandingContent,
+    integrations: integrationsContent,
     advanced: advancedContent,
   };
 

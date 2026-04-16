@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { FormSchema } from "@/lib/forms";
+import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
 import SubmissionActions from "./SubmissionActions";
 
 interface Props {
@@ -36,6 +37,22 @@ export default async function SubmissionDetailPage({ params }: Props) {
     .select("id, field_key, filename, mime_type, size_bytes, storage_path, created_at")
     .eq("submission_id", sub.id)
     .order("created_at", { ascending: true });
+
+  // Load cloud sync logs
+  const { data: syncLogs } = await supabase
+    .from("cloud_sync_log")
+    .select("field_key, cloud_folder_url, status, cloud_integrations:integration_id ( provider )")
+    .eq("submission_id", sub.id);
+
+  const cloudSyncByField: Record<string, { provider: string; folderUrl: string | null; status: string }> = {};
+  for (const log of syncLogs ?? []) {
+    const ci = Array.isArray(log.cloud_integrations) ? log.cloud_integrations[0] : log.cloud_integrations;
+    cloudSyncByField[log.field_key] = {
+      provider: (ci as { provider?: string } | null)?.provider ?? "unknown",
+      folderUrl: log.cloud_folder_url,
+      status: log.status,
+    };
+  }
 
   type FileRow = NonNullable<typeof fileRows>[number] & { url: string | null };
   const filesByField: Record<string, FileRow[]> = {};
@@ -130,6 +147,26 @@ export default async function SubmissionDetailPage({ params }: Props) {
                                   </li>
                                 ))}
                               </ul>
+                            )}
+                            {cloudSyncByField[f.id] && (
+                              <div className="mt-2 flex items-center gap-2 text-xs">
+                                <i className={`${PROVIDER_META[cloudSyncByField[f.id].provider as CloudProvider]?.icon ?? "fa-solid fa-cloud"} ${PROVIDER_META[cloudSyncByField[f.id].provider as CloudProvider]?.color ?? "text-primary"}`} />
+                                {cloudSyncByField[f.id].status === "synced" && cloudSyncByField[f.id].folderUrl ? (
+                                  <a
+                                    href={cloudSyncByField[f.id].folderUrl!}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-primary hover:underline font-medium"
+                                  >
+                                    View in {PROVIDER_META[cloudSyncByField[f.id].provider as CloudProvider]?.displayName ?? "Cloud"}
+                                    <i className="fa-solid fa-arrow-up-right-from-square text-[9px] ml-1" />
+                                  </a>
+                                ) : cloudSyncByField[f.id].status === "failed" ? (
+                                  <span className="text-error font-medium">Cloud sync failed</span>
+                                ) : (
+                                  <span className="text-on-surface-variant/60">Syncing to cloud...</span>
+                                )}
+                              </div>
                             )}
                           </dd>
                         </div>

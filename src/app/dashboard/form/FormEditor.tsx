@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, ShowCondition } from "@/lib/forms";
+import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
+import CloudDestinationButton from "@/components/CloudDestinationButton";
 import { saveFormSchemaAction } from "./actions";
 
 /* ── Field type catalogue ──────────────────────────────────── */
@@ -848,6 +850,29 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields }: {
               <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Allowed types</span>
               <input value={field.accept ?? ""} onChange={(e) => onUpdate({ accept: e.target.value || undefined })} placeholder="e.g. image/*,.pdf,.doc" className={INPUT_CLS} />
             </label>
+
+            {/* Cloud storage destination */}
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pt-2">Cloud Storage</div>
+            {field.cloudDestination ? (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-surface-container-highest/30 border border-outline-variant/10">
+                <i className={`${PROVIDER_META[field.cloudDestination.provider as CloudProvider]?.icon ?? "fa-solid fa-cloud"} ${PROVIDER_META[field.cloudDestination.provider as CloudProvider]?.color ?? "text-primary"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-on-surface truncate">{field.cloudDestination.folderPath}</div>
+                  <div className="text-[10px] text-on-surface-variant/60">{PROVIDER_META[field.cloudDestination.provider as CloudProvider]?.displayName ?? field.cloudDestination.provider}</div>
+                </div>
+                <button
+                  onClick={() => onUpdate({ cloudDestination: undefined })}
+                  className="text-error/60 hover:text-error text-xs shrink-0"
+                  title="Remove cloud destination"
+                >
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
+            ) : (
+              <CloudDestinationButton
+                onSelect={(dest) => onUpdate({ cloudDestination: dest })}
+              />
+            )}
           </section>
         )}
 

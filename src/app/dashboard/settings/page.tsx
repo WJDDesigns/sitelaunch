@@ -13,6 +13,7 @@ import MfaSettingsSection from "./MfaSettingsSection";
 import SessionsSection from "./SessionsSection";
 import ProfileSection from "./ProfileSection";
 import SettingsTabs from "./SettingsTabs";
+import IntegrationsSection from "./IntegrationsSection";
 import SupportForm from "../../support/SupportForm";
 import {
   uploadWorkspaceLogoAction,
@@ -148,6 +149,18 @@ export default async function SettingsPage() {
     </>
   );
 
+  /* ─────────────────────────────────────────────
+     Tab: Integrations - Cloud storage connections
+     ───────────────────────────────────────────── */
+  const { data: cloudIntegrations } = await admin
+    .from("cloud_integrations")
+    .select("id, provider, account_email, connected_at")
+    .eq("partner_id", account.id);
+
+  const integrationsContent = (
+    <IntegrationsSection integrations={cloudIntegrations ?? []} />
+  );
+
   return (
     <div className="max-w-5xl mx-auto px-6 md:px-10 py-8">
       <div className="max-w-3xl space-y-6">
@@ -163,6 +176,7 @@ export default async function SettingsPage() {
         <SettingsTabs
           generalContent={generalContent}
           brandingContent={brandingContent}
+          integrationsContent={integrationsContent}
           advancedContent={advancedContent}
         />
       </div>

@@ -6,6 +6,7 @@ import { absoluteUrl } from "@/lib/host-url";
 import type { FormSchema } from "@/lib/forms";
 import { validateStepData } from "@/lib/forms";
 import { notifyPartnerOfSubmission } from "@/lib/notifications";
+import { syncFilesToCloud } from "@/lib/cloud/sync";
 
 async function loadSubmissionByToken(token: string) {
   const admin = createAdminClient();
@@ -108,12 +109,19 @@ export async function submitSubmissionAction(token: string) {
     event_type: "complete",
   }).then(() => {}, () => {});
 
-  // Fire-and-log notifications. We never throw from here — a failed email
+  // Fire-and-log notifications. We never throw from here -- a failed email
   // shouldn't block the client's happy-path.
   try {
     await notifyPartnerOfSubmission(sub.id);
   } catch (err) {
     console.error("[notify] failed:", err);
+  }
+
+  // Sync uploaded files to cloud storage (fire-and-forget)
+  try {
+    await syncFilesToCloud(sub.id);
+  } catch (err) {
+    console.error("[cloud-sync] failed:", err);
   }
 
   redirect(await absoluteUrl(`/thanks/${token}`));

@@ -147,6 +147,12 @@ export interface FieldDef {
   consentCheckboxLabel?: string;
   /** Show this field only when the condition is met */
   showCondition?: ShowCondition;
+  /** For file/files fields: optional cloud storage destination */
+  cloudDestination?: {
+    provider: "google_drive" | "dropbox" | "onedrive" | "box";
+    folderId: string;
+    folderPath: string;
+  };
 }
 
 export interface UploadedFile {
