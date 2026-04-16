@@ -33,17 +33,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { credential, challenge, deviceName } = body;
 
+    // Pass the real browser origin so verification matches
+    const requestOrigin = request.headers.get("origin") ?? undefined;
+
     const verification = await verifyAndStoreRegistration(
       session.userId,
       credential,
       challenge,
       deviceName,
+      requestOrigin,
     );
 
     return NextResponse.json({ verified: verification.verified });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Registration failed";
-    console.error("[passkey/register] Verification failed:", err);
+    console.error("[passkey/register] Verification failed:", message, err);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

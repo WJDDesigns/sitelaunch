@@ -14,27 +14,55 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const RP_NAME = "SiteLaunch";
 
 function getRpId(): string {
+  // Explicit override takes priority
   if (process.env.PASSKEY_RP_ID) return process.env.PASSKEY_RP_ID;
 
-  // In development on localhost, the RP ID must be "localhost"
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+  // In development on localhost, the RP ID must be "localhost"
   if (appUrl.includes("localhost") || appUrl.includes("127.0.0.1")) {
     return "localhost";
   }
 
-  return (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "mysitelaunch.com").replace(/:\d+$/, "");
+  // Use ROOT_DOMAIN if set (e.g. "mysitelaunch.com")
+  if (process.env.NEXT_PUBLIC_ROOT_DOMAIN) {
+    return process.env.NEXT_PUBLIC_ROOT_DOMAIN.replace(/:\d+$/, "");
+  }
+
+  // Derive from APP_URL: "https://app.mysitelaunch.com" → "mysitelaunch.com"
+  if (appUrl) {
+    try {
+      const hostname = new URL(appUrl).hostname; // "app.mysitelaunch.com"
+      // Use the registrable domain (drop first subdomain if present)
+      const parts = hostname.split(".");
+      if (parts.length > 2) {
+        return parts.slice(1).join("."); // "mysitelaunch.com"
+      }
+      return hostname;
+    } catch {
+      // fall through
+    }
+  }
+
+  return "mysitelaunch.com";
 }
 
-function getExpectedOrigins(): string[] {
+function getExpectedOrigins(requestOrigin?: string): string[] {
   const origins: string[] = [];
   const rpId = getRpId();
 
-  // Always include the configured app URL
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  // The actual browser origin from the request — most reliable
+  if (requestOrigin) {
+    origins.push(requestOrigin);
   }
 
-  // Include common variants
+  // Configured app URL
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    // Strip trailing slash if present
+    origins.push(process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""));
+  }
+
+  // Common production variants
   origins.push(`https://app.${rpId}`);
   origins.push(`https://${rpId}`);
 
@@ -45,7 +73,6 @@ function getExpectedOrigins(): string[] {
     origins.push("http://127.0.0.1:3000");
   }
 
-  // Deduplicate
   return [...new Set(origins)];
 }
 
@@ -114,12 +141,18 @@ export async function verifyAndStoreRegistration(
   response: RegistrationResponseJSON,
   expectedChallenge: string,
   deviceName?: string,
+  requestOrigin?: string,
 ) {
+  const rpId = getRpId();
+  const origins = getExpectedOrigins(requestOrigin);
+
+  console.log("[passkey] verifying registration — rpId:", rpId, "origins:", origins, "requestOrigin:", requestOrigin);
+
   const verification = await verifyRegistrationResponse({
     response,
     expectedChallenge,
-    expectedOrigin: getExpectedOrigins(),
-    expectedRPID: getRpId(),
+    expectedOrigin: origins,
+    expectedRPID: rpId,
   });
 
   if (!verification.verified || !verification.registrationInfo) {
@@ -176,6 +209,7 @@ export async function verifyAuthentication(
   userId: string,
   response: AuthenticationResponseJSON,
   expectedChallenge: string,
+  requestOrigin?: string,
 ) {
   const existingPasskeys = await getUserPasskeys(userId);
   const credId = response.id;
@@ -188,7 +222,7 @@ export async function verifyAuthentication(
   const verification = await verifyAuthenticationResponse({
     response,
     expectedChallenge,
-    expectedOrigin: getExpectedOrigins(),
+    expectedOrigin: getExpectedOrigins(requestOrigin),
     expectedRPID: getRpId(),
     credential: {
       id: passkey.credentialId,

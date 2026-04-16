@@ -112,7 +112,10 @@ export default function MfaSetupFlow({ redirectTo, userEmail }: Props) {
       });
 
       const result = await verifyRes.json();
-      if (!result.verified) throw new Error("Passkey verification failed");
+      if (!verifyRes.ok) {
+        throw new Error(result.error || "Server rejected passkey registration");
+      }
+      if (!result.verified) throw new Error("Passkey verification returned false");
 
       setStep("done");
     } catch (err) {

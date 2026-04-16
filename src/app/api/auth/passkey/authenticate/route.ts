@@ -34,10 +34,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { credential, challenge } = body;
 
+    const requestOrigin = request.headers.get("origin") ?? undefined;
+
     const verification = await verifyAuthentication(
       session.userId,
       credential,
       challenge,
+      requestOrigin,
     );
 
     if (verification.verified) {
