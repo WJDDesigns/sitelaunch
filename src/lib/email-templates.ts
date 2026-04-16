@@ -158,7 +158,8 @@ export function emailTemplate(opts: TemplateOptions): string {
           <!-- Logo -->
           <tr>
             <td style="padding: 0 0 24px; text-align: center;">
-              <span style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display: block; margin: 0 auto 8px; border: 0;" />
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <!-- Card -->

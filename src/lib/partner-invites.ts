@@ -95,7 +95,8 @@ export async function createPartnerInvite(args: {
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #0b1326 0%, #1a1f3a 100%); border-radius: 16px 16px 0 0; padding: 40px 32px; text-align: center;">
-        <div style="font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+        <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display: block; margin: 0 auto 8px; border: 0;" />
+        <div style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
           SiteLaunch
         </div>
         <div style="font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">

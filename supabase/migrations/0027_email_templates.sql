@@ -37,7 +37,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
@@ -101,7 +101,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
@@ -165,7 +165,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
@@ -240,7 +240,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
@@ -318,7 +318,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
@@ -393,7 +393,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
@@ -457,7 +457,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <span style="font-size:22px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">&#128640; SiteLaunch</span>
+              <img src="https://mysitelaunch.com/email-logo.png" alt="SiteLaunch" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">SiteLaunch</span>
             </td>
           </tr>
           <tr>
