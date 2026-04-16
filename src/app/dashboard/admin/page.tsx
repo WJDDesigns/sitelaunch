@@ -1,6 +1,7 @@
 import { requireSuperadmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
+import Image from "next/image";
 
 export default async function AdminDashboardPage() {
   await requireSuperadmin();
@@ -36,7 +37,7 @@ export default async function AdminDashboardPage() {
       .eq("is_active", true),
     admin
       .from("events")
-      .select("id, name, props, created_at, profiles ( full_name, email ), partners ( name )")
+      .select("id, name, props, created_at, profiles ( full_name, email, avatar_url ), partners ( name )")
       .order("created_at", { ascending: false })
       .limit(8),
   ]);
@@ -128,9 +129,15 @@ export default async function AdminDashboardPage() {
             const partner = Array.isArray(ev.partners) ? ev.partners[0] : ev.partners;
             return (
               <div key={ev.id} className="px-6 py-3 flex items-center gap-3">
-                <div className="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                  {(actor?.full_name || actor?.email || "?").slice(0, 1).toUpperCase()}
-                </div>
+                {actor?.avatar_url ? (
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden shrink-0">
+                    <Image src={actor.avatar_url} alt="" fill className="object-cover" sizes="28px" />
+                  </div>
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                    {(actor?.full_name || actor?.email || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-on-surface truncate">
                     <span className="font-semibold">{actor?.full_name || actor?.email || "System"}</span>

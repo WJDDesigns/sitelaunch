@@ -14,6 +14,7 @@ export interface SessionContext {
   email: string;
   fullName: string | null;
   role: AppRole;
+  avatarUrl: string | null;
 }
 
 export interface AccountSwitchContext {
@@ -44,7 +45,7 @@ export async function getSession(): Promise<SessionContext | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name, role, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -55,6 +56,7 @@ export async function getSession(): Promise<SessionContext | null> {
     email: profile.email,
     fullName: profile.full_name,
     role: profile.role as AppRole,
+    avatarUrl: profile.avatar_url ?? null,
   };
 }
 

@@ -12,7 +12,7 @@ export default async function TeamPage() {
   // Get all internal team members (superadmin, admin, support roles — NOT partner_owner/client)
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, email, full_name, role, created_at")
+    .select("id, email, full_name, avatar_url, role, created_at")
     .in("role", ["superadmin", "partner_owner", "partner_member"])
     .order("created_at", { ascending: true });
 

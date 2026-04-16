@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 
 interface Profile {
   id: string;
   email: string;
   full_name: string | null;
+  avatar_url: string | null;
   role: string;
   created_at: string;
 }
@@ -48,9 +50,15 @@ export default function TeamMemberRow({ profile, updateRoleAction, removeAction 
 
   return (
     <div className="px-6 py-3 flex items-center gap-3">
-      <div className="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center text-[11px] font-bold text-primary shrink-0">
-        {(profile.full_name || profile.email).slice(0, 1).toUpperCase()}
-      </div>
+      {profile.avatar_url ? (
+        <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0">
+          <Image src={profile.avatar_url} alt="" fill className="object-cover" sizes="36px" />
+        </div>
+      ) : (
+        <div className="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center text-[11px] font-bold text-primary shrink-0">
+          {(profile.full_name || profile.email).slice(0, 1).toUpperCase()}
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-on-surface truncate">
           {profile.full_name || profile.email}

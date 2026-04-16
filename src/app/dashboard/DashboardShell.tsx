@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import SidebarNav from "./SidebarNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
@@ -31,6 +32,8 @@ interface Props {
   userName: string;
   /** User email */
   userEmail: string;
+  /** User avatar URL */
+  userAvatarUrl: string | null;
   /** Usage line like "5 / 100 submissions" */
   usageLine: string | null;
   /** Usage ratio 0-1 */
@@ -57,6 +60,7 @@ export default function DashboardShell({
   adminItems,
   userName,
   userEmail,
+  userAvatarUrl,
   usageLine,
   usageRatio,
   showUsageBar,
@@ -183,9 +187,15 @@ export default function DashboardShell({
         <div className="border-t border-on-surface/[0.06] px-3 py-4 mt-auto">
           {collapsed ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/10 flex items-center justify-center text-[10px] font-bold text-primary ring-1 ring-primary/10">
-                {(userName || userEmail).slice(0, 1).toUpperCase()}
-              </div>
+              {userAvatarUrl ? (
+                <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-primary/10">
+                  <Image src={userAvatarUrl} alt="" fill className="object-cover" sizes="32px" />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/10 flex items-center justify-center text-[10px] font-bold text-primary ring-1 ring-primary/10">
+                  {(userName || userEmail).slice(0, 1).toUpperCase()}
+                </div>
+              )}
               <button onClick={handleSignOut} className="text-on-surface-variant/40 hover:text-primary transition-colors" title="Sign out">
                 <i className="fa-solid fa-right-from-bracket text-xs" />
               </button>
@@ -193,9 +203,15 @@ export default function DashboardShell({
           ) : (
             <>
               <div className="flex items-center gap-3 px-3 py-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/10 flex items-center justify-center text-[10px] font-bold text-primary ring-1 ring-primary/10 shrink-0">
-                  {(userName || userEmail).slice(0, 1).toUpperCase()}
-                </div>
+                {userAvatarUrl ? (
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-primary/10 shrink-0">
+                    <Image src={userAvatarUrl} alt="" fill className="object-cover" sizes="32px" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/10 flex items-center justify-center text-[10px] font-bold text-primary ring-1 ring-primary/10 shrink-0">
+                    {(userName || userEmail).slice(0, 1).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-on-surface truncate">{userName || userEmail}</p>
                   <p className="text-[10px] text-on-surface-variant/50 truncate">{userEmail}</p>

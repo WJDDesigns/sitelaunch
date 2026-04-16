@@ -133,6 +133,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           adminItems={ADMIN_NAV}
           userName={session.fullName || session.email}
           userEmail={session.email}
+          userAvatarUrl={session.avatarUrl}
           usageLine={usageLine}
           usageRatio={usageRatio}
           showUsageBar={account?.submissionsMonthlyLimit !== null}
