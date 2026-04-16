@@ -35,6 +35,8 @@ const ADMIN_NAV = [
   { href: "/dashboard/admin/activity", label: "Activity Log", icon: "fa-timeline" },
   { href: "/dashboard/admin/emails", label: "Emails", icon: "fa-envelope" },
   { href: "/dashboard/admin/announce", label: "Announce", icon: "fa-bullhorn" },
+  { href: "/dashboard/admin/speed", label: "Speed", icon: "fa-gauge-high" },
+  { href: "/dashboard/admin/security", label: "Security", icon: "fa-shield-halved" },
 ];
 
 /** Scoped nav for partner_member users — they only see their own partner's stuff */

@@ -219,7 +219,7 @@ function AccordionItem({
                 Preview
               </label>
               <iframe
-                srcDoc={htmlBody}
+                srcDoc={previewHtml(htmlBody)}
                 title="Email preview"
                 className="w-full h-[500px] rounded-xl border border-outline-variant/10 bg-white"
                 sandbox="allow-same-origin"
@@ -295,6 +295,18 @@ function AccordionItem({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Rewrite absolute logo URLs to relative paths so the preview iframe
+ * can load them from the local Next.js server instead of the production
+ * domain (which may not be reachable during development).
+ */
+function previewHtml(html: string): string {
+  return html.replace(
+    /https?:\/\/(?:www\.)?mysitelaunch\.com\/(email-logo[^"')\s]*)/g,
+    "/$1",
   );
 }
 

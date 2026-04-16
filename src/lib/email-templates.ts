@@ -7,19 +7,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-
-/* ------------------------------------------------------------------ */
-/*  Template cache (module-level, 5-minute TTL)                       */
-/* ------------------------------------------------------------------ */
-
-interface CachedTemplate {
-  subject: string;
-  html_body: string;
-  fetchedAt: number;
-}
-
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const templateCache = new Map<string, CachedTemplate>();
+import { emailTemplateCache } from "@/lib/cache-manager";
 
 /* ------------------------------------------------------------------ */
 /*  DB template helpers                                                */
@@ -28,13 +16,13 @@ const templateCache = new Map<string, CachedTemplate>();
 /**
  * Fetch a template row from `public.email_templates` by slug.
  * Returns null when the slug does not exist.
- * Results are cached for 5 minutes to avoid a DB round-trip on every send.
+ * Results are cached via the managed email template cache.
  */
 export async function getTemplate(
   slug: string,
 ): Promise<{ subject: string; html: string } | null> {
-  const cached = templateCache.get(slug);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+  const cached = emailTemplateCache.get(slug);
+  if (cached) {
     return { subject: cached.subject, html: cached.html_body };
   }
 
@@ -48,10 +36,9 @@ export async function getTemplate(
 
     if (error || !data) return null;
 
-    templateCache.set(slug, {
+    emailTemplateCache.set(slug, {
       subject: data.subject,
       html_body: data.html_body,
-      fetchedAt: Date.now(),
     });
 
     return { subject: data.subject, html: data.html_body };
