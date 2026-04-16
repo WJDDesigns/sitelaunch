@@ -94,7 +94,10 @@ export default function MfaSetupFlow({ redirectTo, userEmail }: Props) {
     try {
       // Get registration options from our API
       const optionsRes = await fetch("/api/auth/passkey/register");
-      if (!optionsRes.ok) throw new Error("Failed to get registration options");
+      if (!optionsRes.ok) {
+        const errData = await optionsRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to get options (${optionsRes.status})`);
+      }
       const options = await optionsRes.json();
 
       // Start WebAuthn registration in the browser

@@ -13,64 +13,76 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const RP_NAME = "SiteLaunch";
 
+/**
+ * Derive the WebAuthn Relying Party ID.
+ *
+ * Rules:
+ *  - RP ID must be a domain (no port, no scheme)
+ *  - RP ID must equal or be a registrable suffix of the page's origin hostname
+ *  - On localhost / lvh.me the RP ID must be "localhost"
+ */
 function getRpId(): string {
-  // Explicit override takes priority
   if (process.env.PASSKEY_RP_ID) return process.env.PASSKEY_RP_ID;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "").replace(/:\d+$/, "");
 
-  // In development on localhost, the RP ID must be "localhost"
-  if (appUrl.includes("localhost") || appUrl.includes("127.0.0.1")) {
-    return "localhost";
+  // Actual localhost — RP ID must be "localhost"
+  if (["localhost", "127.0.0.1", "0.0.0.0"].some(p => appUrl.includes(p) || rootDomain.includes(p))) {
+    // But not if using lvh.me (which resolves to 127.0.0.1 but has its own hostname)
+    if (!appUrl.includes("lvh.me") && !rootDomain.includes("lvh.me")) {
+      return "localhost";
+    }
   }
 
-  // Use ROOT_DOMAIN if set (e.g. "mysitelaunch.com")
-  if (process.env.NEXT_PUBLIC_ROOT_DOMAIN) {
-    return process.env.NEXT_PUBLIC_ROOT_DOMAIN.replace(/:\d+$/, "");
+  // lvh.me: use "lvh.me" as RP ID (the browser is on app.lvh.me, so lvh.me is valid suffix)
+  if (appUrl.includes("lvh.me") || rootDomain.includes("lvh.me")) {
+    return "lvh.me";
   }
+
+  if (rootDomain) return rootDomain;
 
   // Derive from APP_URL: "https://app.mysitelaunch.com" → "mysitelaunch.com"
   if (appUrl) {
     try {
-      const hostname = new URL(appUrl).hostname; // "app.mysitelaunch.com"
-      // Use the registrable domain (drop first subdomain if present)
+      const hostname = new URL(appUrl).hostname;
       const parts = hostname.split(".");
-      if (parts.length > 2) {
-        return parts.slice(1).join("."); // "mysitelaunch.com"
-      }
-      return hostname;
-    } catch {
-      // fall through
-    }
+      return parts.length > 2 ? parts.slice(1).join(".") : hostname;
+    } catch { /* fall through */ }
   }
 
   return "mysitelaunch.com";
 }
 
+/**
+ * Build the list of acceptable origins for WebAuthn verification.
+ * Always includes the real request origin if provided.
+ */
 function getExpectedOrigins(requestOrigin?: string): string[] {
   const origins: string[] = [];
   const rpId = getRpId();
 
-  // The actual browser origin from the request — most reliable
-  if (requestOrigin) {
-    origins.push(requestOrigin);
-  }
+  if (requestOrigin) origins.push(requestOrigin);
 
-  // Configured app URL
   if (process.env.NEXT_PUBLIC_APP_URL) {
-    // Strip trailing slash if present
     origins.push(process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""));
   }
 
-  // Common production variants
   origins.push(`https://app.${rpId}`);
   origins.push(`https://${rpId}`);
 
-  // Dev: include localhost origins
-  if (process.env.NODE_ENV === "development") {
+  // Dev: localhost variants
+  if (rpId === "localhost" || process.env.NODE_ENV === "development") {
     origins.push("http://localhost:3000");
     origins.push("http://localhost:3001");
     origins.push("http://127.0.0.1:3000");
+    // lvh.me is a popular dev proxy for 127.0.0.1
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
+    if (rootDomain.includes("lvh.me")) {
+      const port = rootDomain.match(/:(\d+)$/)?.[1] || "3000";
+      origins.push(`http://app.lvh.me:${port}`);
+      origins.push(`http://lvh.me:${port}`);
+    }
   }
 
   return [...new Set(origins)];
@@ -91,11 +103,16 @@ export interface StoredPasskey {
  */
 export async function getUserPasskeys(userId: string): Promise<StoredPasskey[]> {
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("user_passkeys")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[passkey] getUserPasskeys error:", error.message);
+    return [];
+  }
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -113,10 +130,13 @@ export async function getUserPasskeys(userId: string): Promise<StoredPasskey[]> 
  */
 export async function getRegistrationOptions(userId: string, userEmail: string) {
   const existingPasskeys = await getUserPasskeys(userId);
+  const rpId = getRpId();
+
+  console.log("[passkey] getRegistrationOptions — rpId:", rpId, "user:", userEmail);
 
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
-    rpID: getRpId(),
+    rpID: rpId,
     userID: new TextEncoder().encode(userId),
     userName: userEmail,
     attestationType: "none",
@@ -134,7 +154,8 @@ export async function getRegistrationOptions(userId: string, userEmail: string) 
 }
 
 /**
- * Verify and store a new passkey registration
+ * Verify and store a new passkey registration.
+ * Errors are thrown with descriptive messages for the client.
  */
 export async function verifyAndStoreRegistration(
   userId: string,
@@ -146,37 +167,69 @@ export async function verifyAndStoreRegistration(
   const rpId = getRpId();
   const origins = getExpectedOrigins(requestOrigin);
 
-  console.log("[passkey] verifying registration — rpId:", rpId, "origins:", origins, "requestOrigin:", requestOrigin);
+  console.log("[passkey] verify registration — rpId:", rpId, "origins:", origins, "requestOrigin:", requestOrigin);
 
-  const verification = await verifyRegistrationResponse({
-    response,
-    expectedChallenge,
-    expectedOrigin: origins,
-    expectedRPID: rpId,
-  });
-
-  if (!verification.verified || !verification.registrationInfo) {
-    throw new Error("Passkey registration verification failed");
+  // Step 1: Verify the WebAuthn response
+  let verification;
+  try {
+    verification = await verifyRegistrationResponse({
+      response,
+      expectedChallenge,
+      expectedOrigin: origins,
+      expectedRPID: rpId,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[passkey] verifyRegistrationResponse threw:", msg);
+    throw new Error(`WebAuthn verification failed: ${msg}`);
   }
 
+  if (!verification.verified || !verification.registrationInfo) {
+    console.error("[passkey] verification returned false — verified:", verification.verified);
+    throw new Error("Passkey verification returned unverified");
+  }
+
+  console.log("[passkey] verification succeeded, storing credential...");
+
+  // Step 2: Store the credential in the database
   const { credential } = verification.registrationInfo;
 
   const admin = createAdminClient();
-  await admin.from("user_passkeys").insert({
+
+  const credentialId = typeof credential.id === "string"
+    ? credential.id
+    : Buffer.from(credential.id).toString("base64url");
+
+  const publicKey = Buffer.from(credential.publicKey).toString("base64url");
+
+  const { error: insertError } = await admin.from("user_passkeys").insert({
     user_id: userId,
-    credential_id: typeof credential.id === "string" ? credential.id : Buffer.from(credential.id).toString("base64url"),
-    public_key: Buffer.from(credential.publicKey).toString("base64url"),
+    credential_id: credentialId,
+    public_key: publicKey,
     counter: credential.counter,
     device_name: deviceName || "Passkey",
     transports: response.response.transports ?? [],
   });
 
-  // Mark MFA as enabled on the profile
-  await admin
+  if (insertError) {
+    console.error("[passkey] DB insert failed:", insertError.message, insertError.details, insertError.hint);
+    throw new Error(`Failed to store passkey: ${insertError.message}`);
+  }
+
+  console.log("[passkey] credential stored, updating profile...");
+
+  // Step 3: Mark MFA as enabled on the profile
+  const { error: profileError } = await admin
     .from("profiles")
     .update({ mfa_enabled: true })
     .eq("id", userId);
 
+  if (profileError) {
+    console.error("[passkey] profile update failed:", profileError.message);
+    // Non-fatal — passkey is stored, just the flag wasn't set
+  }
+
+  console.log("[passkey] registration complete for user:", userId);
   return verification;
 }
 
@@ -233,7 +286,6 @@ export async function verifyAuthentication(
   });
 
   if (verification.verified) {
-    // Update counter
     const admin = createAdminClient();
     await admin
       .from("user_passkeys")

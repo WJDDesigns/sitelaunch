@@ -16,6 +16,7 @@ export async function GET() {
     return NextResponse.json(options);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate options";
+    console.error("[passkey/register GET]", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -33,7 +34,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { credential, challenge, deviceName } = body;
 
-    // Pass the real browser origin so verification matches
+    if (!credential || !challenge) {
+      return NextResponse.json(
+        { error: "Missing credential or challenge in request body" },
+        { status: 400 },
+      );
+    }
+
     const requestOrigin = request.headers.get("origin") ?? undefined;
 
     const verification = await verifyAndStoreRegistration(
@@ -47,7 +54,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ verified: verification.verified });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Registration failed";
-    console.error("[passkey/register] Verification failed:", message, err);
+    console.error("[passkey/register POST]", message);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
