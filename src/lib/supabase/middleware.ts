@@ -26,5 +26,19 @@ export async function updateSession(request: NextRequest) {
   // Refresh the session if expired.
   const { data: { user } } = await supabase.auth.getUser();
 
-  return { response, user };
+  // Check AAL level for MFA enforcement
+  let aal: string | null = null;
+  let hasMfaFactors = false;
+
+  if (user) {
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    aal = aalData?.currentLevel ?? null;
+
+    // Check if user has any verified TOTP factors
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    hasMfaFactors = (factors?.totp ?? []).some(f => f.status === "verified")
+      || (factors?.phone ?? []).some(f => f.status === "verified");
+  }
+
+  return { response, user, aal, hasMfaFactors };
 }

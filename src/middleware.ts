@@ -3,7 +3,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { resolveTenant } from "@/lib/tenant";
 
 export async function middleware(request: NextRequest) {
-  const { response, user } = await updateSession(request);
+  const { response, user, aal, hasMfaFactors } = await updateSession(request);
 
   const host = request.headers.get("host") || "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "mysitelaunch.com";
@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
 
   // Tenant debug logging — only in development
   if (process.env.NODE_ENV === "development") {
-    console.log(`[mw] host=${host} root=${rootDomain} kind=${tenant.kind} slug=${tenant.slug ?? "-"} path=${request.nextUrl.pathname} user=${user ? "yes" : "no"}`);
+    console.log(`[mw] host=${host} root=${rootDomain} kind=${tenant.kind} slug=${tenant.slug ?? "-"} path=${request.nextUrl.pathname} user=${user ? "yes" : "no"} aal=${aal ?? "-"}`);
   }
 
   const url = request.nextUrl.clone();
@@ -24,7 +24,6 @@ export async function middleware(request: NextRequest) {
   if (tenant.customDomain) hdrs.set("x-tenant-custom-domain", tenant.customDomain);
 
   // --- Partner subdomain / custom domain routing --------------------------
-  // Rewrite everything (except /auth, /api, static) under /s/[identifier]
   if (tenant.kind === "partner") {
     const identifier = tenant.slug || tenant.customDomain!;
     if (!pathname.startsWith("/s/") && !pathname.startsWith("/api/") && !pathname.startsWith("/auth/")) {
@@ -33,7 +32,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // --- App-domain auth guard ----------------------------------------------
+  // --- App-domain auth guard + MFA enforcement ----------------------------
   if (tenant.kind === "app") {
     const isPublicRoute =
       pathname === "/" ||
@@ -43,12 +42,41 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/pricing") ||
       pathname.startsWith("/checkout") ||
       pathname.startsWith("/invite");
+
+    // Routes that are exempt from MFA enforcement (user needs access to complete MFA)
+    const isMfaRoute =
+      pathname.startsWith("/auth/mfa") ||
+      pathname.startsWith("/api/auth/passkey") ||
+      pathname.startsWith("/auth/signout");
+
+    // Not logged in — redirect to login
     if (!user && !isPublicRoute) {
       const originalUrl = `${pathname}${url.search}`;
       url.pathname = "/login";
       url.search = `?next=${encodeURIComponent(originalUrl)}`;
       return NextResponse.redirect(url);
     }
+
+    // Logged in but hasn't set up MFA — redirect to MFA setup
+    // (only for protected routes, not public or MFA routes)
+    if (user && !isPublicRoute && !isMfaRoute && !hasMfaFactors) {
+      // User has no MFA factors enrolled — force setup
+      // Check for passkeys in our custom table too (via header flag set by API)
+      const originalUrl = `${pathname}${url.search}`;
+      url.pathname = "/auth/mfa/setup";
+      url.search = `?next=${encodeURIComponent(originalUrl)}`;
+      return NextResponse.redirect(url);
+    }
+
+    // Logged in with MFA factors but hasn't verified this session (aal1 instead of aal2)
+    if (user && !isPublicRoute && !isMfaRoute && hasMfaFactors && aal === "aal1") {
+      const originalUrl = `${pathname}${url.search}`;
+      url.pathname = "/auth/mfa/challenge";
+      url.search = `?next=${encodeURIComponent(originalUrl)}`;
+      return NextResponse.redirect(url);
+    }
+
+    // Logged in and on homepage — redirect to dashboard
     if (user && pathname === "/") {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
@@ -60,7 +88,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except static assets / favicon / images
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

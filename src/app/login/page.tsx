@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import OAuthButtons from "@/components/OAuthButtons";
 import Link from "next/link";
 
 type Mode = "password" | "magic";
@@ -34,6 +35,20 @@ export default function LoginPage() {
       setErrorMsg(error.message);
       return;
     }
+
+    // Check if user needs MFA verification
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const aal = aalData?.currentLevel;
+    const factors = await supabase.auth.mfa.listFactors();
+    const hasVerifiedFactors = (factors.data?.totp ?? []).some(f => f.status === "verified")
+      || (factors.data?.phone ?? []).some(f => f.status === "verified");
+
+    if (hasVerifiedFactors && aal !== "aal2") {
+      // User has MFA enrolled but hasn't verified yet — redirect to challenge
+      router.push(`/auth/mfa/challenge?next=${encodeURIComponent(nextUrl)}`);
+      return;
+    }
+
     router.push(nextUrl);
     router.refresh();
   }
@@ -62,7 +77,6 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center px-6 relative overflow-hidden">
       {/* Background gradient mesh */}
       <div className="absolute inset-0 gradient-mesh pointer-events-none" />
-      {/* Centered glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/[0.06] rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-tertiary/[0.04] rounded-full blur-[100px] pointer-events-none" />
 
@@ -81,22 +95,33 @@ export default function LoginPage() {
               {mode === "password" ? "Sign in with your email and password." : "We'll email you a magic link."}
             </p>
 
+            {/* OAuth Providers */}
+            <div className="mt-6">
+              <OAuthButtons redirectTo={nextUrl !== "/dashboard" ? nextUrl : undefined} mode="signin" />
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px bg-outline-variant/10" />
+              <span className="text-[10px] uppercase tracking-widest text-on-surface-variant/40 font-bold">or</span>
+              <div className="flex-1 h-px bg-outline-variant/10" />
+            </div>
+
             {status === "sent" ? (
-              <div className="mt-6 rounded-xl bg-primary/10 border border-primary/20 p-4 text-sm text-primary text-center">
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-4 text-sm text-primary text-center">
                 <i className="fa-solid fa-envelope text-lg mb-2 block" />
                 Check your inbox. The link will bring you right back here.
               </div>
             ) : (
               <form
                 onSubmit={mode === "password" ? handlePassword : handleMagic}
-                className="mt-6 space-y-4"
+                className="space-y-4"
               >
                 <label className="block">
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Email</span>
                   <input
                     type="email"
                     required
-                    autoFocus
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`mt-1.5 ${INPUT_CLS}`}

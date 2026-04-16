@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import SignupForm from "./SignupForm";
+import OAuthSignup from "./OAuthSignup";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
 import Link from "next/link";
 
@@ -29,6 +31,17 @@ export default function SignupPage() {
           <p className="text-sm text-on-surface-variant/70 mt-1">
             Free forever for one submission a month. Upgrade whenever you&apos;re ready.
           </p>
+        </div>
+
+        <Suspense>
+          <OAuthSignup />
+        </Suspense>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-outline-variant/10" />
+          <span className="text-[10px] uppercase tracking-widest text-on-surface-variant/40 font-bold">or sign up with email</span>
+          <div className="flex-1 h-px bg-outline-variant/10" />
         </div>
 
         <SignupForm rootHost={rootHost} />

@@ -10,6 +10,7 @@ import DomainSetup from "../partners/[id]/DomainSetup";
 import WhiteLabelSection from "../partners/[id]/WhiteLabelSection";
 import WorkspaceBrandingForm from "./WorkspaceBrandingForm";
 import DeleteAccountSection from "./DeleteAccountSection";
+import MfaSettingsSection from "./MfaSettingsSection";
 import {
   uploadWorkspaceLogoAction,
   updateWorkspaceWhiteLabelAction,
@@ -325,6 +326,9 @@ export default async function SettingsPage() {
             </div>
           </section>
         )}
+
+        {/* ─── Security / MFA ─── */}
+        <MfaSettingsSection />
 
         {/* ─── Email Notifications ─── */}
         <section className="glass-panel rounded-2xl border border-outline-variant/15 p-6">
