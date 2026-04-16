@@ -12,8 +12,42 @@ import type {
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const RP_NAME = "SiteLaunch";
-const RP_ID = process.env.PASSKEY_RP_ID || (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "mysitelaunch.com").replace(/:\d+$/, "");
-const ORIGIN = process.env.NEXT_PUBLIC_APP_URL || `https://app.${RP_ID}`;
+
+function getRpId(): string {
+  if (process.env.PASSKEY_RP_ID) return process.env.PASSKEY_RP_ID;
+
+  // In development on localhost, the RP ID must be "localhost"
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  if (appUrl.includes("localhost") || appUrl.includes("127.0.0.1")) {
+    return "localhost";
+  }
+
+  return (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "mysitelaunch.com").replace(/:\d+$/, "");
+}
+
+function getExpectedOrigins(): string[] {
+  const origins: string[] = [];
+  const rpId = getRpId();
+
+  // Always include the configured app URL
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  }
+
+  // Include common variants
+  origins.push(`https://app.${rpId}`);
+  origins.push(`https://${rpId}`);
+
+  // Dev: include localhost origins
+  if (process.env.NODE_ENV === "development") {
+    origins.push("http://localhost:3000");
+    origins.push("http://localhost:3001");
+    origins.push("http://127.0.0.1:3000");
+  }
+
+  // Deduplicate
+  return [...new Set(origins)];
+}
 
 export interface StoredPasskey {
   id: string;
@@ -55,7 +89,7 @@ export async function getRegistrationOptions(userId: string, userEmail: string) 
 
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
-    rpID: RP_ID,
+    rpID: getRpId(),
     userID: new TextEncoder().encode(userId),
     userName: userEmail,
     attestationType: "none",
@@ -84,8 +118,8 @@ export async function verifyAndStoreRegistration(
   const verification = await verifyRegistrationResponse({
     response,
     expectedChallenge,
-    expectedOrigin: ORIGIN,
-    expectedRPID: RP_ID,
+    expectedOrigin: getExpectedOrigins(),
+    expectedRPID: getRpId(),
   });
 
   if (!verification.verified || !verification.registrationInfo) {
@@ -124,7 +158,7 @@ export async function getAuthenticationOptions(userId: string) {
   }
 
   const options = await generateAuthenticationOptions({
-    rpID: RP_ID,
+    rpID: getRpId(),
     allowCredentials: existingPasskeys.map((pk) => ({
       id: pk.credentialId,
       transports: pk.transports as AuthenticatorTransportFuture[],
@@ -154,8 +188,8 @@ export async function verifyAuthentication(
   const verification = await verifyAuthenticationResponse({
     response,
     expectedChallenge,
-    expectedOrigin: ORIGIN,
-    expectedRPID: RP_ID,
+    expectedOrigin: getExpectedOrigins(),
+    expectedRPID: getRpId(),
     credential: {
       id: passkey.credentialId,
       publicKey: Buffer.from(passkey.publicKey, "base64url"),

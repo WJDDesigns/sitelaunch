@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ verified: verification.verified });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Registration failed";
+    console.error("[passkey/register] Verification failed:", err);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
