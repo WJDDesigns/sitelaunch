@@ -3,8 +3,10 @@ import type { AccountSwitchContext } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { trackSession } from "@/lib/session-tracker";
+import { getActiveAnnouncements } from "./admin/announce/actions";
 import ImpersonationBanner from "./ImpersonationBanner";
 import UpgradeBanner from "./UpgradeBanner";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 import DashboardShell from "./DashboardShell";
 import { ToastProvider } from "@/components/Toast";
 
@@ -32,6 +34,7 @@ const ADMIN_NAV = [
   { href: "/dashboard/admin/partners", label: "Accounts", icon: "fa-sitemap" },
   { href: "/dashboard/admin/activity", label: "Activity Log", icon: "fa-timeline" },
   { href: "/dashboard/admin/emails", label: "Emails", icon: "fa-envelope" },
+  { href: "/dashboard/admin/announce", label: "Announce", icon: "fa-bullhorn" },
 ];
 
 /** Scoped nav for partner_member users — they only see their own partner's stuff */
@@ -107,6 +110,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
+  // Fetch active announcements for this user
+  const activeAnnouncements = await getActiveAnnouncements(session.userId, session.role);
+
   // Sidebar display name
   const sidebarName = isPartnerMember && partnerCtx
     ? partnerCtx.partnerName
@@ -141,6 +147,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           accountContexts={accountContexts}
           activePartnerId={partnerCtx?.partnerId ?? accountContexts.find((c) => c.isOwnAccount)?.partnerId ?? accountContexts[0]?.partnerId ?? null}
         >
+          {/* Announcement banners */}
+          {activeAnnouncements.length > 0 && (
+            <AnnouncementBanner announcements={activeAnnouncements} />
+          )}
           {/* Upgrade banner for free-tier users near their limit */}
           {account && usageLimit !== null && account.planTier === "free" && (
             <UpgradeBanner
