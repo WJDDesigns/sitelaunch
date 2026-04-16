@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import SignupForm from "./SignupForm";
 import OAuthSignup from "./OAuthSignup";
 import SiteLaunchLogo from "@/components/SiteLaunchLogo";
+import RocketAnimation from "@/components/RocketAnimation";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -11,14 +12,13 @@ export default function SignupPage() {
   );
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden">
-      {/* Background gradient mesh */}
-      <div className="absolute inset-0 gradient-mesh pointer-events-none" />
-      {/* Glows */}
+    <main className="min-h-screen flex items-end justify-center px-4 pb-[4vh] pt-[38vh] relative overflow-hidden">
+      {/* Rocket animation background */}
+      <RocketAnimation />
+      {/* Soft glow for depth */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-primary/[0.06] rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-1/3 left-1/4 w-[300px] h-[300px] bg-tertiary/[0.04] rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="relative w-full max-w-lg space-y-6 animate-scale-in">
+      <div className="relative z-10 w-full max-w-lg space-y-6 animate-scale-in">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-2">
           <SiteLaunchLogo className="h-14 w-auto text-primary" ringClassName="text-on-surface/60" />
