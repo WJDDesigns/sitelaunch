@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMail } from "@/lib/email";
+import { getRenderedEmail } from "@/lib/email-templates";
 import crypto from "crypto";
 
 function escapeHtml(s: string): string {
@@ -82,7 +83,15 @@ export async function createPartnerInvite(args: {
   // Send invite email
   const inviteUrl = appUrl(`/invite/${token}`);
 
-  const html = `
+  // Try DB template first, fall back to hardcoded
+  const dbEmail = await getRenderedEmail("partner_invite", {
+    inviter_name: args.invitedByName,
+    partner_name: args.partnerName,
+    invite_url: inviteUrl,
+    role: "partner_member",
+  });
+
+  const fallbackHtml = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #0b1326 0%, #1a1f3a 100%); border-radius: 16px 16px 0 0; padding: 40px 32px; text-align: center;">
@@ -145,8 +154,8 @@ export async function createPartnerInvite(args: {
 
   await sendMail({
     to: args.email,
-    subject: `You're invited to join ${args.partnerName} on SiteLaunch`,
-    html,
+    subject: dbEmail?.subject ?? `You're invited to join ${args.partnerName} on SiteLaunch`,
+    html: dbEmail?.html ?? fallbackHtml,
   });
 
   return { ok: true };

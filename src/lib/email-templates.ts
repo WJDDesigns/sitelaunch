@@ -1,7 +1,99 @@
 /**
  * Branded HTML email template wrapper for SiteLaunch emails.
  * Provides consistent styling across all outgoing emails.
+ *
+ * Also supports DB-stored templates from the `email_templates` table,
+ * with in-memory caching (5-minute TTL) and graceful fallback.
  */
+
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/* ------------------------------------------------------------------ */
+/*  Template cache (module-level, 5-minute TTL)                       */
+/* ------------------------------------------------------------------ */
+
+interface CachedTemplate {
+  subject: string;
+  html_body: string;
+  fetchedAt: number;
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const templateCache = new Map<string, CachedTemplate>();
+
+/* ------------------------------------------------------------------ */
+/*  DB template helpers                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fetch a template row from `public.email_templates` by slug.
+ * Returns null when the slug does not exist.
+ * Results are cached for 5 minutes to avoid a DB round-trip on every send.
+ */
+export async function getTemplate(
+  slug: string,
+): Promise<{ subject: string; html: string } | null> {
+  const cached = templateCache.get(slug);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return { subject: cached.subject, html: cached.html_body };
+  }
+
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("email_templates")
+      .select("subject, html_body")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    templateCache.set(slug, {
+      subject: data.subject,
+      html_body: data.html_body,
+      fetchedAt: Date.now(),
+    });
+
+    return { subject: data.subject, html: data.html_body };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Replace all `{{key}}` placeholders in a string with the corresponding
+ * value from `vars`. Unknown keys are replaced with an empty string.
+ */
+export function renderTemplate(
+  htmlBody: string,
+  vars: Record<string, string>,
+): string {
+  return htmlBody.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+}
+
+/**
+ * High-level helper: fetch a DB template by slug, render it with the
+ * supplied variables, and return the final subject + html.
+ *
+ * If the template does not exist in the DB the function returns `null`
+ * so the caller can fall back to the legacy `emailTemplate()` wrapper.
+ */
+export async function getRenderedEmail(
+  slug: string,
+  vars: Record<string, string>,
+): Promise<{ subject: string; html: string } | null> {
+  const tpl = await getTemplate(slug);
+  if (!tpl) return null;
+
+  return {
+    subject: renderTemplate(tpl.subject, vars),
+    html: renderTemplate(tpl.html, vars),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Legacy branded wrapper (kept as fallback)                          */
+/* ------------------------------------------------------------------ */
 
 function escapeHtml(s: string): string {
   return s

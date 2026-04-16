@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/email";
-import { emailTemplate, escapeHtml } from "@/lib/email-templates";
+import { emailTemplate, escapeHtml, getRenderedEmail } from "@/lib/email-templates";
 
 const VALID_SUBJECTS = [
   "Bug Report",
@@ -42,7 +42,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message is too long (max 5000 characters)." }, { status: 400 });
     }
 
-    const html = emailTemplate({
+    // Try DB template first, fall back to hardcoded
+    const dbEmail = await getRenderedEmail("support_contact", {
+      sender_name: name.trim(),
+      sender_email: email.trim(),
+      subject,
+      message: message.trim(),
+    });
+
+    const html = dbEmail?.html ?? emailTemplate({
       heading: `[Support] ${subject}`,
       body: `
         <p style="margin: 0 0 8px;">
@@ -58,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const result = await sendMail({
       to: "wayne@wjddesigns.com",
-      subject: `[SiteLaunch Support] ${subject} — ${name.trim()}`,
+      subject: dbEmail?.subject ?? `[SiteLaunch Support] ${subject} — ${name.trim()}`,
       html,
       replyTo: email.trim(),
     });

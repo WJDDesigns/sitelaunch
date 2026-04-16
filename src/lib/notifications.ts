@@ -29,7 +29,13 @@ export async function sendVerificationEmail(args: {
     throw new Error("Supabase did not return an action_link");
   }
 
-  const html = emailTemplate({
+  // Try DB template first, fall back to hardcoded
+  const dbEmail = await getRenderedEmail("verification", {
+    name: args.companyName,
+    verify_url: verifyUrl,
+  });
+
+  const html = dbEmail?.html ?? emailTemplate({
     heading: "Verify your email",
     body: `
       <p style="margin: 0 0 8px;">
@@ -45,7 +51,7 @@ export async function sendVerificationEmail(args: {
 
   await sendMail({
     to: args.to,
-    subject: "Verify your email — SiteLaunch",
+    subject: dbEmail?.subject ?? "Verify your email — SiteLaunch",
     html,
   });
 }
@@ -83,7 +89,13 @@ export async function resendVerificationEmail(args: {
     throw new Error("Supabase did not return an action_link");
   }
 
-  const html = emailTemplate({
+  // Try DB template first, fall back to hardcoded
+  const dbEmail = await getRenderedEmail("verification_resend", {
+    name: companyName,
+    verify_url: verifyUrl,
+  });
+
+  const html = dbEmail?.html ?? emailTemplate({
     heading: "Verify your email",
     body: `
       <p style="margin: 0 0 8px;">
@@ -98,7 +110,7 @@ export async function resendVerificationEmail(args: {
 
   await sendMail({
     to: args.email,
-    subject: "Verify your email — SiteLaunch",
+    subject: dbEmail?.subject ?? "Verify your email — SiteLaunch",
     html,
   });
 }
@@ -128,7 +140,15 @@ export async function sendWelcomeEmail(args: {
       ? "Your Agency + Partners workspace is ready — you can spin up sub-partners whenever you want."
       : "Your Agency workspace is ready.";
 
-  const html = emailTemplate({
+  // Try DB template first, fall back to hardcoded
+  const dbEmail = await getRenderedEmail("welcome", {
+    company_name: args.companyName,
+    plan_line: planLine,
+    storefront_url: storefrontUrl,
+    dashboard_url: dashboardUrl,
+  });
+
+  const html = dbEmail?.html ?? emailTemplate({
     heading: `Welcome to SiteLaunch, ${args.companyName}!`,
     body: `
       <p style="margin: 0 0 8px;">${escapeHtml(planLine)}</p>
@@ -142,7 +162,7 @@ export async function sendWelcomeEmail(args: {
 
   await sendMail({
     to: args.to,
-    subject: "Welcome to SiteLaunch",
+    subject: dbEmail?.subject ?? "Welcome to SiteLaunch",
     html,
   });
 }
@@ -180,7 +200,7 @@ export async function createNotification(
  */
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMail } from "@/lib/email";
-import { emailTemplate, escapeHtml } from "@/lib/email-templates";
+import { emailTemplate, escapeHtml, getRenderedEmail } from "@/lib/email-templates";
 
 function appUrl(path: string): string {
   const root = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.mysitelaunch.com";
@@ -253,7 +273,14 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
 
   // --- Partner notification ------------------------------------------------
   if (partnerEmails.length > 0) {
-    const html = emailTemplate({
+    const dbPartnerEmail = await getRenderedEmail("submission_partner", {
+      partner_name: partner.name,
+      client_name: clientName,
+      client_email: clientEmail,
+      dashboard_link: dashboardLink,
+    });
+
+    const html = dbPartnerEmail?.html ?? emailTemplate({
       heading: `New submission for ${partner.name}`,
       body: `
         <p style="margin: 0 0 8px;">
@@ -266,7 +293,7 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
     });
     await sendMail({
       to: partnerEmails,
-      subject: `New submission · ${clientName} · ${partner.name}`,
+      subject: dbPartnerEmail?.subject ?? `New submission · ${clientName} · ${partner.name}`,
       html,
       replyTo: sub.client_email || undefined,
     });
@@ -274,7 +301,12 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
 
   // --- Client confirmation -------------------------------------------------
   if (sub.client_email) {
-    const html = emailTemplate({
+    const dbClientEmail = await getRenderedEmail("submission_client", {
+      client_name: clientName,
+      partner_name: partner.name,
+    });
+
+    const html = dbClientEmail?.html ?? emailTemplate({
       heading: `Thanks, ${clientName} — we got it!`,
       body: `
         <p style="margin: 0 0 0;">
@@ -286,7 +318,7 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
     });
     await sendMail({
       to: sub.client_email,
-      subject: `We received your onboarding info · ${partner.name}`,
+      subject: dbClientEmail?.subject ?? `We received your onboarding info · ${partner.name}`,
       html,
       replyTo: partner.support_email || undefined,
     });
