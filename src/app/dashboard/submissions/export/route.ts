@@ -3,6 +3,10 @@ import { getSubmissionsCsvData } from "../actions";
 import type { FormSchema } from "@/lib/forms";
 
 function escapeCsv(val: string): string {
+  // Prevent CSV injection: prefix formula-triggering characters with apostrophe
+  if (val.length > 0 && "=+@-".includes(val[0])) {
+    val = "'" + val;
+  }
   if (val.includes(",") || val.includes('"') || val.includes("\n")) {
     return `"${val.replace(/"/g, '""')}"`;
   }

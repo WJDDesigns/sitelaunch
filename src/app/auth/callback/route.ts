@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const origin = buildOrigin(request);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const rawNext = searchParams.get("next") ?? "/dashboard";
+  // Prevent open redirect: only allow relative paths, reject protocol-relative URLs
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   if (code) {
     const supabase = await createClient();

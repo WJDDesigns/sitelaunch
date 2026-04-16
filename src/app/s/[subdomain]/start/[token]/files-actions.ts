@@ -40,9 +40,9 @@ const ALLOWED_EXTENSIONS = new Set([
 ]);
 
 function isAllowedFile(file: File): boolean {
-  if (ALLOWED_TYPES.has(file.type)) return true;
+  // Require both a valid MIME type AND a valid extension to prevent spoofing
   const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  return ALLOWED_EXTENSIONS.has(ext);
+  return ALLOWED_TYPES.has(file.type) && ALLOWED_EXTENSIONS.has(ext);
 }
 
 async function loadSubmissionMeta(token: string) {
