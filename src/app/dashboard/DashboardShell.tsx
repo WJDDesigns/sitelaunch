@@ -119,10 +119,7 @@ export default function DashboardShell({
             <LinqMeLogo variant="light" className="h-10 w-auto text-primary shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-on-surface font-headline tracking-tight truncate">
-                  {sidebarName}
-                </h2>
-                <p className="text-[10px] text-primary/60 uppercase tracking-widest font-semibold">
+                                <p className="text-[10px] text-primary/60 uppercase tracking-widest font-semibold">
                   {sidebarLabel}
                 </p>
               </div>
