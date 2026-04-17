@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import RocketAnimation from "@/components/RocketAnimation";
+import VantaBackground from "@/components/VantaBackground";
 import AuthHeader from "@/components/AuthHeader";
 import Link from "next/link";
 
@@ -71,7 +71,7 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 pt-16 pb-8 relative overflow-hidden bg-surface">
-      <RocketAnimation />
+      <VantaBackground />
       <AuthHeader />
 
       <div className="relative z-10 w-full max-w-sm animate-scale-in">
