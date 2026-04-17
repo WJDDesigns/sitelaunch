@@ -1046,21 +1046,31 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
   })();
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [analyzing, setAnalyzing] = useState<number | null>(null);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const debounceRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const update = (next: CompetitorEntry[]) => onChange(JSON.stringify(next));
   const canAdd = !cfg.maxCompetitors || entries.length < cfg.maxCompetitors;
 
   const fetchAnalysis = useCallback(async (url: string, idx: number) => {
+    // Auto-prepend https:// if no protocol
+    let finalUrl = url.trim();
+    if (finalUrl && !finalUrl.match(/^https?:\/\//i)) {
+      finalUrl = "https://" + finalUrl;
+    }
     try {
-      new URL(url); // validate
-    } catch { return; }
+      new URL(finalUrl);
+    } catch {
+      setAnalyzeError("Please enter a valid URL (e.g. https://example.com)");
+      return;
+    }
+    setAnalyzeError(null);
     setAnalyzing(idx);
     try {
       const res = await fetch("/api/competitor-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: finalUrl }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -1074,8 +1084,13 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
           const next = current.map((e, i) => i === idx ? { ...e, analysis: { title: data.title, description: data.description, headings: data.headings, navLinks: data.navLinks, fetchedAt: data.fetchedAt } } : e);
           onChange(JSON.stringify(next));
         }
+      } else {
+        const errData = await res.json().catch(() => null);
+        setAnalyzeError(errData?.error || `Analysis failed (${res.status})`);
       }
-    } catch { /* silently fail */ }
+    } catch {
+      setAnalyzeError("Could not reach the analysis service. Please try again.");
+    }
     setAnalyzing(null);
   }, [value, onChange]);
 
@@ -1097,7 +1112,7 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
     if (cfg.autoFetch && patch.url !== undefined) {
       if (debounceRef.current[idx]) clearTimeout(debounceRef.current[idx]);
       const url = patch.url;
-      if (url && url.startsWith("http")) {
+      if (url && url.length > 3) {
         debounceRef.current[idx] = setTimeout(() => fetchAnalysis(url, idx), 1200);
       }
     }
@@ -1192,6 +1207,7 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
           {cfg.maxCompetitors && <span className="text-[10px] font-normal opacity-60">({entries.length}/{cfg.maxCompetitors})</span>}
         </button>
       )}
+      {analyzeError && <p className="text-xs text-error mt-2 flex items-center gap-1.5"><i className="fa-solid fa-triangle-exclamation text-[10px]" />{analyzeError}</p>}
       {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
     </div>
   );
