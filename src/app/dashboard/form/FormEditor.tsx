@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, ShowCondition, AssetCollectionConfig, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, ShowCondition, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig } from "@/lib/forms";
 import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
 import CloudDestinationButton from "@/components/CloudDestinationButton";
 import { saveFormSchemaAction } from "./actions";
@@ -1090,12 +1090,12 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields }: {
               <div className="space-y-1.5">
                 {field.assetCollectionConfig.categories?.map((cat, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <input value={cat} onChange={e => { const cats = [...field.assetCollectionConfig!.categories!]; cats[i] = e.target.value; onUpdate({ assetCollectionConfig: { ...field.assetCollectionConfig!, categories: cats } }); }} className={INPUT_CLS} />
+                    <input value={cat} onChange={e => { const cats = [...field.assetCollectionConfig!.categories!]; cats[i] = e.target.value as AssetCategory; onUpdate({ assetCollectionConfig: { ...field.assetCollectionConfig!, categories: cats } }); }} className={INPUT_CLS} />
                     <button onClick={() => { const cats = field.assetCollectionConfig!.categories!.filter((_, j) => j !== i); onUpdate({ assetCollectionConfig: { ...field.assetCollectionConfig!, categories: cats } }); }} className="p-1 text-on-surface-variant/40 hover:text-error text-xs transition-colors shrink-0"><i className="fa-solid fa-xmark" /></button>
                   </div>
                 ))}
               </div>
-              <button onClick={() => onUpdate({ assetCollectionConfig: { ...field.assetCollectionConfig!, categories: [...field.assetCollectionConfig!.categories!, ""] } })} className="w-full py-2 border border-dashed border-outline-variant/30 rounded-lg text-xs text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1.5 mt-2"><i className="fa-solid fa-plus text-[9px]" /> Add Category</button>
+              <button onClick={() => onUpdate({ assetCollectionConfig: { ...field.assetCollectionConfig!, categories: [...field.assetCollectionConfig!.categories!, "other" as AssetCategory] } })} className="w-full py-2 border border-dashed border-outline-variant/30 rounded-lg text-xs text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1.5 mt-2"><i className="fa-solid fa-plus text-[9px]" /> Add Category</button>
             </div>
           </section>
         )}
@@ -1214,7 +1214,7 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields }: {
                           <div className="flex-1 space-y-1">
                             <input value={ref.label} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], label: e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Refinement label" />
                             <div className="flex gap-1.5">
-                              <select value={ref.type} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], type: e.target.value as "select" | "range" | "text" }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS}>
+                              <select value={ref.type} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], type: e.target.value as "select" | "range" | "text" | "number" }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS}>
                                 <option value="select">Select</option>
                                 <option value="range">Range</option>
                                 <option value="text">Text</option>
