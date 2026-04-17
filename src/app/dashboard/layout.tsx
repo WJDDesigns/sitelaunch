@@ -19,7 +19,8 @@ const TIER_LABELS: Record<string, string> = {
 const WORKSPACE_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "fa-table-cells" },
   { href: "/dashboard/form", label: "Form Builder", icon: "fa-pen-ruler" },
-  { href: "/dashboard/submissions", label: "My Customers", icon: "fa-users" },
+  { href: "/dashboard/submissions", label: "My Customers", icon: "fa-inbox" },
+  { href: "/dashboard/accounts", label: "Accounts", icon: "fa-users" },
   { href: "/dashboard/analytics", label: "Analytics", icon: "fa-chart-pie" },
   { href: "/dashboard/billing", label: "Billing", icon: "fa-credit-card" },
   { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
@@ -48,6 +49,7 @@ function getPartnerMemberNav(partnerId: string, allowFormEditing: boolean) {
     formsLink,
     { href: `/dashboard/partners/${partnerId}`, label: "Branding", icon: "fa-palette" },
     { href: "/dashboard/submissions", label: "Submissions", icon: "fa-inbox" },
+    { href: "/dashboard/accounts", label: "Accounts", icon: "fa-users" },
     { href: "/dashboard/settings", label: "Profile", icon: "fa-user" },
   ];
 }
