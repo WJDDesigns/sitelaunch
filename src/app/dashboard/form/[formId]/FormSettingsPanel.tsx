@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { renameFormAction, setDefaultFormAction, deleteFormAction, updateFormNotificationSettingsAction } from "../form-actions";
+import { renameFormAction, setDefaultFormAction, deleteFormAction, updateFormNotificationSettingsAction, updateThemeModeAction } from "../form-actions";
 import { updateFormPartnersAction } from "./assignment-actions";
 
 interface Partner {
@@ -23,6 +23,7 @@ interface Props {
   confirmPageHeading: string;
   confirmPageBody: string;
   redirectUrl: string;
+  themeMode: "dark" | "light" | "auto";
 }
 
 export default function FormSettingsPanel({
@@ -38,6 +39,7 @@ export default function FormSettingsPanel({
   confirmPageHeading: initialConfirmHeading,
   confirmPageBody: initialConfirmBody,
   redirectUrl: initialRedirectUrl,
+  themeMode: initialThemeMode,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -54,6 +56,20 @@ export default function FormSettingsPanel({
   const [confirmBody, setConfirmBody] = useState(initialConfirmBody);
   const [redirectUrl, setRedirectUrl] = useState(initialRedirectUrl);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
+
+  // Theme state
+  const [themeMode, setThemeMode] = useState<"dark" | "light" | "auto">(initialThemeMode);
+  const [themeMsg, setThemeMsg] = useState<string | null>(null);
+
+  function handleThemeChange(mode: "dark" | "light" | "auto") {
+    setThemeMode(mode);
+    setThemeMsg(null);
+    startTransition(async () => {
+      const result = await updateThemeModeAction(mode);
+      setThemeMsg(result.ok ? "Theme updated!" : (result.error ?? "Failed."));
+      if (result.ok) router.refresh();
+    });
+  }
 
   function handleRename() {
     if (!name.trim() || name === formName) return;
@@ -289,6 +305,38 @@ export default function FormSettingsPanel({
               <div className="mt-1.5 px-4 py-2.5 text-sm bg-surface-container-lowest rounded-xl text-on-surface-variant font-mono break-all">
                 {formUrl}
               </div>
+            </div>
+
+            {/* Theme mode */}
+            <div>
+              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Client form theme</span>
+              <p className="text-xs text-on-surface-variant/60 mt-0.5 mb-2">
+                Controls the default appearance of your client-facing forms.
+              </p>
+              <div className="flex gap-2">
+                {([
+                  { value: "dark" as const, icon: "fa-moon", label: "Dark" },
+                  { value: "light" as const, icon: "fa-sun", label: "Light" },
+                  { value: "auto" as const, icon: "fa-circle-half-stroke", label: "Auto" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleThemeChange(opt.value)}
+                    disabled={pending}
+                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      themeMode === opt.value
+                        ? "bg-primary text-on-primary shadow-md"
+                        : "bg-surface-container-lowest text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-container-high/50"
+                    } disabled:opacity-50`}
+                  >
+                    <i className={`fa-solid ${opt.icon} text-xs`} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {themeMsg && (
+                <p className={`text-xs font-medium mt-2 ${themeMsg.includes("!") ? "text-tertiary" : "text-error"}`}>{themeMsg}</p>
+              )}
             </div>
 
             {/* Default toggle */}

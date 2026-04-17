@@ -367,3 +367,26 @@ export async function duplicateFormAction(formId: string): Promise<ActionResult>
   revalidatePath("/dashboard/form");
   return { ok: true, formId: pf.id };
 }
+
+/**
+ * Update the theme mode for the current partner's storefront.
+ * Stored on the partners table and controls Dark/Light/Auto for all client-facing forms.
+ */
+export async function updateThemeModeAction(
+  themeMode: "dark" | "light" | "auto",
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const account = await getCurrentAccount(session.userId);
+  if (!account) return { ok: false, error: "No account found." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("partners")
+    .update({ theme_mode: themeMode })
+    .eq("id", account.id);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/dashboard/form");
+  return { ok: true };
+}

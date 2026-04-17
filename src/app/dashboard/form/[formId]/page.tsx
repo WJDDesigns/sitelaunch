@@ -50,7 +50,7 @@ export default async function FormEditorPage({ params }: PageProps) {
   // Get partner details for public link
   const { data: partner } = await supabase
     .from("partners")
-    .select("slug, custom_domain, primary_color")
+    .select("slug, custom_domain, primary_color, theme_mode")
     .eq("id", account.id)
     .maybeSingle();
 
@@ -108,6 +108,7 @@ export default async function FormEditorPage({ params }: PageProps) {
             confirmPageHeading={(pf.confirm_page_heading as string) ?? ""}
             confirmPageBody={(pf.confirm_page_body as string) ?? ""}
             redirectUrl={(pf.redirect_url as string) ?? ""}
+            themeMode={(partner?.theme_mode as "dark" | "light" | "auto") ?? "dark"}
           />
         }
       />

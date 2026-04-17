@@ -45,7 +45,7 @@ export default async function FormsListPage() {
   // Get partner for storefront link + landing mode
   const { data: partner } = await supabase
     .from("partners")
-    .select("slug, custom_domain, show_all_forms")
+    .select("slug, custom_domain, show_all_forms, theme_mode")
     .eq("id", account.id)
     .maybeSingle();
 
@@ -183,6 +183,7 @@ export default async function FormsListPage() {
                         confirmPageHeading={(form.confirm_page_heading as string) ?? ""}
                         confirmPageBody={(form.confirm_page_body as string) ?? ""}
                         redirectUrl={(form.redirect_url as string) ?? ""}
+                        themeMode={(partner?.theme_mode as "dark" | "light" | "auto") ?? "dark"}
                       />
                       <a
                         href={formUrl}
