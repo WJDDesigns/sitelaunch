@@ -3,19 +3,18 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Vanta.js TRUNK animated background for auth pages.
- * Loads p5.js + vanta.trunk.min.js from CDN.
+ * Vanta.js FOG animated background for auth pages.
+ * Loads three.js r134 + vanta.fog.min.js from CDN.
  */
 export default function VantaBackground() {
   const vantaRef = useRef<HTMLDivElement>(null);
-  const effectRef = useRef<ReturnType<typeof Object> | null>(null);
+  const effectRef = useRef<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadScript = (src: string): Promise<void> =>
       new Promise((resolve, reject) => {
-        // Skip if already loaded
         if (document.querySelector(`script[src="${src}"]`)) {
           resolve();
           return;
@@ -31,30 +30,33 @@ export default function VantaBackground() {
     (async () => {
       try {
         await loadScript(
-          "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
+          "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"
         );
         await loadScript(
-          "https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.trunk.min.js"
+          "https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"
         );
 
         if (cancelled || !vantaRef.current) return;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const VANTA = (window as any).VANTA;
-        if (!VANTA?.TRUNK) return;
+        if (!VANTA?.FOG) return;
 
-        effectRef.current = VANTA.TRUNK({
+        effectRef.current = VANTA.FOG({
           el: vantaRef.current,
+          THREE: (window as any).THREE,
           mouseControls: true,
           touchControls: true,
           gyroControls: false,
           minHeight: 200.0,
           minWidth: 200.0,
-          scale: 1.0,
-          scaleMobile: 1.0,
-          color: 0x83ff,
-          backgroundColor: 0x0b1326,
-          chaos: 6.5,
+          highlightColor: 0xc2ff,
+          midtoneColor: 0x77ff,
+          lowlightColor: 0xf0ff,
+          baseColor: 0x3654b6,
+          blurFactor: 0.67,
+          speed: 2.1,
+          zoom: 0.2,
         });
       } catch (err) {
         console.warn("Vanta background failed to load:", err);
@@ -63,7 +65,10 @@ export default function VantaBackground() {
 
     return () => {
       cancelled = true;
-      if (effectRef.current && typeof (effectRef.current as any).destroy === "function") {
+      if (
+        effectRef.current &&
+        typeof (effectRef.current as any).destroy === "function"
+      ) {
         (effectRef.current as any).destroy();
       }
     };
