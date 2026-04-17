@@ -72,7 +72,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 pt-16 pb-8 relative overflow-hidden bg-surface">
+    <main className="min-h-screen flex items-center justify-center px-6 pt-16 pb-8 relative overflow-hidden">
       <VantaBackground />
       <AuthHeader />
 

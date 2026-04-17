@@ -31,7 +31,7 @@ export default function VantaBackground() {
     (async () => {
       try {
         await loadScript(
-          "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"
+          "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
         );
         await loadScript(
           "https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.trunk.min.js"
