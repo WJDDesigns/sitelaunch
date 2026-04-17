@@ -81,6 +81,7 @@ export default async function SubmissionPage({ params }: Props) {
         submit={boundSubmit}
         uploadFile={boundUpload}
         deleteFile={boundDelete}
+        partnerId={partner.id}
       />
 
       {/* Footer — only visible on desktop (mobile footer is less useful with sidebar layout) */}

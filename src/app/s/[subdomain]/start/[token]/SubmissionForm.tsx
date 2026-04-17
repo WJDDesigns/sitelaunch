@@ -21,6 +21,7 @@ interface Props {
   submit: () => Promise<void>;
   uploadFile: (fieldId: string, formData: FormData) => Promise<UploadedFile>;
   deleteFile: (fileId: string) => Promise<void>;
+  partnerId?: string;
 }
 
 /* ── animation styles ──────────────────────────────────────── */
@@ -60,7 +61,7 @@ const INPUT_CLS =
 export default function SubmissionForm({
   schema, initialData, initialFiles, primaryColor,
   partnerName, partnerLogoUrl,
-  saveStep, submit, uploadFile, deleteFile,
+  saveStep, submit, uploadFile, deleteFile, partnerId,
 }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -393,7 +394,7 @@ export default function SubmissionForm({
                 </div>
               ) : (
                 <div key={f.id} className={`sl-fade-up sl-d${Math.min(i + 2, 5)}`}>
-                  <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} />
+                  <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} />
                 </div>
               ),
             )}
@@ -1032,11 +1033,11 @@ function BrandStyleField({ field, value, error, onChange, primaryColor }: {
   );
 }
 
-function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }: {
-  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string;
+function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor, partnerId }: {
+  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; partnerId?: string;
 }) {
   const cfg = field.competitorAnalyzerConfig!;
-  type AnalysisResult = { title?: string | null; description?: string | null; headings?: string[]; navLinks?: string[]; fetchedAt?: string };
+  type AnalysisResult = { title?: string | null; description?: string | null; headings?: string[]; navLinks?: string[]; techStack?: string[]; socialLinks?: string[]; features?: Record<string, boolean>; aiSnapshot?: string | null; fetchedAt?: string };
   type CompetitorEntry = { url: string; notes?: string; analysis?: AnalysisResult };
   const entries: CompetitorEntry[] = (() => {
     try {
@@ -1070,7 +1071,7 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
       const res = await fetch("/api/competitor-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: finalUrl }),
+        body: JSON.stringify({ url: finalUrl, partnerId }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -1081,7 +1082,7 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
           current = Array.isArray(raw) ? raw : [];
         } catch { current = []; }
         if (current[idx]) {
-          const next = current.map((e, i) => i === idx ? { ...e, analysis: { title: data.title, description: data.description, headings: data.headings, navLinks: data.navLinks, fetchedAt: data.fetchedAt } } : e);
+          const next = current.map((e, i) => i === idx ? { ...e, analysis: { title: data.title, description: data.description, headings: data.headings, navLinks: data.navLinks, techStack: data.techStack, socialLinks: data.socialLinks, features: data.features, aiSnapshot: data.aiSnapshot, fetchedAt: data.fetchedAt } } : e);
           onChange(JSON.stringify(next));
         }
       } else {
@@ -1166,16 +1167,72 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
               </button>
             </div>
             {/* Analysis results */}
-            {entry.analysis && (entry.analysis.title || entry.analysis.description) && (
-              <div className="mt-2.5 rounded-lg p-2.5 border border-outline-variant/30" style={{ backgroundColor: primaryColor + "08" }}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <i className="fa-solid fa-robot text-[9px]" style={{ color: primaryColor }} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: primaryColor }}>Site Analysis</span>
+            {entry.analysis && (entry.analysis.title || entry.analysis.description || entry.analysis.aiSnapshot) && (
+              <div className="mt-2.5 rounded-lg p-3 border border-outline-variant/30 space-y-2.5" style={{ backgroundColor: primaryColor + "08" }}>
+                {/* Header */}
+                <div className="flex items-center gap-1.5">
+                  <i className="fa-solid fa-chart-line text-[9px]" style={{ color: primaryColor }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: primaryColor }}>
+                    {entry.analysis.aiSnapshot ? "AI Competitive Snapshot" : "Site Analysis"}
+                  </span>
                 </div>
+
+                {/* Basic info */}
                 {entry.analysis.title && <p className="text-xs font-semibold text-on-surface">{entry.analysis.title}</p>}
-                {entry.analysis.description && <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed line-clamp-2">{entry.analysis.description}</p>}
-                {entry.analysis.navLinks && entry.analysis.navLinks.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
+                {entry.analysis.description && <p className="text-[11px] text-on-surface-variant leading-relaxed line-clamp-2">{entry.analysis.description}</p>}
+
+                {/* Tech stack & social pills */}
+                {((entry.analysis.techStack && entry.analysis.techStack.length > 0) || (entry.analysis.socialLinks && entry.analysis.socialLinks.length > 0)) && (
+                  <div className="flex flex-wrap gap-1">
+                    {entry.analysis.techStack?.slice(0, 6).map((tech, i) => (
+                      <span key={`t-${i}`} className="text-[9px] px-1.5 py-0.5 rounded-md font-medium" style={{ backgroundColor: primaryColor + "18", color: primaryColor }}>{tech}</span>
+                    ))}
+                    {entry.analysis.socialLinks?.map((s, i) => (
+                      <span key={`s-${i}`} className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant">{s}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Feature badges */}
+                {entry.analysis.features && (
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(entry.analysis.features)
+                      .filter(([, v]) => v)
+                      .map(([key]) => {
+                        const labels: Record<string, string> = {
+                          contactForm: "Contact Form",
+                          callToAction: "CTA",
+                          liveChat: "Live Chat",
+                          blog: "Blog",
+                          testimonials: "Testimonials",
+                          video: "Video",
+                          mobileResponsive: "Mobile Ready",
+                        };
+                        return (
+                          <span key={key} className="text-[9px] px-1.5 py-0.5 rounded-md bg-tertiary/10 text-tertiary font-medium flex items-center gap-0.5">
+                            <i className="fa-solid fa-check text-[7px]" />
+                            {labels[key] ?? key}
+                          </span>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* AI Snapshot */}
+                {entry.analysis.aiSnapshot && (
+                  <div className="pt-2 border-t border-outline-variant/20">
+                    <div className="text-[11px] text-on-surface leading-relaxed whitespace-pre-line [&>p]:mb-1.5"
+                      dangerouslySetInnerHTML={{
+                        __html: entry.analysis.aiSnapshot
+                          .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-on-surface font-semibold">$1</strong>')
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Nav links */}
+                {!entry.analysis.aiSnapshot && entry.analysis.navLinks && entry.analysis.navLinks.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
                     {entry.analysis.navLinks.slice(0, 6).map((link, i) => (
                       <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant">{link}</span>
                     ))}
@@ -1550,9 +1607,9 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
 }
 
 function CelestialField({
-  field, value, error, onChange, primaryColor, allData,
+  field, value, error, onChange, primaryColor, allData, partnerId,
 }: {
-  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>;
+  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>; partnerId?: string;
 }) {
   const str = (value as string) ?? "";
   const focusRing = { "--tw-ring-color": primaryColor + "66" } as React.CSSProperties;
@@ -2188,7 +2245,7 @@ function CelestialField({
 
   /* ── Competitor Analyzer ── */
   if (field.type === "competitor_analyzer" && field.competitorAnalyzerConfig) {
-    return <CompetitorAnalyzerField field={field} value={value} error={error} onChange={onChange} primaryColor={primaryColor} />;
+    return <CompetitorAnalyzerField field={field} value={value} error={error} onChange={onChange} primaryColor={primaryColor} partnerId={partnerId} />;
   }
 
   /* ── Timeline Selector ── */
