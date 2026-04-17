@@ -7,6 +7,7 @@ import SidebarNav from "./SidebarNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import LinqMeLogo from "@/components/LinqMeLogo";
 import NotificationBell from "@/components/NotificationBell";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 import AccountSwitcher from "@/components/AccountSwitcher";
 
 const STORAGE_KEY = "sl-sidebar-collapsed";
@@ -46,6 +47,8 @@ interface Props {
   accountContexts: { partnerId: string; partnerName: string; partnerSlug: string; role: "partner_owner" | "partner_member"; isOwnAccount: boolean }[];
   /** Currently active partner ID */
   activePartnerId: string | null;
+  /** Active announcements to show in top bar */
+  announcements: { id: string; title: string; message: string; icon: string; type: "info" | "warning" | "success" | "urgent" }[];
   children: React.ReactNode;
 }
 
@@ -67,6 +70,7 @@ export default function DashboardShell({
   hasImpersonation,
   accountContexts,
   activePartnerId,
+  announcements,
   children,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
@@ -116,7 +120,7 @@ export default function DashboardShell({
         {/* Logo + collapse toggle */}
         <div className={`flex items-center ${collapsed ? "justify-center px-2" : "px-5"} py-4 mb-1`}>
           <Link href="/dashboard" className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-            <LinqMeLogo variant="light" className="h-7 w-auto text-primary shrink-0" />
+            <LinqMeLogo variant="light" className="h-6 w-auto text-primary shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
                                 <p className="text-[10px] text-primary/60 uppercase tracking-widest font-semibold">
@@ -228,9 +232,16 @@ export default function DashboardShell({
 
       {/* Main */}
       <main className={`flex-1 ${mainMargin} min-h-screen transition-all duration-300`}>
-        {/* Top bar */}
-        <div className="sticky top-0 z-30 flex items-center justify-end px-6 py-3 bg-surface/80 backdrop-blur-md border-b border-on-surface/[0.04]">
-          <NotificationBell />
+        {/* Top bar with announcements + notification */}
+        <div className="sticky top-0 z-30 flex items-center bg-surface/80 backdrop-blur-md border-b border-on-surface/[0.04]">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            {announcements.length > 0 && (
+              <AnnouncementBanner announcements={announcements} />
+            )}
+          </div>
+          <div className="shrink-0 px-5 py-3">
+            <NotificationBell />
+          </div>
         </div>
         {children}
       </main>

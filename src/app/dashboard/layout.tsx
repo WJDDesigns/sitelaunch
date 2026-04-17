@@ -6,15 +6,14 @@ import { trackSession } from "@/lib/session-tracker";
 import { getActiveAnnouncements } from "./admin/announce/actions";
 import ImpersonationBanner from "./ImpersonationBanner";
 import UpgradeBanner from "./UpgradeBanner";
-import AnnouncementBanner from "@/components/AnnouncementBanner";
 import DashboardShell from "./DashboardShell";
 import { ToastProvider } from "@/components/Toast";
 
 const TIER_LABELS: Record<string, string> = {
   free: "Free",
-  paid: "Paid",
-  unlimited: "Unlimited",
-  enterprise: "Enterprise",
+  paid: "Starter",
+  unlimited: "Agency",
+  enterprise: "Agency",
 };
 
 const WORKSPACE_NAV = [
@@ -148,12 +147,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           hasImpersonation={!!impersonatingName}
           accountContexts={accountContexts}
           activePartnerId={partnerCtx?.partnerId ?? accountContexts.find((c) => c.isOwnAccount)?.partnerId ?? accountContexts[0]?.partnerId ?? null}
-        >
-          {/* Announcement banners */}
-          {activeAnnouncements.length > 0 && (
-            <AnnouncementBanner announcements={activeAnnouncements} />
-          )}
-          {/* Upgrade banner for free-tier users near their limit */}
+          announcements={activeAnnouncements}
+        >          {/* Upgrade banner for free-tier users near their limit */}
           {account && usageLimit !== null && account.planTier === "free" && (
             <UpgradeBanner
               used={usageUsed}
