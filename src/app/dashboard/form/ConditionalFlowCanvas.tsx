@@ -3,24 +3,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import type { FormSchema, StepDef, FieldDef, ShowCondition } from "@/lib/forms";
 
-/* ── Types ────────────────────────────────────────────────── */
-
-interface RuleNode {
-  id: string;
-  type: "field" | "step";
-  label: string;
-  fieldType?: string;
-  stepTitle?: string;
-  stepIdx: number;
-  condition?: ShowCondition;
-}
-
-interface Connection {
-  sourceId: string;
-  targetId: string;
-  operator: string;
-  value?: string;
-}
+/* ── Constants ───────────────────────────────────────────── */
 
 const OPERATOR_LABELS: Record<string, string> = {
   equals: "=",
@@ -42,7 +25,33 @@ const OPERATOR_FULL: Record<string, string> = {
   less_than: "Less than",
 };
 
-/* ── Main Component ───────────────────────────────────────── */
+const SOURCE_PALETTE = [
+  "#696cf8", "#f472b6", "#34d399", "#fbbf24", "#60a5fa",
+  "#a78bfa", "#fb923c", "#2dd4bf", "#e879f9", "#4ade80",
+];
+
+/* ── Types ───────────────────────────────────────────────── */
+
+interface BlockNode {
+  id: string;
+  kind: "source" | "target";
+  label: string;
+  fieldType?: string;
+  stepIdx: number;
+  stepTitle?: string;
+  targetType?: "field" | "step";
+  condition?: ShowCondition;
+}
+
+interface Wire {
+  sourceId: string;
+  targetId: string;
+  targetType: "field" | "step";
+  operator: string;
+  value?: string;
+}
+
+/* ── Main Component ──────────────────────────────────────── */
 
 export default function ConditionalFlowCanvas({
   schema,
@@ -51,52 +60,63 @@ export default function ConditionalFlowCanvas({
   schema: FormSchema;
   onChange: (schema: FormSchema) => void;
 }) {
-  const [selectedRule, setSelectedRule] = useState<string | null>(null);
-  const [editingTarget, setEditingTarget] = useState<RuleNode | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+  const [editingTarget, setEditingTarget] = useState<string | null>(null);
+  const [draggingFrom, setDraggingFrom] = useState<string | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Build all nodes and connections from the schema
-  const { nodes, connections, sourceFields } = useMemo(() => {
-    const nodes: RuleNode[] = [];
-    const connections: Connection[] = [];
+  // Build source blocks (fields that can trigger conditions)
+  const { sourceBlocks, targetBlocks, wires, sourceFields, allFields } = useMemo(() => {
+    const sources: BlockNode[] = [];
+    const targets: BlockNode[] = [];
+    const wires: Wire[] = [];
     const sourceFields: FieldDef[] = [];
+    const allFields: (FieldDef & { stepIdx: number })[] = [];
+    const seenSourceIds = new Set<string>();
 
     schema.steps.forEach((step, si) => {
-      // Step-level node
-      nodes.push({
-        id: `step_${step.id}`,
-        type: "step",
-        label: step.title,
-        stepIdx: si,
-        condition: step.showCondition,
-      });
+      // Step-level condition
       if (step.showCondition?.fieldId) {
-        connections.push({
+        if (!seenSourceIds.has(step.showCondition.fieldId)) seenSourceIds.add(step.showCondition.fieldId);
+        targets.push({
+          id: `step_${step.id}`,
+          kind: "target",
+          label: step.title,
+          stepIdx: si,
+          targetType: "step",
+          condition: step.showCondition,
+        });
+        wires.push({
           sourceId: step.showCondition.fieldId,
           targetId: `step_${step.id}`,
+          targetType: "step",
           operator: step.showCondition.operator,
           value: step.showCondition.value,
         });
       }
 
-      // Field-level nodes
       step.fields.forEach((field) => {
-        // Track all usable source fields
+        allFields.push({ ...field, stepIdx: si });
         if (field.type !== "heading" && field.type !== "file" && field.type !== "files") {
           sourceFields.push(field);
         }
         if (field.showCondition?.fieldId) {
-          nodes.push({
+          if (!seenSourceIds.has(field.showCondition.fieldId)) seenSourceIds.add(field.showCondition.fieldId);
+          targets.push({
             id: field.id,
-            type: "field",
+            kind: "target",
             label: field.label,
             fieldType: field.type,
             stepIdx: si,
+            targetType: "field",
             condition: field.showCondition,
           });
-          connections.push({
+          wires.push({
             sourceId: field.showCondition.fieldId,
             targetId: field.id,
+            targetType: "field",
             operator: field.showCondition.operator,
             value: field.showCondition.value,
           });
@@ -104,91 +124,53 @@ export default function ConditionalFlowCanvas({
       });
     });
 
-    return { nodes: nodes.filter((n) => n.condition?.fieldId), connections, sourceFields };
-  }, [schema]);
-
-  // All fields flat for lookups
-  const allFieldsFlat = useMemo(() => {
-    const flat: (FieldDef & { stepIdx: number })[] = [];
-    schema.steps.forEach((step, si) => {
-      step.fields.forEach((f) => flat.push({ ...f, stepIdx: si }));
+    // Build source blocks from fields that are referenced
+    const activeSourceIds = [...seenSourceIds];
+    activeSourceIds.forEach((id) => {
+      const f = allFields.find((af) => af.id === id);
+      if (f) {
+        sources.push({
+          id: f.id,
+          kind: "source",
+          label: f.label,
+          fieldType: f.type,
+          stepIdx: f.stepIdx,
+        });
+      }
     });
-    return flat;
+
+    return { sourceBlocks: sources, targetBlocks: targets, wires, sourceFields, allFields };
   }, [schema]);
 
   const fieldById = useCallback(
-    (id: string) => allFieldsFlat.find((f) => f.id === id),
-    [allFieldsFlat],
+    (id: string) => allFields.find((f) => f.id === id),
+    [allFields],
   );
 
-  // Group connections by source field
-  const connectionsBySource = useMemo(() => {
-    const map: Record<string, Connection[]> = {};
-    connections.forEach((c) => {
-      (map[c.sourceId] ||= []).push(c);
+  // Color map for sources
+  const sourceColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    sourceBlocks.forEach((s, i) => {
+      map[s.id] = SOURCE_PALETTE[i % SOURCE_PALETTE.length];
     });
     return map;
-  }, [connections]);
+  }, [sourceBlocks]);
 
-  // Unique source fields that have rules pointing to them
-  const activeSourceIds = useMemo(
-    () => [...new Set(connections.map((c) => c.sourceId))],
-    [connections],
-  );
+  // Group wires by source
+  const wiresBySource = useMemo(() => {
+    const map: Record<string, Wire[]> = {};
+    wires.forEach((w) => {
+      (map[w.sourceId] ||= []).push(w);
+    });
+    return map;
+  }, [wires]);
 
-  function handleRemoveCondition(targetId: string, targetType: "field" | "step") {
-    const updated = JSON.parse(JSON.stringify(schema)) as FormSchema;
-    if (targetType === "step") {
-      const stepId = targetId.replace("step_", "");
-      const step = updated.steps.find((s) => s.id === stepId);
-      if (step) delete step.showCondition;
-    } else {
-      for (const step of updated.steps) {
-        const field = step.fields.find((f) => f.id === targetId);
-        if (field) {
-          delete field.showCondition;
-          break;
-        }
-      }
-    }
-    onChange(updated);
-    setSelectedRule(null);
-  }
-
-  function handleUpdateCondition(targetId: string, targetType: "field" | "step", condition: ShowCondition) {
-    const updated = JSON.parse(JSON.stringify(schema)) as FormSchema;
-    if (targetType === "step") {
-      const stepId = targetId.replace("step_", "");
-      const step = updated.steps.find((s) => s.id === stepId);
-      if (step) step.showCondition = condition;
-    } else {
-      for (const step of updated.steps) {
-        const field = step.fields.find((f) => f.id === targetId);
-        if (field) {
-          field.showCondition = condition;
-          break;
-        }
-      }
-    }
-    onChange(updated);
-  }
-
-  function handleAddRule(targetId: string, targetType: "field" | "step") {
-    if (sourceFields.length === 0) return;
-    const condition: ShowCondition = {
-      fieldId: sourceFields[0].id,
-      operator: "equals",
-      value: "",
-    };
-    handleUpdateCondition(targetId, targetType, condition);
-  }
-
-  // Steps and fields available as targets (no condition yet)
+  // Available targets (no condition yet)
   const availableTargets = useMemo(() => {
     const targets: { id: string; type: "field" | "step"; label: string; stepIdx: number }[] = [];
     schema.steps.forEach((step, si) => {
       if (!step.showCondition?.fieldId) {
-        targets.push({ id: `step_${step.id}`, type: "step", label: `Step: ${step.title}`, stepIdx: si });
+        targets.push({ id: `step_${step.id}`, type: "step", label: step.title, stepIdx: si });
       }
       step.fields.forEach((f) => {
         if (!f.showCondition?.fieldId && f.type !== "heading") {
@@ -197,181 +179,241 @@ export default function ConditionalFlowCanvas({
       });
     });
     return targets;
-  }, [schema]);
+  }, [schema, wires]);
 
-  // Color palette for source fields
-  const sourceColors = useMemo(() => {
-    const palette = [
-      "#696cf8", "#f472b6", "#34d399", "#fbbf24", "#60a5fa",
-      "#a78bfa", "#fb923c", "#2dd4bf", "#e879f9", "#4ade80",
-    ];
-    const map: Record<string, string> = {};
-    activeSourceIds.forEach((id, i) => {
-      map[id] = palette[i % palette.length];
+  /* ── Schema mutation helpers ──────────────────────────── */
+
+  function updateCondition(targetId: string, targetType: "field" | "step", condition: ShowCondition) {
+    const updated = JSON.parse(JSON.stringify(schema)) as FormSchema;
+    if (targetType === "step") {
+      const stepId = targetId.replace("step_", "");
+      const step = updated.steps.find((s) => s.id === stepId);
+      if (step) step.showCondition = condition;
+    } else {
+      for (const step of updated.steps) {
+        const field = step.fields.find((f) => f.id === targetId);
+        if (field) { field.showCondition = condition; break; }
+      }
+    }
+    onChange(updated);
+  }
+
+  function removeCondition(targetId: string, targetType: "field" | "step") {
+    const updated = JSON.parse(JSON.stringify(schema)) as FormSchema;
+    if (targetType === "step") {
+      const stepId = targetId.replace("step_", "");
+      const step = updated.steps.find((s) => s.id === stepId);
+      if (step) delete step.showCondition;
+    } else {
+      for (const step of updated.steps) {
+        const field = step.fields.find((f) => f.id === targetId);
+        if (field) { delete field.showCondition; break; }
+      }
+    }
+    onChange(updated);
+  }
+
+  /* ── Drag-to-connect ─────────────────────────────────── */
+
+  function handleSourceDragStart(sourceId: string, e: React.MouseEvent) {
+    e.preventDefault();
+    setDraggingFrom(sourceId);
+    setDragPos({ x: e.clientX, y: e.clientY });
+
+    const handleMove = (ev: MouseEvent) => setDragPos({ x: ev.clientX, y: ev.clientY });
+    const handleUp = () => {
+      setDraggingFrom(null);
+      setDragPos(null);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+  }
+
+  function handleDropOnTarget(targetId: string, targetType: "field" | "step") {
+    if (!draggingFrom) return;
+    updateCondition(targetId, targetType, {
+      fieldId: draggingFrom,
+      operator: "equals",
+      value: "",
     });
-    return map;
-  }, [activeSourceIds]);
+    setDraggingFrom(null);
+    setDragPos(null);
+    setEditingTarget(targetId);
+  }
+
+  const hasRules = wires.length > 0;
 
   return (
-    <div className="h-full flex flex-col bg-surface">
+    <div className="h-full flex flex-col bg-surface" ref={canvasRef}>
       {/* Top bar */}
-      <div className="shrink-0 px-6 py-4 border-b border-outline-variant/10 bg-surface-container-low/30">
+      <div className="shrink-0 px-6 py-3 border-b border-outline-variant/10 bg-surface-container-low/30">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-headline font-bold text-on-surface tracking-tight">
+            <h2 className="text-base font-headline font-bold text-on-surface tracking-tight">
               <i className="fa-solid fa-diagram-project text-primary mr-2" />
               Smart Conditions
             </h2>
-            <p className="text-xs text-on-surface-variant/60 mt-0.5">
-              Visual logic — fields and steps appear or hide based on user answers
+            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">
+              Drag from trigger blocks to targets, or click to add rules. Both views sync automatically.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">
-              {connections.length} rule{connections.length !== 1 ? "s" : ""} active
+              {wires.length} rule{wires.length !== 1 ? "s" : ""}
             </span>
+            <button
+              onClick={() => setShowAddPanel(true)}
+              className="px-3 py-1.5 text-xs font-bold text-on-primary bg-primary rounded-lg hover:shadow-[0_0_12px_rgba(105,108,248,0.3)] transition-all flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-plus text-[10px]" />
+              Add Rule
+            </button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 flex">
-        {/* Flow canvas area */}
+        {/* Main canvas */}
         <div className="flex-1 overflow-auto p-6">
-          {connections.length === 0 && availableTargets.length > 0 ? (
-            <EmptyState
-              availableTargets={availableTargets}
-              sourceFields={sourceFields}
-              onAddRule={handleAddRule}
-              fieldById={fieldById}
-            />
+          {!hasRules && !showAddPanel ? (
+            <EmptyState onAdd={() => setShowAddPanel(true)} />
           ) : (
-            <div className="space-y-6">
-              {/* Active rules grouped by source */}
-              {activeSourceIds.map((sourceId) => {
-                const source = fieldById(sourceId);
-                if (!source) return null;
-                const conns = connectionsBySource[sourceId] ?? [];
-                const color = sourceColors[sourceId] ?? "#696cf8";
+            <div className="space-y-5">
+              {/* Visual block flow */}
+              {sourceBlocks.map((source) => {
+                const color = sourceColors[source.id] ?? "#696cf8";
+                const conns = wiresBySource[source.id] ?? [];
 
                 return (
-                  <div key={sourceId} className="rounded-2xl border border-outline-variant/15 bg-surface-container-lowest overflow-hidden">
-                    {/* Source field header */}
-                    <div className="px-5 py-3.5 border-b border-outline-variant/10 flex items-center gap-3" style={{ borderLeftWidth: 4, borderLeftColor: color }}>
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px]" style={{ backgroundColor: color + "18", color }}>
-                        <i className="fa-solid fa-bolt" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-on-surface truncate">{source.label}</p>
-                        <p className="text-[10px] text-on-surface-variant/60">
-                          Trigger field &middot; Step {source.stepIdx + 1}
-                        </p>
-                      </div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "15", color }}>
-                        {conns.length} target{conns.length !== 1 ? "s" : ""}
-                      </div>
-                    </div>
-
-                    {/* Connection lines */}
-                    <div className="p-4 space-y-2">
-                      {conns.map((conn) => {
-                        const target = nodes.find((n) => n.id === conn.targetId);
-                        if (!target) return null;
-                        const isSelected = selectedRule === conn.targetId;
-
-                        return (
-                          <div
-                            key={conn.targetId}
-                            onClick={() => setSelectedRule(isSelected ? null : conn.targetId)}
-                            className={`group flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${
-                              isSelected
-                                ? "bg-primary/5 border-2 border-primary/30 shadow-sm"
-                                : "bg-surface-container hover:bg-surface-container-high/60 border-2 border-transparent"
-                            }`}
-                          >
-                            {/* Condition badge */}
-                            <div className="shrink-0 flex items-center gap-1.5">
-                              <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-md" style={{ backgroundColor: color + "15", color }}>
-                                {OPERATOR_LABELS[conn.operator] ?? conn.operator}
-                              </span>
-                              {conn.value && (
-                                <span className="text-[10px] font-medium text-on-surface bg-surface-container-high px-2 py-1 rounded-md max-w-[120px] truncate">
-                                  {conn.value}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Arrow */}
-                            <div className="flex items-center gap-1 text-on-surface-variant/30">
-                              <div className="w-6 h-px" style={{ backgroundColor: color + "40" }} />
-                              <i className="fa-solid fa-chevron-right text-[7px]" style={{ color: color + "60" }} />
-                            </div>
-
-                            {/* Target */}
-                            <div className="flex-1 min-w-0 flex items-center gap-2">
-                              <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] ${
-                                target.type === "step"
-                                  ? "bg-amber-500/15 text-amber-400"
-                                  : "bg-primary/10 text-primary"
-                              }`}>
-                                <i className={`fa-solid ${target.type === "step" ? "fa-layer-group" : "fa-eye"}`} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-on-surface truncate">{target.label}</p>
-                                <p className="text-[9px] text-on-surface-variant/50">
-                                  {target.type === "step" ? "Entire step" : `Field in step ${target.stepIdx + 1}`}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingTarget(target);
-                                }}
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant/50 hover:text-primary hover:bg-primary/10 transition-all"
-                                title="Edit rule"
-                              >
-                                <i className="fa-solid fa-pen text-[9px]" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveCondition(conn.targetId, target.type);
-                                }}
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant/50 hover:text-error hover:bg-error/10 transition-all"
-                                title="Remove rule"
-                              >
-                                <i className="fa-solid fa-trash text-[9px]" />
-                              </button>
-                            </div>
+                  <div key={source.id} className="relative">
+                    {/* Source block */}
+                    <div className="flex items-start gap-6">
+                      <div
+                        ref={(el) => { nodeRefs.current[source.id] = el; }}
+                        className="w-64 shrink-0 rounded-2xl border-2 bg-surface-container-lowest overflow-hidden"
+                        style={{ borderColor: color + "40" }}
+                      >
+                        <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: color + "08" }}>
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px]" style={{ backgroundColor: color + "20", color }}>
+                            <i className="fa-solid fa-bolt" />
                           </div>
-                        );
-                      })}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-on-surface truncate">{source.label}</p>
+                            <p className="text-[10px] text-on-surface-variant/60">
+                              Trigger · Step {source.stepIdx + 1}
+                            </p>
+                          </div>
+                          {/* Drag handle for creating new connections */}
+                          <button
+                            onMouseDown={(e) => handleSourceDragStart(source.id, e)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center cursor-crosshair hover:scale-110 transition-transform"
+                            style={{ backgroundColor: color + "20", color }}
+                            title="Drag to a target to create a connection"
+                          >
+                            <i className="fa-solid fa-circle-dot text-[9px]" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Wire + target blocks */}
+                      <div className="flex-1 space-y-2 pt-1">
+                        {conns.map((wire) => {
+                          const target = targetBlocks.find((t) => t.id === wire.targetId);
+                          if (!target) return null;
+                          const isEditing = editingTarget === wire.targetId;
+
+                          return (
+                            <div key={wire.targetId} className="flex items-center gap-3">
+                              {/* Wire line with condition badge */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="w-8 h-px" style={{ backgroundColor: color + "40" }} />
+                                <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-md whitespace-nowrap" style={{ backgroundColor: color + "15", color }}>
+                                  {OPERATOR_LABELS[wire.operator] ?? wire.operator}
+                                  {wire.value ? ` "${wire.value}"` : ""}
+                                </span>
+                                <div className="flex items-center gap-0.5">
+                                  <div className="w-4 h-px" style={{ backgroundColor: color + "40" }} />
+                                  <i className="fa-solid fa-caret-right text-[10px]" style={{ color: color + "60" }} />
+                                </div>
+                              </div>
+
+                              {/* Target block */}
+                              <div
+                                ref={(el) => { nodeRefs.current[wire.targetId] = el; }}
+                                className={`flex-1 max-w-xs rounded-xl border-2 px-4 py-2.5 flex items-center gap-3 group cursor-pointer transition-all ${
+                                  isEditing ? "border-primary/40 bg-primary/5 shadow-sm" : "border-outline-variant/15 bg-surface-container hover:border-primary/20"
+                                }`}
+                                onClick={() => setEditingTarget(isEditing ? null : wire.targetId)}
+                              >
+                                <div className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] shrink-0 ${
+                                  target.targetType === "step"
+                                    ? "bg-amber-500/15 text-amber-400"
+                                    : "bg-primary/10 text-primary"
+                                }`}>
+                                  <i className={`fa-solid ${target.targetType === "step" ? "fa-layer-group" : "fa-eye"}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-on-surface truncate">{target.label}</p>
+                                  <p className="text-[9px] text-on-surface-variant/50">
+                                    {target.targetType === "step" ? "Show entire step" : `Show field in step ${target.stepIdx + 1}`}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setEditingTarget(wire.targetId); }}
+                                    className="w-6 h-6 rounded flex items-center justify-center text-on-surface-variant/50 hover:text-primary hover:bg-primary/10 text-[9px]"
+                                  ><i className="fa-solid fa-pen" /></button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); removeCondition(wire.targetId, wire.targetType); }}
+                                    className="w-6 h-6 rounded flex items-center justify-center text-on-surface-variant/50 hover:text-error hover:bg-error/10 text-[9px]"
+                                  ><i className="fa-solid fa-trash" /></button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
               })}
 
-              {/* Add new rule */}
-              {availableTargets.length > 0 && (
-                <AddRuleCard
-                  availableTargets={availableTargets}
-                  sourceFields={sourceFields}
-                  onAddRule={(targetId, targetType, condition) => {
-                    handleUpdateCondition(targetId, targetType, condition);
-                  }}
-                  fieldById={fieldById}
-                />
+              {/* Drop zone when dragging */}
+              {draggingFrom && (
+                <div className="mt-4 p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/[0.03]">
+                  <p className="text-xs text-primary font-bold mb-3">
+                    <i className="fa-solid fa-circle-dot text-[10px] mr-1.5" />
+                    Drop on a target to connect — or choose one:
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {availableTargets.map((t) => (
+                      <button
+                        key={t.id}
+                        onMouseUp={() => handleDropOnTarget(t.id, t.type)}
+                        onClick={() => handleDropOnTarget(t.id, t.type)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-container border border-outline-variant/15 hover:border-primary/30 hover:bg-primary/5 transition-all text-left"
+                      >
+                        <div className={`w-5 h-5 rounded flex items-center justify-center text-[8px] ${
+                          t.type === "step" ? "bg-amber-500/15 text-amber-400" : "bg-primary/10 text-primary"
+                        }`}>
+                          <i className={`fa-solid ${t.type === "step" ? "fa-layer-group" : "fa-eye"}`} />
+                        </div>
+                        <span className="text-[11px] text-on-surface truncate">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Right: summary sidebar */}
+        {/* Right sidebar */}
         <div className="w-72 shrink-0 border-l border-outline-variant/10 bg-surface-container-low/20 overflow-y-auto hidden lg:block">
           <div className="p-5 space-y-5">
+            {/* Form structure */}
             <div>
               <h3 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">Form Structure</h3>
               <div className="space-y-2">
@@ -381,7 +423,7 @@ export default function ConditionalFlowCanvas({
                       <span className="w-5 h-5 rounded-md bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center">{si + 1}</span>
                       <span className="text-xs font-semibold text-on-surface truncate flex-1">{step.title}</span>
                       {step.showCondition?.fieldId && (
-                        <i className="fa-solid fa-eye text-[8px] text-amber-400" title="Has condition" />
+                        <i className="fa-solid fa-eye text-[8px] text-amber-400" title="Conditional" />
                       )}
                     </div>
                     <div className="space-y-0.5 ml-7">
@@ -389,6 +431,8 @@ export default function ConditionalFlowCanvas({
                         <div key={f.id} className="flex items-center gap-1.5 text-[10px] text-on-surface-variant/70">
                           {f.showCondition?.fieldId ? (
                             <i className="fa-solid fa-eye text-[7px] text-amber-400" />
+                          ) : sourceBlocks.find((s) => s.id === f.id) ? (
+                            <i className="fa-solid fa-bolt text-[7px]" style={{ color: sourceColors[f.id] ?? "#696cf8" }} />
                           ) : (
                             <i className="fa-solid fa-circle text-[4px] text-on-surface-variant/30" />
                           )}
@@ -401,20 +445,25 @@ export default function ConditionalFlowCanvas({
               </div>
             </div>
 
+            {/* How it works */}
             <div className="border-t border-outline-variant/10 pt-4">
               <h3 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">How it works</h3>
-              <div className="space-y-2.5 text-[11px] text-on-surface-variant/60 leading-relaxed">
+              <div className="space-y-2 text-[11px] text-on-surface-variant/60 leading-relaxed">
                 <p>
                   <i className="fa-solid fa-bolt text-primary text-[9px] mr-1.5" />
-                  <strong className="text-on-surface-variant/80">Trigger fields</strong> are the questions your client answers.
+                  <strong className="text-on-surface-variant/80">Drag</strong> from a trigger's dot to create connections.
                 </p>
                 <p>
                   <i className="fa-solid fa-eye text-amber-400 text-[9px] mr-1.5" />
-                  <strong className="text-on-surface-variant/80">Targets</strong> are the fields or steps that show/hide based on the answer.
+                  <strong className="text-on-surface-variant/80">Targets</strong> show/hide based on trigger answers.
                 </p>
                 <p>
-                  <i className="fa-solid fa-forward text-tertiary text-[9px] mr-1.5" />
-                  <strong className="text-on-surface-variant/80">Hidden steps</strong> are auto-skipped during navigation.
+                  <i className="fa-solid fa-pen text-tertiary text-[9px] mr-1.5" />
+                  <strong className="text-on-surface-variant/80">Click</strong> any target block to edit its condition.
+                </p>
+                <p>
+                  <i className="fa-solid fa-arrows-left-right text-primary text-[9px] mr-1.5" />
+                  <strong className="text-on-surface-variant/80">Syncs</strong> with field settings — edit either view.
                 </p>
               </div>
             </div>
@@ -423,16 +472,34 @@ export default function ConditionalFlowCanvas({
       </div>
 
       {/* Edit modal */}
-      {editingTarget && (
-        <EditRuleModal
-          target={editingTarget}
+      {editingTarget && (() => {
+        const target = targetBlocks.find((t) => t.id === editingTarget);
+        if (!target?.condition) return null;
+        return (
+          <EditRuleModal
+            target={target}
+            sourceFields={sourceFields}
+            condition={target.condition}
+            onSave={(condition) => {
+              updateCondition(target.id, target.targetType!, condition);
+              setEditingTarget(null);
+            }}
+            onClose={() => setEditingTarget(null)}
+            fieldById={fieldById}
+          />
+        );
+      })()}
+
+      {/* Add rule panel */}
+      {showAddPanel && (
+        <AddRuleModal
+          availableTargets={availableTargets}
           sourceFields={sourceFields}
-          condition={editingTarget.condition!}
-          onSave={(condition) => {
-            handleUpdateCondition(editingTarget.id, editingTarget.type, condition);
-            setEditingTarget(null);
+          onAdd={(targetId, targetType, condition) => {
+            updateCondition(targetId, targetType, condition);
+            setShowAddPanel(false);
           }}
-          onClose={() => setEditingTarget(null)}
+          onClose={() => setShowAddPanel(false)}
           fieldById={fieldById}
         />
       )}
@@ -440,19 +507,9 @@ export default function ConditionalFlowCanvas({
   );
 }
 
-/* ── Empty State ──────────────────────────────────────────── */
+/* ── Empty State ─────────────────────────────────────────── */
 
-function EmptyState({
-  availableTargets,
-  sourceFields,
-  onAddRule,
-  fieldById,
-}: {
-  availableTargets: { id: string; type: "field" | "step"; label: string; stepIdx: number }[];
-  sourceFields: FieldDef[];
-  onAddRule: (targetId: string, targetType: "field" | "step") => void;
-  fieldById: (id: string) => (FieldDef & { stepIdx: number }) | undefined;
-}) {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-8 text-center max-w-lg mx-auto">
       <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
@@ -461,41 +518,36 @@ function EmptyState({
       <h3 className="text-xl font-headline font-bold text-on-surface mb-2">
         No conditional logic yet
       </h3>
-      <p className="text-sm text-on-surface-variant/60 mb-8 leading-relaxed">
+      <p className="text-sm text-on-surface-variant/60 mb-6 leading-relaxed">
         Make your form smart — show or hide fields and entire steps based on how your client answers.
-        For example: &ldquo;What services do you need?&rdquo; → selecting &ldquo;SEO&rdquo; reveals the SEO-specific step.
+        Drag from trigger blocks or click the button below to create your first rule.
       </p>
-
-      <AddRuleCard
-        availableTargets={availableTargets}
-        sourceFields={sourceFields}
-        onAddRule={(targetId, targetType, condition) => {
-          // Find in schema and update
-          onAddRule(targetId, targetType);
-        }}
-        fieldById={fieldById}
-        isFirst
-      />
+      <button
+        onClick={onAdd}
+        className="px-6 py-3 bg-primary text-on-primary font-bold rounded-xl text-sm hover:shadow-[0_0_20px_rgba(105,108,248,0.3)] transition-all flex items-center gap-2"
+      >
+        <i className="fa-solid fa-plus text-xs" />
+        Create First Rule
+      </button>
     </div>
   );
 }
 
-/* ── Add Rule Card ────────────────────────────────────────── */
+/* ── Add Rule Modal ──────────────────────────────────────── */
 
-function AddRuleCard({
+function AddRuleModal({
   availableTargets,
   sourceFields,
-  onAddRule,
+  onAdd,
+  onClose,
   fieldById,
-  isFirst,
 }: {
   availableTargets: { id: string; type: "field" | "step"; label: string; stepIdx: number }[];
   sourceFields: FieldDef[];
-  onAddRule: (targetId: string, targetType: "field" | "step", condition: ShowCondition) => void;
+  onAdd: (targetId: string, targetType: "field" | "step", condition: ShowCondition) => void;
+  onClose: () => void;
   fieldById: (id: string) => (FieldDef & { stepIdx: number }) | undefined;
-  isFirst?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const [sourceId, setSourceId] = useState("");
   const [operator, setOperator] = useState<ShowCondition["operator"]>("equals");
   const [value, setValue] = useState("");
@@ -504,143 +556,92 @@ function AddRuleCard({
   const selectedSource = sourceId ? sourceFields.find((f) => f.id === sourceId) : null;
   const hasOptions = selectedSource && ["select", "radio", "checkbox"].includes(selectedSource.type);
   const needsValue = operator !== "not_empty" && operator !== "is_empty";
-
   const selectedTarget = targetId ? availableTargets.find((t) => t.id === targetId) : null;
 
   function handleCreate() {
     if (!sourceId || !targetId || !selectedTarget) return;
-    const condition: ShowCondition = { fieldId: sourceId, operator, value: needsValue ? value : undefined };
-    onAddRule(targetId, selectedTarget.type, condition);
-    setOpen(false);
-    setSourceId("");
-    setOperator("equals");
-    setValue("");
-    setTargetId("");
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className={`w-full py-4 rounded-2xl border-2 border-dashed border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/50 transition-all ${isFirst ? "py-5" : ""}`}
-      >
-        <i className="fa-solid fa-plus text-xs" />
-        Add Conditional Rule
-      </button>
-    );
+    onAdd(targetId, selectedTarget.type, { fieldId: sourceId, operator, value: needsValue ? value : undefined });
   }
 
   return (
-    <div className="rounded-2xl border-2 border-primary/30 bg-primary/[0.02] p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-bold text-on-surface">
-          <i className="fa-solid fa-plus text-primary text-xs mr-2" />
-          New Conditional Rule
-        </h4>
-        <button onClick={() => setOpen(false)} className="text-on-surface-variant/60 hover:text-on-surface"><i className="fa-solid fa-xmark" /></button>
-      </div>
-
-      {/* Step 1: trigger field */}
-      <div>
-        <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[8px] font-bold mr-1.5">1</span>
-          When this field...
-        </label>
-        <select
-          value={sourceId}
-          onChange={(e) => { setSourceId(e.target.value); setValue(""); }}
-          className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
-        >
-          <option value="">Select a trigger field...</option>
-          {sourceFields.map((f) => (
-            <option key={f.id} value={f.id}>{f.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Step 2: operator + value */}
-      {sourceId && (
-        <div>
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[8px] font-bold mr-1.5">2</span>
-            Matches this condition...
-          </label>
-          <div className="flex gap-2">
-            <select
-              value={operator}
-              onChange={(e) => setOperator(e.target.value as ShowCondition["operator"])}
-              className="flex-1 px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
-            >
-              {Object.entries(OPERATOR_FULL).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-            {needsValue && (
-              hasOptions ? (
-                <select
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
-                >
-                  <option value="">Select value...</option>
-                  {(selectedSource!.options ?? []).map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  placeholder="Value..."
-                  className="flex-1 px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none"
-                />
-              )
-            )}
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-surface-container rounded-2xl border border-outline-variant/15 p-6 w-full max-w-lg shadow-2xl space-y-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-on-surface">
+            <i className="fa-solid fa-plus text-primary text-xs mr-2" />
+            New Conditional Rule
+          </h3>
+          <button onClick={onClose} className="text-on-surface-variant/60 hover:text-on-surface"><i className="fa-solid fa-xmark" /></button>
         </div>
-      )}
 
-      {/* Step 3: target */}
-      {sourceId && (
+        {/* Step 1: trigger */}
         <div>
           <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[8px] font-bold mr-1.5">3</span>
-            Then show...
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[8px] font-bold mr-1.5">1</span>
+            When this field...
           </label>
-          <select
-            value={targetId}
-            onChange={(e) => setTargetId(e.target.value)}
-            className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
-          >
-            <option value="">Select a field or step to show...</option>
-            <optgroup label="Steps">
-              {availableTargets.filter((t) => t.type === "step").map((t) => (
-                <option key={t.id} value={t.id}>{t.label}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Fields">
-              {availableTargets.filter((t) => t.type === "field").map((t) => (
-                <option key={t.id} value={t.id}>{t.label}</option>
-              ))}
-            </optgroup>
+          <select value={sourceId} onChange={(e) => { setSourceId(e.target.value); setValue(""); }} className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none">
+            <option value="">Select a trigger field...</option>
+            {sourceFields.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
           </select>
         </div>
-      )}
 
-      {/* Create button */}
-      <button
-        onClick={handleCreate}
-        disabled={!sourceId || !targetId || (needsValue && !value)}
-        className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl text-sm disabled:opacity-40 transition-all hover:shadow-lg hover:shadow-primary/20"
-      >
-        <i className="fa-solid fa-check text-xs mr-2" />
-        Create Rule
-      </button>
+        {/* Step 2: condition */}
+        {sourceId && (
+          <div>
+            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[8px] font-bold mr-1.5">2</span>
+              Matches this condition...
+            </label>
+            <div className="flex gap-2">
+              <select value={operator} onChange={(e) => setOperator(e.target.value as ShowCondition["operator"])} className="flex-1 px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none">
+                {Object.entries(OPERATOR_FULL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              {needsValue && (hasOptions ? (
+                <select value={value} onChange={(e) => setValue(e.target.value)} className="flex-1 px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none">
+                  <option value="">Select value...</option>
+                  {(selectedSource!.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Value..." className="flex-1 px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none" />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: target */}
+        {sourceId && (
+          <div>
+            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[8px] font-bold mr-1.5">3</span>
+              Then show...
+            </label>
+            <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none">
+              <option value="">Select a field or step...</option>
+              <optgroup label="Steps">
+                {availableTargets.filter((t) => t.type === "step").map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </optgroup>
+              <optgroup label="Fields">
+                {availableTargets.filter((t) => t.type === "field").map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </optgroup>
+            </select>
+          </div>
+        )}
+
+        <button
+          onClick={handleCreate}
+          disabled={!sourceId || !targetId || (needsValue && !value)}
+          className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl text-sm disabled:opacity-40 transition-all hover:shadow-lg hover:shadow-primary/20"
+        >
+          <i className="fa-solid fa-check text-xs mr-2" />
+          Create Rule
+        </button>
+      </div>
     </div>
   );
 }
 
-/* ── Edit Rule Modal ──────────────────────────────────────── */
+/* ── Edit Rule Modal ─────────────────────────────────────── */
 
 function EditRuleModal({
   target,
@@ -650,7 +651,7 @@ function EditRuleModal({
   onClose,
   fieldById,
 }: {
-  target: RuleNode;
+  target: BlockNode;
   sourceFields: FieldDef[];
   condition: ShowCondition;
   onSave: (c: ShowCondition) => void;
@@ -678,28 +679,16 @@ function EditRuleModal({
 
         <div>
           <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Trigger field</label>
-          <select
-            value={sourceId}
-            onChange={(e) => { setSourceId(e.target.value); setValue(""); }}
-            className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
-          >
-            {sourceFields.map((f) => (
-              <option key={f.id} value={f.id}>{f.label}</option>
-            ))}
+          <select value={sourceId} onChange={(e) => { setSourceId(e.target.value); setValue(""); }} className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none">
+            {sourceFields.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
           </select>
         </div>
 
         <div className="flex gap-2">
           <div className="flex-1">
             <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Operator</label>
-            <select
-              value={operator}
-              onChange={(e) => setOperator(e.target.value as ShowCondition["operator"])}
-              className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none"
-            >
-              {Object.entries(OPERATOR_FULL).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
+            <select value={operator} onChange={(e) => setOperator(e.target.value as ShowCondition["operator"])} className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface focus:ring-1 focus:ring-primary/40 outline-none">
+              {Object.entries(OPERATOR_FULL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           {needsValue && (

@@ -348,6 +348,36 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  /* ── Auto-save (debounced 2s after last change) ────────── */
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(JSON.stringify(initialSchema));
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "idle">("saved");
+
+  useEffect(() => {
+    if (!formId) return;
+    const current = JSON.stringify(schema);
+    if (current === lastSavedRef.current) return;
+
+    setAutoSaveStatus("idle");
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      const result = await saveFormSchemaAction(current, formId);
+      if (result.ok) {
+        lastSavedRef.current = current;
+        setAutoSaveStatus("saved");
+      } else {
+        setAutoSaveStatus("idle");
+        setMessage({ kind: "err", text: result.error ?? "Auto-save failed." });
+      }
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schema, formId]);
+
   const updateSteps = useCallback((fn: (steps: StepDef[]) => StepDef[]) => {
     setSchema((prev) => ({ steps: fn([...prev.steps]) }));
     setMessage(null);
@@ -580,11 +610,18 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
           <p className="text-xs text-on-surface-variant hidden sm:block">Customize the onboarding form your clients fill out.</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          {message && (
-            <span className={`text-xs font-medium hidden sm:block ${message.kind === "ok" ? "text-tertiary" : "text-error"}`}>
-              {message.text}
-            </span>
-          )}
+          {/* Auto-save indicator */}
+          <span className="text-[10px] font-medium hidden sm:flex items-center gap-1.5">
+            {message?.kind === "err" ? (
+              <span className="text-error">{message.text}</span>
+            ) : autoSaveStatus === "saving" ? (
+              <><i className="fa-solid fa-circle-notch fa-spin text-[8px] text-on-surface-variant/50" /> <span className="text-on-surface-variant/50">Saving…</span></>
+            ) : autoSaveStatus === "saved" ? (
+              <><i className="fa-solid fa-check text-[8px] text-tertiary" /> <span className="text-tertiary">Saved</span></>
+            ) : (
+              <><i className="fa-solid fa-circle text-[6px] text-amber-400" /> <span className="text-on-surface-variant/50">Unsaved</span></>
+            )}
+          </span>
           {/* Undo / Redo */}
           <div className="hidden sm:flex items-center gap-1 border-r border-outline-variant/20 pr-3 mr-1">
             <button
@@ -627,9 +664,10 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
             </button>
           )}
           <button
-            disabled={saving}
+            disabled={saving || autoSaveStatus === "saving"}
             onClick={handleSave}
-            className="px-5 py-2 bg-primary text-on-primary font-bold rounded-lg text-sm hover:shadow-[0_0_15px_rgba(192,193,255,0.4)] disabled:opacity-60 transition-all whitespace-nowrap"
+            className="px-4 py-2 bg-primary text-on-primary font-bold rounded-lg text-xs hover:shadow-[0_0_15px_rgba(192,193,255,0.4)] disabled:opacity-60 transition-all whitespace-nowrap"
+            title="Save now (auto-saves after 2s)"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -1092,11 +1130,23 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
         )}
 
         {field.type === "package" && field.packageConfig && (
-          <PackageSettingsPanel config={field.packageConfig} onUpdate={(cfg) => onUpdate({ packageConfig: cfg })} />
+          <DialogLauncher
+            icon="fa-box-open"
+            label="Package Selector"
+            summary={`${field.packageConfig.packages.length} packages, ${field.packageConfig.features.length} features`}
+          >
+            {(onClose) => <PackageSettingsPanel config={field.packageConfig!} onUpdate={(cfg) => onUpdate({ packageConfig: cfg })} onCloseDialog={onClose} />}
+          </DialogLauncher>
         )}
 
         {field.type === "repeater" && field.repeaterConfig && (
-          <RepeaterSettingsPanel config={field.repeaterConfig} onUpdate={(cfg) => onUpdate({ repeaterConfig: cfg })} />
+          <DialogLauncher
+            icon="fa-layer-group"
+            label="Repeater / Pages"
+            summary={`${field.repeaterConfig.subFields.length} sub-fields, ${field.repeaterConfig.minEntries ?? 0}-${field.repeaterConfig.maxEntries ?? 20} entries`}
+          >
+            {(onClose) => <RepeaterSettingsPanel config={field.repeaterConfig!} onUpdate={(cfg) => onUpdate({ repeaterConfig: cfg })} onCloseDialog={onClose} />}
+          </DialogLauncher>
         )}
 
         {field.type === "consent" && (
@@ -1187,117 +1237,29 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
           </section>
         )}
 
-        {/* ââ Feature Selector Settings ââ */}
+        {/* ── Feature Selector Settings ── */}
         {field.type === "feature_selector" && field.featureSelectorConfig && (
-          <section className="space-y-3">
-            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Feature Selector</div>
-            <div>
-              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Max Selections (0 = unlimited)</span>
-              <input type="number" min={0} value={field.featureSelectorConfig.maxSelections} onChange={e => onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, maxSelections: +e.target.value } })} className={INPUT_CLS} />
-            </div>
-            <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
-              <span className="text-xs font-medium text-on-surface">Show Price Impact</span>
-              <label className="relative cursor-pointer">
-                <input type="checkbox" checked={!!field.featureSelectorConfig.showPriceImpact} onChange={e => onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, showPriceImpact: e.target.checked } })} className="sr-only peer" />
-                <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
-              </label>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
-              <span className="text-xs font-medium text-on-surface">Show Complexity</span>
-              <label className="relative cursor-pointer">
-                <input type="checkbox" checked={!!field.featureSelectorConfig.showComplexity} onChange={e => onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, showComplexity: e.target.checked } })} className="sr-only peer" />
-                <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
-              </label>
-            </div>
-            <div>
-              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Features</span>
-              <div className="space-y-2">
-                {field.featureSelectorConfig.features?.map((feat, i) => (
-                  <div key={feat.id} className="p-2.5 bg-surface-container rounded-lg space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <input value={feat.name} onChange={e => { const features = [...field.featureSelectorConfig!.features!]; features[i] = { ...features[i], name: e.target.value }; onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className={INPUT_CLS} placeholder="Feature name" />
-                      <button onClick={() => { const features = field.featureSelectorConfig!.features!.filter((_, j) => j !== i); onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className="p-1 text-on-surface-variant/40 hover:text-error text-xs transition-colors shrink-0"><i className="fa-solid fa-xmark" /></button>
-                    </div>
-                    <input value={feat.description} onChange={e => { const features = [...field.featureSelectorConfig!.features!]; features[i] = { ...features[i], description: e.target.value }; onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className={INPUT_CLS} placeholder="Description" />
-                    <div className="flex gap-2">
-                      <input value={feat.icon} onChange={e => { const features = [...field.featureSelectorConfig!.features!]; features[i] = { ...features[i], icon: e.target.value }; onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className={`${INPUT_CLS} flex-1`} placeholder="Icon (fa-...)" />
-                      <input value={feat.category} onChange={e => { const features = [...field.featureSelectorConfig!.features!]; features[i] = { ...features[i], category: e.target.value }; onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className={`${INPUT_CLS} flex-1`} placeholder="Category" />
-                    </div>
-                    <div className="flex gap-2">
-                      <select value={feat.complexity} onChange={e => { const features = [...field.featureSelectorConfig!.features!]; features[i] = { ...features[i], complexity: e.target.value as "Simple" | "Medium" | "Complex" }; onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className={INPUT_CLS}>
-                        <option value="Simple">Simple</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Complex">Complex</option>
-                      </select>
-                      <input value={feat.priceImpact} onChange={e => { const features = [...field.featureSelectorConfig!.features!]; features[i] = { ...features[i], priceImpact: e.target.value }; onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features } }); }} className={INPUT_CLS} placeholder="Price impact" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => onUpdate({ featureSelectorConfig: { ...field.featureSelectorConfig!, features: [...field.featureSelectorConfig!.features!, { id: uid(), name: "", description: "", icon: "fa-puzzle-piece", complexity: "Simple" as const, priceImpact: "", category: "" }] } })} className="w-full py-2 border border-dashed border-outline-variant/30 rounded-lg text-xs text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1.5 mt-2"><i className="fa-solid fa-plus text-[9px]" /> Add Feature</button>
-            </div>
-          </section>
+          <DialogLauncher
+            icon="fa-puzzle-piece"
+            label="Feature Selector"
+            summary={`${field.featureSelectorConfig.features?.length ?? 0} features configured`}
+          >
+            {(onClose) => <FeatureSelectorDialog config={field.featureSelectorConfig!} onUpdate={(cfg) => onUpdate({ featureSelectorConfig: cfg })} onClose={onClose} />}
+          </DialogLauncher>
         )}
 
-        {/* ââ Goal Builder Settings ââ */}
+
+        {/* ── Goal Builder Settings ── */}
         {field.type === "goal_builder" && field.goalBuilderConfig && (
-          <section className="space-y-3">
-            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Goal Builder</div>
-            <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
-              <span className="text-xs font-medium text-on-surface">Allow Multiple Goals</span>
-              <label className="relative cursor-pointer">
-                <input type="checkbox" checked={!!field.goalBuilderConfig.allowMultiple} onChange={e => onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, allowMultiple: e.target.checked } })} className="sr-only peer" />
-                <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
-              </label>
-            </div>
-            <div>
-              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Goals</span>
-              <div className="space-y-2">
-                {field.goalBuilderConfig.goals?.map((goal, gi) => (
-                  <div key={goal.id} className="p-2.5 bg-surface-container rounded-lg space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <input value={goal.icon} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; goals[gi] = { ...goals[gi], icon: e.target.value }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Icon (fa-...)" style={{ maxWidth: 100 }} />
-                      <input value={goal.label} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; goals[gi] = { ...goals[gi], label: e.target.value }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Goal label" />
-                      <button onClick={() => { const goals = field.goalBuilderConfig!.goals!.filter((_, j) => j !== gi); onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className="p-1 text-on-surface-variant/40 hover:text-error text-xs transition-colors shrink-0"><i className="fa-solid fa-xmark" /></button>
-                    </div>
-                    <div className="pl-3 border-l border-outline-variant/20 space-y-1.5 mt-1">
-                      <span className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider">Refinements</span>
-                      {goal.refinements?.map((ref, ri) => (
-                        <div key={ref.id} className="flex items-start gap-2">
-                          <div className="flex-1 space-y-1">
-                            <input value={ref.label} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], label: e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Refinement label" />
-                            <div className="flex gap-1.5">
-                              <select value={ref.type} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], type: e.target.value as "select" | "range" | "text" | "number" }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS}>
-                                <option value="select">Select</option>
-                                <option value="range">Range</option>
-                                <option value="text">Text</option>
-                              </select>
-                              {ref.type === "select" && (
-                                <input value={(ref.options || []).join(", ")} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], options: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Options (comma-separated)" />
-                              )}
-                              {ref.type === "range" && (
-                                <>
-                                  <input type="number" value={ref.min ?? 0} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], min: +e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Min" />
-                                  <input type="number" value={ref.max ?? 100} onChange={e => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], max: +e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className={INPUT_CLS} placeholder="Max" />
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <button onClick={() => { const goals = [...field.goalBuilderConfig!.goals!]; const refs = goals[gi].refinements!.filter((_, j) => j !== ri); goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className="p-1 text-on-surface-variant/40 hover:text-error text-xs transition-colors shrink-0 mt-1"><i className="fa-solid fa-xmark" /></button>
-                        </div>
-                      ))}
-                      <button onClick={() => { const goals = [...field.goalBuilderConfig!.goals!]; goals[gi] = { ...goals[gi], refinements: [...goals[gi].refinements!, { id: uid(), label: "", type: "select" as const, options: [] }] }; onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals } }); }} className="w-full py-1.5 border border-dashed border-outline-variant/20 rounded text-[10px] text-on-surface-variant/60 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1"><i className="fa-solid fa-plus text-[8px]" /> Add Refinement</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => onUpdate({ goalBuilderConfig: { ...field.goalBuilderConfig!, goals: [...field.goalBuilderConfig!.goals!, { id: uid(), label: "", icon: "fa-bullseye", refinements: [] }] } })} className="w-full py-2 border border-dashed border-outline-variant/30 rounded-lg text-xs text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1.5 mt-2"><i className="fa-solid fa-plus text-[9px]" /> Add Goal</button>
-            </div>
-          </section>
+          <DialogLauncher
+            icon="fa-bullseye"
+            label="Goal Builder"
+            summary={`${field.goalBuilderConfig.goals?.length ?? 0} goals configured`}
+          >
+            {(onClose) => <GoalBuilderDialog config={field.goalBuilderConfig!} onUpdate={(cfg) => onUpdate({ goalBuilderConfig: cfg })} onClose={onClose} />}
+          </DialogLauncher>
         )}
+
 
         {/* ââ Approval / Sign-off Settings ââ */}
         {field.type === "approval" && field.approvalConfig && (
@@ -1332,39 +1294,15 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
 
         {/* ── Brand Style Picker Settings ── */}
         {field.type === "brand_style" && field.brandStyleConfig && (
-          <section className="space-y-3">
-            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Brand Style Options</div>
-            <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
-              <span className="text-xs font-medium text-on-surface">Allow Multiple Selections</span>
-              <label className="relative cursor-pointer">
-                <input type="checkbox" checked={!!field.brandStyleConfig.allowMultiple} onChange={e => onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, allowMultiple: e.target.checked } })} className="sr-only peer" />
-                <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
-              </label>
-            </div>
-            <div className="space-y-2">
-              {field.brandStyleConfig.styles.map((style, si) => (
-                <div key={style.id} className="p-3 bg-surface-container rounded-xl space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-0.5">{style.palette.map((c, ci) => <div key={ci} className="w-4 h-4 rounded-sm border border-outline-variant/20" style={{ backgroundColor: c }} />)}</div>
-                    <input value={style.name} onChange={e => { const styles = [...field.brandStyleConfig!.styles]; styles[si] = { ...styles[si], name: e.target.value }; onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles } }); }} className="flex-1 text-xs font-semibold bg-transparent border-none outline-none text-on-surface" />
-                    <button onClick={() => { const styles = field.brandStyleConfig!.styles.filter((_, i) => i !== si); onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles } }); }} className="text-on-surface-variant/40 hover:text-error text-xs"><i className="fa-solid fa-trash" /></button>
-                  </div>
-                  <input value={style.description ?? ""} onChange={e => { const styles = [...field.brandStyleConfig!.styles]; styles[si] = { ...styles[si], description: e.target.value }; onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles } }); }} className={INPUT_CLS + " !py-1.5 !text-[11px]"} placeholder="Style description..." />
-                  <div className="flex gap-1.5 items-center">
-                    <span className="text-[10px] text-on-surface-variant/60 shrink-0">Palette:</span>
-                    {style.palette.map((c, ci) => (
-                      <input key={ci} type="color" value={c} onChange={e => { const styles = [...field.brandStyleConfig!.styles]; const palette = [...styles[si].palette]; palette[ci] = e.target.value; styles[si] = { ...styles[si], palette }; onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles } }); }} className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent p-0" />
-                    ))}
-                    {style.palette.length < 6 && <button onClick={() => { const styles = [...field.brandStyleConfig!.styles]; styles[si] = { ...styles[si], palette: [...styles[si].palette, "#888888"] }; onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles } }); }} className="w-6 h-6 rounded border border-dashed border-outline-variant/30 flex items-center justify-center text-[8px] text-on-surface-variant/40 hover:text-primary hover:border-primary/40"><i className="fa-solid fa-plus" /></button>}
-                  </div>
-                  <input value={style.fontFamily ?? ""} onChange={e => { const styles = [...field.brandStyleConfig!.styles]; styles[si] = { ...styles[si], fontFamily: e.target.value }; onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles } }); }} className={INPUT_CLS + " !py-1.5 !text-[11px]"} placeholder="Font family (e.g. Inter, Playfair Display)" />
-                </div>
-              ))}
-              <button onClick={() => onUpdate({ brandStyleConfig: { ...field.brandStyleConfig!, styles: [...field.brandStyleConfig!.styles, { id: uid(), name: "New Style", palette: ["#333333", "#666666", "#ffffff", "#eeeeee"], fontFamily: "", description: "" }] } })} className="w-full py-2 border border-dashed border-outline-variant/30 rounded-lg text-xs text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1.5"><i className="fa-solid fa-plus text-[9px]" /> Add Style</button>
-            </div>
-          </section>
+          <DialogLauncher
+            icon="fa-swatchbook"
+            label="Brand Style Picker"
+            summary={`${field.brandStyleConfig.styles.length} styles configured`}
+          >
+            {(onClose) => <BrandStyleDialog config={field.brandStyleConfig!} onUpdate={(cfg) => onUpdate({ brandStyleConfig: cfg })} onClose={onClose} />}
+          </DialogLauncher>
         )}
+
 
         {/* ── Competitor Analyzer Settings ── */}
         {field.type === "competitor_analyzer" && field.competitorAnalyzerConfig && (
@@ -1543,9 +1481,10 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
 
 /* ── Package settings panel (inside field inspector) ──────── */
 
-function PackageSettingsPanel({ config, onUpdate }: {
+function PackageSettingsPanel({ config, onUpdate, onCloseDialog }: {
   config: PackageConfig;
   onUpdate: (cfg: PackageConfig) => void;
+  onCloseDialog?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"packages" | "features" | "rules" | "layout">("packages");
 
@@ -2263,9 +2202,10 @@ const REPEATER_SUB_TYPES: { value: RepeaterSubField["type"]; label: string }[] =
   { value: "files", label: "Multi-File" },
 ];
 
-function RepeaterSettingsPanel({ config, onUpdate }: {
+function RepeaterSettingsPanel({ config, onUpdate, onCloseDialog }: {
   config: RepeaterConfig;
   onUpdate: (cfg: RepeaterConfig) => void;
+  onCloseDialog?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"fields" | "settings">("fields");
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
@@ -2469,5 +2409,214 @@ function RepeaterSettingsPanel({ config, onUpdate }: {
         </div>
       )}
     </section>
+  );
+}
+
+/* ── Dialog Launcher (opens complex settings in a full modal) ── */
+
+function DialogLauncher({
+  icon,
+  label,
+  summary,
+  children,
+}: {
+  icon: string;
+  label: string;
+  summary: string;
+  children: (onClose: () => void) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-3 p-3 bg-surface-container rounded-xl border border-outline-variant/10 hover:border-primary/30 hover:bg-primary/[0.03] transition-all group"
+      >
+        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-sm shrink-0">
+          <i className={`fa-solid ${icon}`} />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">{label}</p>
+          <p className="text-[10px] text-on-surface-variant/60">{summary}</p>
+        </div>
+        <i className="fa-solid fa-arrow-up-right-from-square text-[10px] text-on-surface-variant/30 group-hover:text-primary transition-colors" />
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)}>
+          <div
+            className="bg-surface rounded-2xl border border-outline-variant/15 shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 bg-surface border-b border-outline-variant/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-sm">
+                  <i className={`fa-solid ${icon}`} />
+                </div>
+                <h2 className="text-lg font-headline font-bold text-on-surface">{label}</h2>
+              </div>
+              <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all">
+                <i className="fa-solid fa-xmark text-sm" />
+              </button>
+            </div>
+            <div className="p-6">
+              {children(() => setOpen(false))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ── Feature Selector Dialog ─────────────────────────────── */
+
+function FeatureSelectorDialog({ config, onUpdate, onClose }: {
+  config: FeatureSelectorConfig;
+  onUpdate: (cfg: FeatureSelectorConfig) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Max Selections (0 = unlimited)</span>
+          <input type="number" min={0} value={config.maxSelections} onChange={e => onUpdate({ ...config, maxSelections: +e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+          <span className="text-xs font-medium text-on-surface">Price Impact</span>
+          <label className="relative cursor-pointer">
+            <input type="checkbox" checked={!!config.showPriceImpact} onChange={e => onUpdate({ ...config, showPriceImpact: e.target.checked })} className="sr-only peer" />
+            <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+            <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+          </label>
+        </div>
+        <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+          <span className="text-xs font-medium text-on-surface">Complexity</span>
+          <label className="relative cursor-pointer">
+            <input type="checkbox" checked={!!config.showComplexity} onChange={e => onUpdate({ ...config, showComplexity: e.target.checked })} className="sr-only peer" />
+            <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+            <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+          </label>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {config.features?.map((feat, i) => (
+          <div key={feat.id} className="p-4 bg-surface-container rounded-xl border border-outline-variant/10 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs shrink-0">
+                <i className={`fa-solid ${feat.icon || "fa-puzzle-piece"}`} />
+              </div>
+              <input value={feat.name} onChange={e => { const features = [...config.features!]; features[i] = { ...features[i], name: e.target.value }; onUpdate({ ...config, features }); }} className={`${INPUT_CLS} font-semibold`} placeholder="Feature name" />
+              <button onClick={() => onUpdate({ ...config, features: config.features!.filter((_, j) => j !== i) })} className="p-2 text-on-surface-variant/40 hover:text-error text-xs"><i className="fa-solid fa-trash" /></button>
+            </div>
+            <input value={feat.description} onChange={e => { const features = [...config.features!]; features[i] = { ...features[i], description: e.target.value }; onUpdate({ ...config, features }); }} className={INPUT_CLS} placeholder="Description" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <input value={feat.icon} onChange={e => { const features = [...config.features!]; features[i] = { ...features[i], icon: e.target.value }; onUpdate({ ...config, features }); }} className={INPUT_CLS} placeholder="fa-..." />
+              <input value={feat.category} onChange={e => { const features = [...config.features!]; features[i] = { ...features[i], category: e.target.value }; onUpdate({ ...config, features }); }} className={INPUT_CLS} placeholder="Category" />
+              <select value={feat.complexity} onChange={e => { const features = [...config.features!]; features[i] = { ...features[i], complexity: e.target.value as "Simple" | "Medium" | "Complex" }; onUpdate({ ...config, features }); }} className={INPUT_CLS}>
+                <option value="Simple">Simple</option><option value="Medium">Medium</option><option value="Complex">Complex</option>
+              </select>
+              <input value={feat.priceImpact} onChange={e => { const features = [...config.features!]; features[i] = { ...features[i], priceImpact: e.target.value }; onUpdate({ ...config, features }); }} className={INPUT_CLS} placeholder="Price" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => onUpdate({ ...config, features: [...config.features!, { id: uid(), name: "", description: "", icon: "fa-puzzle-piece", complexity: "Simple" as const, priceImpact: "", category: "" }] })} className="w-full py-3 border-2 border-dashed border-primary/30 rounded-xl text-sm text-primary font-bold hover:bg-primary/5 transition-all flex items-center justify-center gap-2"><i className="fa-solid fa-plus text-xs" /> Add Feature</button>
+    </div>
+  );
+}
+
+/* ── Goal Builder Dialog ─────────────────────────────────── */
+
+function GoalBuilderDialog({ config, onUpdate, onClose }: {
+  config: GoalBuilderConfig;
+  onUpdate: (cfg: GoalBuilderConfig) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+        <span className="text-xs font-medium text-on-surface">Allow Multiple Goals</span>
+        <label className="relative cursor-pointer">
+          <input type="checkbox" checked={!!config.allowMultiple} onChange={e => onUpdate({ ...config, allowMultiple: e.target.checked })} className="sr-only peer" />
+          <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+          <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+        </label>
+      </div>
+      <div className="space-y-3">
+        {config.goals?.map((goal, gi) => (
+          <div key={goal.id} className="p-4 bg-surface-container rounded-xl border border-outline-variant/10 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs shrink-0"><i className={`fa-solid ${goal.icon || "fa-bullseye"}`} /></div>
+              <input value={goal.icon} onChange={e => { const goals = [...config.goals!]; goals[gi] = { ...goals[gi], icon: e.target.value }; onUpdate({ ...config, goals }); }} className={INPUT_CLS} placeholder="Icon" style={{ maxWidth: 120 }} />
+              <input value={goal.label} onChange={e => { const goals = [...config.goals!]; goals[gi] = { ...goals[gi], label: e.target.value }; onUpdate({ ...config, goals }); }} className={`${INPUT_CLS} font-semibold`} placeholder="Goal label" />
+              <button onClick={() => onUpdate({ ...config, goals: config.goals!.filter((_, j) => j !== gi) })} className="p-2 text-on-surface-variant/40 hover:text-error text-xs"><i className="fa-solid fa-trash" /></button>
+            </div>
+            <div className="pl-4 border-l-2 border-primary/20 space-y-2">
+              <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider">Refinements</span>
+              {goal.refinements?.map((ref, ri) => (
+                <div key={ref.id} className="flex items-start gap-2 p-3 bg-surface-container-high/50 rounded-lg">
+                  <div className="flex-1 space-y-2">
+                    <input value={ref.label} onChange={e => { const goals = [...config.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], label: e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ ...config, goals }); }} className={INPUT_CLS} placeholder="Refinement label" />
+                    <div className="flex gap-2">
+                      <select value={ref.type} onChange={e => { const goals = [...config.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], type: e.target.value as "select" | "range" | "text" | "number" }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ ...config, goals }); }} className={INPUT_CLS}>
+                        <option value="select">Select</option><option value="range">Range</option><option value="text">Text</option>
+                      </select>
+                      {ref.type === "select" && <input value={(ref.options || []).join(", ")} onChange={e => { const goals = [...config.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], options: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ ...config, goals }); }} className={INPUT_CLS} placeholder="Options (comma-separated)" />}
+                      {ref.type === "range" && <><input type="number" value={ref.min ?? 0} onChange={e => { const goals = [...config.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], min: +e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ ...config, goals }); }} className={INPUT_CLS} placeholder="Min" /><input type="number" value={ref.max ?? 100} onChange={e => { const goals = [...config.goals!]; const refs = [...goals[gi].refinements!]; refs[ri] = { ...refs[ri], max: +e.target.value }; goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ ...config, goals }); }} className={INPUT_CLS} placeholder="Max" /></>}
+                    </div>
+                  </div>
+                  <button onClick={() => { const goals = [...config.goals!]; const refs = goals[gi].refinements!.filter((_, j) => j !== ri); goals[gi] = { ...goals[gi], refinements: refs }; onUpdate({ ...config, goals }); }} className="p-1 text-on-surface-variant/40 hover:text-error text-xs mt-1"><i className="fa-solid fa-xmark" /></button>
+                </div>
+              ))}
+              <button onClick={() => { const goals = [...config.goals!]; goals[gi] = { ...goals[gi], refinements: [...goals[gi].refinements!, { id: uid(), label: "", type: "select" as const, options: [] }] }; onUpdate({ ...config, goals }); }} className="w-full py-2 border border-dashed border-outline-variant/20 rounded-lg text-[11px] text-on-surface-variant/60 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1"><i className="fa-solid fa-plus text-[9px]" /> Add Refinement</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => onUpdate({ ...config, goals: [...config.goals!, { id: uid(), label: "", icon: "fa-bullseye", refinements: [] }] })} className="w-full py-3 border-2 border-dashed border-primary/30 rounded-xl text-sm text-primary font-bold hover:bg-primary/5 transition-all flex items-center justify-center gap-2"><i className="fa-solid fa-plus text-xs" /> Add Goal</button>
+    </div>
+  );
+}
+
+/* ── Brand Style Dialog ──────────────────────────────────── */
+
+function BrandStyleDialog({ config, onUpdate, onClose }: {
+  config: NonNullable<FieldDef["brandStyleConfig"]>;
+  onUpdate: (cfg: NonNullable<FieldDef["brandStyleConfig"]>) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+        <span className="text-xs font-medium text-on-surface">Allow Multiple Selections</span>
+        <label className="relative cursor-pointer">
+          <input type="checkbox" checked={!!config.allowMultiple} onChange={e => onUpdate({ ...config, allowMultiple: e.target.checked })} className="sr-only peer" />
+          <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+          <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+        </label>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {config.styles.map((style, si) => (
+          <div key={style.id} className="p-4 bg-surface-container rounded-xl border border-outline-variant/10 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">{style.palette.map((c, ci) => <div key={ci} className="w-5 h-5 rounded border border-outline-variant/20" style={{ backgroundColor: c }} />)}</div>
+              <input value={style.name} onChange={e => { const styles = [...config.styles]; styles[si] = { ...styles[si], name: e.target.value }; onUpdate({ ...config, styles }); }} className="flex-1 text-sm font-bold bg-transparent border-none outline-none text-on-surface" />
+              <button onClick={() => onUpdate({ ...config, styles: config.styles.filter((_, i) => i !== si) })} className="text-on-surface-variant/40 hover:text-error text-xs p-1"><i className="fa-solid fa-trash" /></button>
+            </div>
+            <input value={style.description ?? ""} onChange={e => { const styles = [...config.styles]; styles[si] = { ...styles[si], description: e.target.value }; onUpdate({ ...config, styles }); }} className={INPUT_CLS} placeholder="Style description..." />
+            <div className="flex gap-2 items-center flex-wrap">
+              <span className="text-[10px] text-on-surface-variant/60 shrink-0">Palette:</span>
+              {style.palette.map((c, ci) => <input key={ci} type="color" value={c} onChange={e => { const styles = [...config.styles]; const palette = [...styles[si].palette]; palette[ci] = e.target.value; styles[si] = { ...styles[si], palette }; onUpdate({ ...config, styles }); }} className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent p-0" />)}
+              {style.palette.length < 6 && <button onClick={() => { const styles = [...config.styles]; styles[si] = { ...styles[si], palette: [...styles[si].palette, "#888888"] }; onUpdate({ ...config, styles }); }} className="w-7 h-7 rounded border border-dashed border-outline-variant/30 flex items-center justify-center text-[9px] text-on-surface-variant/40 hover:text-primary"><i className="fa-solid fa-plus" /></button>}
+            </div>
+            <input value={style.fontFamily ?? ""} onChange={e => { const styles = [...config.styles]; styles[si] = { ...styles[si], fontFamily: e.target.value }; onUpdate({ ...config, styles }); }} className={INPUT_CLS} placeholder="Font family" />
+          </div>
+        ))}
+      </div>
+      <button onClick={() => onUpdate({ ...config, styles: [...config.styles, { id: uid(), name: "New Style", palette: ["#333333", "#666666", "#ffffff", "#eeeeee"], fontFamily: "", description: "" }] })} className="w-full py-3 border-2 border-dashed border-primary/30 rounded-xl text-sm text-primary font-bold hover:bg-primary/5 transition-all flex items-center justify-center gap-2"><i className="fa-solid fa-plus text-xs" /> Add Style</button>
+    </div>
   );
 }

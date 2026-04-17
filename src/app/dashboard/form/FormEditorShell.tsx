@@ -84,8 +84,8 @@ export default function FormEditorShell({
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Top toolbar with preview toggle + public link */}
-      <div className="shrink-0 px-4 sm:px-6 py-2.5 border-b border-outline-variant/10 bg-surface-container-low/30 flex items-center justify-between gap-3">
+      {/* Top toolbar — compact */}
+      <div className="shrink-0 px-4 sm:px-6 py-2 border-b border-outline-variant/10 bg-surface-container-low/30 flex items-center justify-between gap-3">
         {/* Left: back link + mode toggle */}
         <div className="flex items-center gap-3">
           {formId && (
@@ -94,89 +94,87 @@ export default function FormEditorShell({
               {formName || "Forms"}
             </Link>
           )}
-        <div className="flex items-center gap-1 bg-surface-container rounded-lg p-0.5">
-          <button
-            onClick={() => setMode("editor")}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
-              mode === "editor"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant/60 hover:text-on-surface"
-            }`}
-          >
-            <i className="fa-solid fa-pen-ruler text-[10px] mr-1.5" />
-            Editor
-          </button>
-          <button
-            onClick={() => setMode("logic")}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
-              mode === "logic"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant/60 hover:text-on-surface"
-            }`}
-          >
-            <i className="fa-solid fa-diagram-project text-[10px] mr-1.5" />
-            Logic
-          </button>
-          <button
-            onClick={() => {
-              setMode("preview");
-              setLiveSchema(initialSchema);
-            }}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
-              mode === "preview"
-                ? "bg-primary text-on-primary"
-                : "text-on-surface-variant/60 hover:text-on-surface"
-            }`}
-          >
-            <i className="fa-solid fa-eye text-[10px] mr-1.5" />
-            Preview
-          </button>
-        </div>
-          {formId && (
-            <Link href={`/dashboard/form/${formId}/entries`}
-              className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md text-on-surface-variant/60 hover:text-primary hover:bg-primary/5 transition-all">
-              <i className="fa-solid fa-table-list text-[10px] mr-1.5" />
-              Entries
-            </Link>
-          )}
+          <div className="flex items-center gap-1 bg-surface-container rounded-lg p-0.5">
+            <button
+              onClick={() => setMode("editor")}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
+                mode === "editor"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant/60 hover:text-on-surface"
+              }`}
+            >
+              <i className="fa-solid fa-pen-ruler text-[10px] mr-1.5" />
+              Editor
+            </button>
+            <button
+              onClick={() => setMode("logic")}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
+                mode === "logic"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant/60 hover:text-on-surface"
+              }`}
+            >
+              <i className="fa-solid fa-diagram-project text-[10px] mr-1.5" />
+              Logic
+            </button>
+            <button
+              onClick={() => {
+                setMode("preview");
+                setLiveSchema(initialSchema);
+              }}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
+                mode === "preview"
+                  ? "bg-primary text-on-primary"
+                  : "text-on-surface-variant/60 hover:text-on-surface"
+              }`}
+            >
+              <i className="fa-solid fa-eye text-[10px] mr-1.5" />
+              Preview
+            </button>
+          </div>
         </div>
 
-        {/* Right: status badge + publish button + settings + public link */}
+        {/* Right: status dropdown + settings + permalink */}
         <div className="flex items-center gap-2">
-          {/* Publish status + toggle */}
+          {publishMsg && (
+            <span className="text-[10px] text-error font-medium hidden sm:inline">{publishMsg}</span>
+          )}
+          {/* Status dropdown */}
           {formId && (
-            <div className="flex items-center gap-2">
-              {publishMsg && (
-                <span className="text-[10px] text-error font-medium hidden sm:inline">{publishMsg}</span>
-              )}
-              <span className={`hidden sm:inline text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                isActive
-                  ? "text-tertiary bg-tertiary/10 border-tertiary/20"
-                  : "text-on-surface-variant/60 bg-surface-container-high border-outline-variant/15"
-              }`}>
-                <i className={`fa-solid ${isActive ? "fa-circle-check" : "fa-circle-pause"} text-[8px] mr-1`} />
-                {isActive ? "Published" : "Draft"}
-              </span>
-              <button
-                onClick={handleTogglePublish}
+            <div className="relative">
+              <select
+                value={isActive ? "published" : "draft"}
+                onChange={(e) => {
+                  const wantActive = e.target.value === "published";
+                  if (wantActive !== isActive) handleTogglePublish();
+                }}
                 disabled={publishing}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap disabled:opacity-60 ${
+                className={`appearance-none pl-6 pr-8 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full border cursor-pointer focus:outline-none transition-all disabled:opacity-60 ${
                   isActive
-                    ? "text-on-surface-variant border border-outline-variant/20 hover:border-error/30 hover:text-error"
-                    : "text-on-primary bg-tertiary hover:shadow-[0_0_12px_rgba(100,220,180,0.3)]"
+                    ? "text-tertiary bg-tertiary/10 border-tertiary/20"
+                    : "text-on-surface-variant/60 bg-surface-container-high border-outline-variant/15"
                 }`}
               >
-                <i className={`fa-solid ${isActive ? "fa-eye-slash" : "fa-rocket"} text-[10px]`} />
-                {publishing ? "..." : isActive ? "Unpublish" : "Publish"}
-              </button>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+              <i className={`fa-solid ${isActive ? "fa-circle-check" : "fa-circle-pause"} text-[8px] absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none ${isActive ? "text-tertiary" : "text-on-surface-variant/60"}`} />
+              <i className="fa-solid fa-chevron-down text-[7px] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant/40" />
             </div>
           )}
           {settingsSlot}
           {publicUrl && isActive && (
             <>
-              <span className="text-xs text-on-surface-variant/60 hidden md:inline truncate max-w-[200px] lg:max-w-xs">
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-on-surface-variant/60 hidden md:inline truncate max-w-[200px] lg:max-w-xs hover:text-primary transition-colors"
+                title="Open form in new tab"
+              >
                 {publicUrl.replace(/^https?:\/\//, "")}
-              </span>
+                <i className="fa-solid fa-arrow-up-right-from-square text-[8px] ml-1.5 opacity-40" />
+              </a>
               <button
                 onClick={handleCopyLink}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary border border-primary/20 rounded-lg hover:bg-primary/10 transition-all whitespace-nowrap"
@@ -184,15 +182,6 @@ export default function FormEditorShell({
                 <i className={`fa-solid ${copied ? "fa-check" : "fa-link"} text-[10px]`} />
                 {copied ? "Copied!" : "Copy Link"}
               </button>
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-on-surface-variant border border-outline-variant/20 rounded-lg hover:border-primary/30 hover:text-primary transition-all whitespace-nowrap"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" />
-                <span className="hidden sm:inline">Open</span>
-              </a>
             </>
           )}
         </div>
