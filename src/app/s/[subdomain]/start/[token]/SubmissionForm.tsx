@@ -858,7 +858,7 @@ function SignaturePadCanvas({ value, onChange, primaryColor }: {
       const ctx = canvas.getContext("2d");
       if (ctx) { ctx.scale(dpr, dpr); ctxRef.current = ctx; }
       if (value && ctx) {
-        const img = new Image();
+        const img = document.createElement('img');
         img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
         img.src = value;
       }
