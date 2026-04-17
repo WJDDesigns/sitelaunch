@@ -1052,7 +1052,6 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
   const canAdd = !cfg.maxCompetitors || entries.length < cfg.maxCompetitors;
 
   const fetchAnalysis = useCallback(async (url: string, idx: number) => {
-    if (!cfg.autoFetch) return;
     try {
       new URL(url); // validate
     } catch { return; }
@@ -1078,7 +1077,7 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
       }
     } catch { /* silently fail */ }
     setAnalyzing(null);
-  }, [cfg.autoFetch, value, onChange]);
+  }, [value, onChange]);
 
   const addEntry = () => {
     if (!canAdd) return;
@@ -1132,16 +1131,14 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor }
                   style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties}
                 />
               </div>
-              {cfg.autoFetch && (
-                <button type="button"
-                  onClick={() => entry.url && fetchAnalysis(entry.url, idx)}
-                  disabled={analyzing === idx || !entry.url}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
-                  style={{ color: primaryColor }}
-                  title="Analyze site">
-                  <i className={`fa-solid ${analyzing === idx ? "fa-spinner fa-spin" : "fa-magnifying-glass-chart"} text-xs`} />
-                </button>
-              )}
+              <button type="button"
+                onClick={() => entry.url && fetchAnalysis(entry.url, idx)}
+                disabled={analyzing === idx || !entry.url}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
+                style={{ color: primaryColor }}
+                title="Analyze site">
+                <i className={`fa-solid ${analyzing === idx ? "fa-spinner fa-spin" : "fa-magnifying-glass-chart"} text-xs`} />
+              </button>
               <button type="button" onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors"
                 title="Toggle notes">
