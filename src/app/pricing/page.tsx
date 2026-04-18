@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import LinqMeLogo from "@/components/LinqMeLogo";
 import ThemeToggle from "@/components/ThemeToggle";
+import ScrollReveal from "@/components/ScrollReveal";
 import PricingCards from "./PricingCards";
 
 export const metadata: Metadata = {
@@ -151,7 +152,9 @@ export default function PricingPage() {
         <div className="absolute top-[20%] right-[-5%] w-[400px] h-[350px] bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[10%] left-[-5%] w-[350px] h-[300px] bg-primary/[0.05] rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative z-10">
-          <PricingCards tiers={TIERS} />
+          <ScrollReveal animation="zoom-in">
+            <PricingCards tiers={TIERS} />
+          </ScrollReveal>
         </div>
       </section>
 
@@ -163,7 +166,10 @@ export default function PricingPage() {
         <div className="absolute top-[30%] right-[-5%] w-[350px] h-[300px] bg-primary/[0.05] rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-[20%] left-[-5%] w-[300px] h-[250px] bg-tertiary/[0.04] rounded-full blur-[90px] pointer-events-none" />
         <div className="max-w-4xl mx-auto relative z-10 pt-24 md:pt-32">
-          <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Compare plans <span className="gradient-text">at a glance</span></h2>
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Compare plans <span className="gradient-text">at a glance</span></h2>
+          </ScrollReveal>
+          <ScrollReveal animation="fade-up" delay={100}>
           <div className="rounded-2xl overflow-hidden border border-outline-variant/[0.08] bg-surface-container/30">
             <table className="w-full text-sm">
               <thead>
@@ -189,6 +195,7 @@ export default function PricingPage() {
               </tbody>
             </table>
           </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -199,13 +206,17 @@ export default function PricingPage() {
         <div className="absolute top-[20%] left-[-5%] w-[400px] h-[350px] bg-primary/[0.07] rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[20%] right-[-5%] w-[350px] h-[300px] bg-tertiary/[0.06] rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-3xl mx-auto relative z-10 pt-24 md:pt-32">
-          <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Frequently asked <span className="gradient-text">questions</span></h2>
+          <ScrollReveal animation="fade-up">
+            <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Frequently asked <span className="gradient-text">questions</span></h2>
+          </ScrollReveal>
           <div className="space-y-4">
-            {FAQ.map((item) => (
-              <div key={item.q} className="glass-panel rounded-2xl border border-outline-variant/[0.08] p-6">
-                <h3 className="font-bold text-on-surface mb-2">{item.q}</h3>
-                <p className="text-sm text-on-surface-variant/70 leading-relaxed">{item.a}</p>
-              </div>
+            {FAQ.map((item, i) => (
+              <ScrollReveal key={item.q} animation="fade-up" delay={i * 60}>
+                <div className="glass-panel rounded-2xl border border-outline-variant/[0.08] p-6 hover:border-outline-variant/15 transition-all duration-300 glow-card">
+                  <h3 className="font-bold text-on-surface mb-2">{item.q}</h3>
+                  <p className="text-sm text-on-surface-variant/70 leading-relaxed">{item.a}</p>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -217,6 +228,7 @@ export default function PricingPage() {
         <div className="absolute inset-0 gradient-mesh pointer-events-none" />
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-outline-variant/15 to-transparent" />
         <div className="max-w-3xl mx-auto relative z-10 pt-24 md:pt-32">
+          <ScrollReveal animation="zoom-in">
           <div className="gradient-border rounded-3xl">
             <div className="relative glass-panel noise-overlay p-12 md:p-16 rounded-3xl overflow-hidden">
               <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-primary/[0.12] rounded-full blur-[80px] pointer-events-none" />
@@ -236,6 +248,7 @@ export default function PricingPage() {
               </Link>
             </div>
           </div>
+          </ScrollReveal>
         </div>
       </section>
 

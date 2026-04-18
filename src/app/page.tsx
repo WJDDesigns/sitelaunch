@@ -1,6 +1,7 @@
 import Link from "next/link";
 import LinqMeLogo from "@/components/LinqMeLogo";
 import ThemeToggle from "@/components/ThemeToggle";
+import ScrollReveal from "@/components/ScrollReveal";
 import HomePricingTeaser from "./HomePricingTeaser";
 import { getSession } from "@/lib/auth";
 
@@ -296,12 +297,17 @@ export default async function LandingPage() {
         <div className="absolute inset-0 bg-scanlines pointer-events-none" />
         <div className="absolute inset-0 bg-spotlight pointer-events-none" />
         <div className="max-w-5xl mx-auto px-6 text-center relative z-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-on-surface-variant/40 font-semibold mb-6">Powering agencies and creative teams worldwide</p>
-          <div className="flex flex-wrap justify-center gap-x-12 gap-y-4 items-center text-on-surface-variant/20">
-            {["Agency Co", "Studio X", "PixelForge", "BrandHive", "CreativOps"].map((name, i) => (
-              <span key={name} className={`text-lg md:text-xl font-headline font-bold tracking-tight ${i % 2 === 0 ? "hover:text-primary/50" : "hover:text-tertiary/50"} transition-colors duration-500`}>{name}</span>
-            ))}
-          </div>
+          <ScrollReveal animation="fade-in">
+            <p className="text-xs uppercase tracking-[0.25em] text-on-surface-variant/40 font-semibold mb-6">Powering agencies and creative teams worldwide</p>
+            <div className="flex flex-wrap justify-center gap-x-12 gap-y-4 items-center text-on-surface-variant/20">
+              {["Agency Co", "Studio X", "PixelForge", "BrandHive", "CreativOps"].map((name, i) => {
+                const colors = ["text-[#4285F4]/50", "text-[#DB4437]/50", "text-[#0F9D58]/50", "text-[#F4B400]/50", "text-[#4285F4]/50"];
+                return (
+                  <span key={name} className={`text-lg md:text-xl font-headline font-bold tracking-tight hover:${colors[i]} transition-colors duration-500`}>{name}</span>
+                );
+              })}
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -317,10 +323,10 @@ export default async function LandingPage() {
 
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <StatBlock value="10,000+" label="Entries collected" icon="fa-paper-plane" accent="primary" />
-            <StatBlock value="500+" label="Agencies onboard" icon="fa-building" accent="tertiary" />
-            <StatBlock value="99.9%" label="Uptime SLA" icon="fa-shield-halved" accent="primary" />
-            <StatBlock value="30+" label="Field types available" icon="fa-cube" accent="tertiary" />
+            <ScrollReveal animation="fade-up" delay={0}><StatBlock value="10,000+" label="Entries collected" icon="fa-paper-plane" color="blue" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={100}><StatBlock value="500+" label="Agencies onboard" icon="fa-building" color="red" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={200}><StatBlock value="99.9%" label="Uptime SLA" icon="fa-shield-halved" color="green" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={300}><StatBlock value="30+" label="Field types available" icon="fa-cube" color="amber" /></ScrollReveal>
           </div>
         </div>
       </section>
@@ -345,9 +351,9 @@ export default async function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            <StepCard num={1} title="Build Your Forms" desc="Use the drag-and-drop builder to create multi-step forms with 30+ field types including file uploads, packages, repeaters, conditional logic, and more." icon="fa-pen-ruler" delay="delay-1" accent="primary" />
-            <StepCard num={2} title="Collect Data & Files" desc="Share a white-labeled link with clients. They fill it out step by step, upload files, and auto-save as they go. No login needed." icon="fa-inbox" delay="delay-2" accent="tertiary" />
-            <StepCard num={3} title="Analyze & Act" desc="Every entry flows into your dashboard. Build custom Insights widgets, export to CSV or PDF, manage accounts, and track trends over time." icon="fa-chart-pie" delay="delay-3" accent="primary" />
+            <ScrollReveal animation="fade-up" delay={0}><StepCard num={1} title="Build Your Forms" desc="Use the drag-and-drop builder to create multi-step forms with 30+ field types including file uploads, packages, repeaters, conditional logic, and more." icon="fa-pen-ruler" color="blue" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={150}><StepCard num={2} title="Collect Data & Files" desc="Share a white-labeled link with clients. They fill it out step by step, upload files, and auto-save as they go. No login needed." icon="fa-inbox" color="green" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={300}><StepCard num={3} title="Analyze & Act" desc="Every entry flows into your dashboard. Build custom Insights widgets, export to CSV or PDF, manage accounts, and track trends over time." icon="fa-chart-pie" color="amber" /></ScrollReveal>
           </div>
         </div>
       </section>
@@ -372,59 +378,67 @@ export default async function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="md:col-span-2 group relative rounded-2xl overflow-hidden glow-card">
-              <div className="gradient-border rounded-2xl h-full">
-                <div className="relative glass-panel noise-overlay p-8 md:p-10 rounded-2xl min-h-[220px] flex flex-col justify-end">
-                  <div className="absolute top-6 right-6 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500">
-                    <i className="fa-solid fa-wand-magic-sparkles text-lg" />
+            <ScrollReveal animation="slide-left" delay={0} className="md:col-span-2">
+              <div className="group relative rounded-2xl overflow-hidden glow-card h-full">
+                <div className="gradient-border rounded-2xl h-full">
+                  <div className="relative glass-panel noise-overlay p-8 md:p-10 rounded-2xl min-h-[220px] flex flex-col justify-end border-t-4 border-t-primary/40">
+                    <div className="absolute top-6 right-6 w-14 h-14 rounded-2xl bg-[#4285F4]/15 flex items-center justify-center text-[#4285F4] group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_30px_rgba(66,133,244,0.2)] transition-all duration-500">
+                      <i className="fa-solid fa-wand-magic-sparkles text-xl" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2 relative z-10">Total White-Labeling</h3>
+                    <p className="text-on-surface-variant max-w-md relative z-10">Your brand, your domain, your colors. Clients see your portal, not ours.</p>
                   </div>
-                  <h3 className="text-2xl font-bold mb-2 relative z-10">Total White-Labeling</h3>
-                  <p className="text-on-surface-variant max-w-md relative z-10">Your brand, your domain, your colors. Clients see your portal, not ours.</p>
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
 
-            <div className="group relative rounded-2xl overflow-hidden glow-card">
-              <div className="relative bg-surface-container-high/60 noise-overlay p-8 rounded-2xl border border-outline-variant/10 min-h-[220px] flex flex-col justify-end">
-                <div className="absolute top-6 right-6 w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 group-hover:bg-tertiary/20 transition-all duration-500">
-                  <i className="fa-solid fa-sitemap text-lg" />
-                </div>
-                <h3 className="text-xl font-bold mb-2 relative z-10">Accounts & Team Management</h3>
-                <p className="text-on-surface-variant text-sm relative z-10">Track client accounts, invite team members, and control permissions from one workspace.</p>
-              </div>
-            </div>
-
-            <div className="group relative rounded-2xl overflow-hidden glow-card">
-              <div className="relative bg-surface-container-high/60 noise-overlay p-8 rounded-2xl border border-outline-variant/10 min-h-[220px] flex flex-col justify-end">
-                <div className="absolute top-6 right-6 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500">
-                  <i className="fa-solid fa-pen-ruler text-lg" />
-                </div>
-                <h3 className="text-xl font-bold mb-2 relative z-10">Powerful Form Builder</h3>
-                <p className="text-on-surface-variant text-sm relative z-10">30+ field types, multi-step flows, conditional logic, file uploads, and repeater fields.</p>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 group relative rounded-2xl overflow-hidden glow-card">
-              <div className="gradient-border rounded-2xl h-full">
-                <div className="relative glass-panel noise-overlay p-8 md:p-10 rounded-2xl min-h-[220px] flex flex-col justify-end">
-                  <div className="absolute top-6 right-6 w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 group-hover:bg-tertiary/20 transition-all duration-500">
-                    <i className="fa-solid fa-chart-pie text-lg" />
+            <ScrollReveal animation="slide-right" delay={100}>
+              <div className="group relative rounded-2xl overflow-hidden glow-card h-full">
+                <div className="relative bg-surface-container-high/60 noise-overlay p-8 rounded-2xl border border-outline-variant/10 min-h-[220px] flex flex-col justify-end border-t-4 border-t-[#0F9D58]/40">
+                  <div className="absolute top-6 right-6 w-14 h-14 rounded-2xl bg-[#0F9D58]/15 flex items-center justify-center text-[#0F9D58] group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_30px_rgba(15,157,88,0.2)] transition-all duration-500">
+                    <i className="fa-solid fa-sitemap text-xl" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-2 relative z-10">Insights Dashboard</h3>
-                  <p className="text-on-surface-variant max-w-md relative z-10">Build custom dashboards with charts, number cards, and tables. Auto-generate widgets per form or create your own from scratch.</p>
+                  <h3 className="text-xl font-bold mb-2 relative z-10">Accounts & Team Management</h3>
+                  <p className="text-on-surface-variant text-sm relative z-10">Track client accounts, invite team members, and control permissions from one workspace.</p>
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
+
+            <ScrollReveal animation="slide-left" delay={100}>
+              <div className="group relative rounded-2xl overflow-hidden glow-card h-full">
+                <div className="relative bg-surface-container-high/60 noise-overlay p-8 rounded-2xl border border-outline-variant/10 min-h-[220px] flex flex-col justify-end border-t-4 border-t-[#DB4437]/40">
+                  <div className="absolute top-6 right-6 w-14 h-14 rounded-2xl bg-[#DB4437]/15 flex items-center justify-center text-[#DB4437] group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_30px_rgba(219,68,55,0.2)] transition-all duration-500">
+                    <i className="fa-solid fa-pen-ruler text-xl" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 relative z-10">Powerful Form Builder</h3>
+                  <p className="text-on-surface-variant text-sm relative z-10">30+ field types, multi-step flows, conditional logic, file uploads, and repeater fields.</p>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal animation="slide-right" delay={0} className="md:col-span-2">
+              <div className="group relative rounded-2xl overflow-hidden glow-card h-full">
+                <div className="gradient-border rounded-2xl h-full">
+                  <div className="relative glass-panel noise-overlay p-8 md:p-10 rounded-2xl min-h-[220px] flex flex-col justify-end border-t-4 border-t-[#F4B400]/40">
+                    <div className="absolute top-6 right-6 w-14 h-14 rounded-2xl bg-[#F4B400]/15 flex items-center justify-center text-[#F4B400] group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-[0_0_30px_rgba(244,180,0,0.2)] transition-all duration-500">
+                      <i className="fa-solid fa-chart-pie text-xl" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2 relative z-10">Insights Dashboard</h3>
+                    <p className="text-on-surface-variant max-w-md relative z-10">Build custom dashboards with charts, number cards, and tables. Auto-generate widgets per form or create your own from scratch.</p>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
 
           <div className="mt-12 mb-2 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <MiniFeature icon="fa-file-csv" title="CSV & PDF Exports" desc="Download entries as spreadsheets or branded PDFs anytime." accent="primary" />
-            <MiniFeature icon="fa-clock-rotate-left" title="Auto-save Drafts" desc="Clients can leave and come back. Progress is never lost." accent="tertiary" />
-            <MiniFeature icon="fa-code-branch" title="Conditional Logic" desc="Show or hide fields and steps based on previous answers." accent="primary" />
-            <MiniFeature icon="fa-bell" title="Instant Notifications" desc="Get notified the moment a client submits an entry." accent="tertiary" />
-            <MiniFeature icon="fa-shield-halved" title="Secure File Storage" desc="Encrypted uploads with signed URLs. Only authorized users can access." accent="primary" />
-            <MiniFeature icon="fa-arrows-repeat" title="Repeater Fields" desc="Let clients add dynamic rows of data like team members or pages." accent="tertiary" />
+            <ScrollReveal animation="fade-up" delay={0}><MiniFeature icon="fa-file-csv" title="CSV & PDF Exports" desc="Download entries as spreadsheets or branded PDFs anytime." color="blue" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={80}><MiniFeature icon="fa-clock-rotate-left" title="Auto-save Drafts" desc="Clients can leave and come back. Progress is never lost." color="green" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={160}><MiniFeature icon="fa-code-branch" title="Conditional Logic" desc="Show or hide fields and steps based on previous answers." color="red" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={0}><MiniFeature icon="fa-bell" title="Instant Notifications" desc="Get notified the moment a client submits an entry." color="amber" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={80}><MiniFeature icon="fa-shield-halved" title="Secure File Storage" desc="Encrypted uploads with signed URLs. Only authorized users can access." color="blue" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={160}><MiniFeature icon="fa-arrows-repeat" title="Repeater Fields" desc="Let clients add dynamic rows of data like team members or pages." color="green" /></ScrollReveal>
           </div>
         </div>
       </section>
@@ -448,9 +462,9 @@ export default async function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <TestimonialCard quote="We replaced three tools with linqme. Forms, client data, and analytics are all in one place now, and our clients think it's our own platform." name="Lena Morales" role="Founder, PixelForge Studio" />
-            <TestimonialCard quote="The Insights dashboard changed how we report to stakeholders. We auto-generate charts per form and the data updates in real time." name="Jordan Ellis" role="Creative Director, BrandHive" featured />
-            <TestimonialCard quote="30+ field types, conditional logic, repeater fields. We've built intake forms for web design, branding, and SEO that each feel completely different." name="Priya Sandoval" role="Operations Lead, CreativOps" />
+            <ScrollReveal animation="fade-up" delay={0}><TestimonialCard quote="We replaced three tools with linqme. Forms, client data, and analytics are all in one place now, and our clients think it's our own platform." name="Lena Morales" role="Founder, PixelForge Studio" /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={150}><TestimonialCard quote="The Insights dashboard changed how we report to stakeholders. We auto-generate charts per form and the data updates in real time." name="Jordan Ellis" role="Creative Director, BrandHive" featured /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={300}><TestimonialCard quote="30+ field types, conditional logic, repeater fields. We've built intake forms for web design, branding, and SEO that each feel completely different." name="Priya Sandoval" role="Operations Lead, CreativOps" /></ScrollReveal>
           </div>
         </div>
       </section>
@@ -477,10 +491,10 @@ export default async function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <UseCaseCard icon="fa-laptop-code" title="Web Design & Development" desc="Collect copy, images, sitemaps, and brand assets before starting a project. Track every client with accounts and visualize progress in Insights." accent="primary" />
-            <UseCaseCard icon="fa-bullhorn" title="Marketing & Social Media" desc="Build intake forms for campaign briefs, brand guidelines, and creative assets. Use conditional logic to tailor questions per service type." accent="tertiary" />
-            <UseCaseCard icon="fa-paintbrush" title="Branding & Identity" desc="Create questionnaires with package selectors, mood board uploads, and competitor analysis fields. Export entries as branded PDFs for your team." accent="tertiary" />
-            <UseCaseCard icon="fa-handshake" title="Consulting & Freelance" desc="Standardize your intake with multi-step forms, auto-save drafts, and repeater fields for dynamic data. Manage everything from one dashboard." accent="primary" />
+            <ScrollReveal animation="slide-left" delay={0}><UseCaseCard icon="fa-laptop-code" title="Web Design & Development" desc="Collect copy, images, sitemaps, and brand assets before starting a project. Track every client with accounts and visualize progress in Insights." color="blue" /></ScrollReveal>
+            <ScrollReveal animation="slide-right" delay={100}><UseCaseCard icon="fa-bullhorn" title="Marketing & Social Media" desc="Build intake forms for campaign briefs, brand guidelines, and creative assets. Use conditional logic to tailor questions per service type." color="red" /></ScrollReveal>
+            <ScrollReveal animation="slide-left" delay={100}><UseCaseCard icon="fa-paintbrush" title="Branding & Identity" desc="Create questionnaires with package selectors, mood board uploads, and competitor analysis fields. Export entries as branded PDFs for your team." color="green" /></ScrollReveal>
+            <ScrollReveal animation="slide-right" delay={0}><UseCaseCard icon="fa-handshake" title="Consulting & Freelance" desc="Standardize your intake with multi-step forms, auto-save drafts, and repeater fields for dynamic data. Manage everything from one dashboard." color="amber" /></ScrollReveal>
           </div>
         </div>
       </section>
@@ -497,21 +511,27 @@ export default async function LandingPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-primary/[0.08] rounded-full blur-[140px] pointer-events-none" />
 
         <div className="max-w-4xl mx-auto relative z-10 text-center">
-          <span className="inline-block text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4">Pricing</span>
-          <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Plans for <span className="gradient-text">every stage</span></h2>
-          <p className="text-on-surface-variant text-lg mb-12 max-w-xl mx-auto">
-            Start free with Free, grow with Starter, and go unlimited with Agency.
-          </p>
+          <ScrollReveal animation="fade-up">
+            <span className="inline-block text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4">Pricing</span>
+            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Plans for <span className="gradient-text">every stage</span></h2>
+            <p className="text-on-surface-variant text-lg mb-12 max-w-xl mx-auto">
+              Start free with Free, grow with Starter, and go unlimited with Agency.
+            </p>
+          </ScrollReveal>
 
-          <HomePricingTeaser />
+          <ScrollReveal animation="zoom-in" delay={150}>
+            <HomePricingTeaser />
+          </ScrollReveal>
 
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 px-8 py-4 border border-outline-variant/20 rounded-xl font-bold hover:border-primary/30 hover:bg-primary/[0.03] transition-all duration-300 group"
-          >
-            Compare all plans
-            <i className="fa-solid fa-arrow-right text-sm group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <ScrollReveal animation="fade-up" delay={300}>
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 px-8 py-4 border border-outline-variant/20 rounded-xl font-bold hover:border-primary/30 hover:bg-primary/[0.03] transition-all duration-300 group"
+            >
+              Compare all plans
+              <i className="fa-solid fa-arrow-right text-sm group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -532,12 +552,12 @@ export default async function LandingPage() {
           </div>
 
           <div className="space-y-4">
-            <FaqItem q="Is linqme really free?" a="Yes. The Free plan is free forever with 1 submission per month and 1 GB of storage. No credit card required. Upgrade to Starter or Agency when you're ready for more." />
-            <FaqItem q="Can my clients see linqme branding?" a="On paid plans, you can completely remove all linqme branding. Your clients will see your logo, your colors, and your custom domain. It looks 100% like your own tool." />
-            <FaqItem q="What can I build with the form builder?" a="Multi-step forms with 30+ field types including text, dropdowns, file uploads, repeater fields, package selectors, conditional logic, and more. Each form can have its own unique flow." />
-            <FaqItem q="Do I need to give clients a login?" a="No. Clients access forms via a unique, secure link. No accounts or passwords needed on their end. You get a full dashboard to manage everything." />
-            <FaqItem q="What are Insights dashboards?" a="Insights lets you build custom dashboards with number cards, bar charts, line graphs, pie charts, tables, and more. Auto-generate a dashboard per form, or create widgets from scratch." />
-            <FaqItem q="Is there a contract?" a="No. All plans are month-to-month. Cancel anytime from your dashboard. Annual billing with 20% off is also available." />
+            <ScrollReveal animation="fade-up" delay={0}><FaqItem q="Is linqme really free?" a="Yes. The Free plan is free forever with 1 submission per month and 1 GB of storage. No credit card required. Upgrade to Starter or Agency when you're ready for more." /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={60}><FaqItem q="Can my clients see linqme branding?" a="On paid plans, you can completely remove all linqme branding. Your clients will see your logo, your colors, and your custom domain. It looks 100% like your own tool." /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={120}><FaqItem q="What can I build with the form builder?" a="Multi-step forms with 30+ field types including text, dropdowns, file uploads, repeater fields, package selectors, conditional logic, and more. Each form can have its own unique flow." /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={60}><FaqItem q="Do I need to give clients a login?" a="No. Clients access forms via a unique, secure link. No accounts or passwords needed on their end. You get a full dashboard to manage everything." /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={120}><FaqItem q="What are Insights dashboards?" a="Insights lets you build custom dashboards with number cards, bar charts, line graphs, pie charts, tables, and more. Auto-generate a dashboard per form, or create widgets from scratch." /></ScrollReveal>
+            <ScrollReveal animation="fade-up" delay={60}><FaqItem q="Is there a contract?" a="No. All plans are month-to-month. Cancel anytime from your dashboard. Annual billing with 20% off is also available." /></ScrollReveal>
           </div>
         </div>
       </section>
@@ -551,6 +571,7 @@ export default async function LandingPage() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-outline-variant/15 to-transparent" />
 
         <div className="max-w-4xl mx-auto relative z-10">
+          <ScrollReveal animation="zoom-in">
           <div className="gradient-border rounded-3xl">
             <div className="relative glass-panel noise-overlay p-12 md:p-20 rounded-3xl overflow-hidden">
               <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-primary/[0.18] rounded-full blur-[80px] pointer-events-none animate-glow-breathe" />
@@ -574,6 +595,7 @@ export default async function LandingPage() {
               </Link>
             </div>
           </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -601,29 +623,36 @@ export default async function LandingPage() {
 
 /* ── Sub-components ───────────────────────────────── */
 
-function StatBlock({ value, label, icon, accent = "primary" }: { value: string; label: string; icon: string; accent?: "primary" | "tertiary" }) {
-  const isPrimary = accent === "primary";
+const COLOR_MAP: Record<string, { bg: string; text: string; shadow: string }> = {
+  blue:  { bg: "bg-[#4285F4]", text: "text-[#4285F4]", shadow: "shadow-[0_0_30px_rgba(66,133,244,0.25)]" },
+  red:   { bg: "bg-[#DB4437]", text: "text-[#DB4437]", shadow: "shadow-[0_0_30px_rgba(219,68,55,0.25)]" },
+  green: { bg: "bg-[#0F9D58]", text: "text-[#0F9D58]", shadow: "shadow-[0_0_30px_rgba(15,157,88,0.25)]" },
+  amber: { bg: "bg-[#F4B400]", text: "text-[#F4B400]", shadow: "shadow-[0_0_30px_rgba(244,180,0,0.25)]" },
+};
+
+function StatBlock({ value, label, icon, color = "blue" }: { value: string; label: string; icon: string; color?: string }) {
+  const c = COLOR_MAP[color] ?? COLOR_MAP.blue;
   return (
     <div className="text-center group">
-      <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl ${isPrimary ? "bg-primary/10 border-primary/10" : "bg-tertiary/10 border-tertiary/10"} border mb-4 ${isPrimary ? "group-hover:bg-primary/20 group-hover:shadow-[0_0_30px_rgba(var(--color-primary),0.15)]" : "group-hover:bg-tertiary/20 group-hover:shadow-[0_0_30px_rgba(var(--color-tertiary),0.15)]"} group-hover:scale-110 transition-all duration-500`}>
-        <i className={`fa-solid ${icon} ${isPrimary ? "text-primary" : "text-tertiary"} text-lg`} />
+      <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl ${c.bg}/15 border border-current/10 mb-4 group-hover:${c.bg}/25 group-hover:${c.shadow} group-hover:scale-110 transition-all duration-500`}>
+        <i className={`fa-solid ${icon} ${c.text} text-lg`} />
       </div>
-      <div className="text-4xl md:text-5xl font-headline font-extrabold gradient-text mb-2">{value}</div>
+      <div className={`text-4xl md:text-5xl font-headline font-extrabold ${c.text} mb-2`}>{value}</div>
       <p className="text-sm text-on-surface-variant/60">{label}</p>
     </div>
   );
 }
 
-function StepCard({ num, title, desc, icon, delay, accent }: { num: number; title: string; desc: string; icon: string; delay: string; accent: string }) {
-  const isPrimary = accent === "primary";
+function StepCard({ num, title, desc, icon, color = "blue" }: { num: number; title: string; desc: string; icon: string; color?: string }) {
+  const c = COLOR_MAP[color] ?? COLOR_MAP.blue;
   return (
-    <div className={`animate-fade-up ${delay} group relative`}>
-      <div className="relative glass-panel noise-overlay rounded-2xl border border-outline-variant/10 p-8 h-full hover:border-primary/20 transition-all duration-500 glow-card">
+    <div className="group relative">
+      <div className="relative glass-panel noise-overlay rounded-2xl border border-outline-variant/10 p-8 h-full hover:border-outline-variant/20 transition-all duration-500 glow-card">
         <div className="flex items-center gap-4 mb-5">
-          <div className={`relative w-11 h-11 rounded-full ${isPrimary ? "bg-primary/15" : "bg-tertiary/15"} flex items-center justify-center ${isPrimary ? "text-primary" : "text-tertiary"} text-sm font-bold font-headline ${isPrimary ? "group-hover:shadow-[0_0_20px_rgba(var(--color-primary),0.25)]" : "group-hover:shadow-[0_0_20px_rgba(var(--color-tertiary),0.25)]"} transition-all duration-500`}>
+          <div className={`relative w-11 h-11 rounded-full ${c.bg}/15 flex items-center justify-center ${c.text} text-sm font-bold font-headline group-hover:${c.shadow} transition-all duration-500`}>
             {num}
           </div>
-          <div className={`w-11 h-11 rounded-xl ${isPrimary ? "bg-primary/10 group-hover:bg-primary/20" : "bg-tertiary/10 group-hover:bg-tertiary/20"} flex items-center justify-center ${isPrimary ? "text-primary" : "text-tertiary"} transition-all duration-500`}>
+          <div className={`w-11 h-11 rounded-xl ${c.bg}/10 group-hover:${c.bg}/20 flex items-center justify-center ${c.text} transition-all duration-500`}>
             <i className={`fa-solid ${icon}`} />
           </div>
         </div>
@@ -634,11 +663,11 @@ function StepCard({ num, title, desc, icon, delay, accent }: { num: number; titl
   );
 }
 
-function MiniFeature({ icon, title, desc, accent = "primary" }: { icon: string; title: string; desc: string; accent?: "primary" | "tertiary" }) {
-  const isPrimary = accent === "primary";
+function MiniFeature({ icon, title, desc, color = "blue" }: { icon: string; title: string; desc: string; color?: string }) {
+  const c = COLOR_MAP[color] ?? COLOR_MAP.blue;
   return (
-    <div className={`flex items-start gap-4 p-5 rounded-xl border border-outline-variant/[0.06] ${isPrimary ? "hover:border-primary/15 hover:bg-primary/[0.03]" : "hover:border-tertiary/15 hover:bg-tertiary/[0.03]"} transition-all duration-300 group`}>
-      <div className={`w-9 h-9 rounded-lg ${isPrimary ? "bg-primary/10 text-primary group-hover:bg-primary/20" : "bg-tertiary/10 text-tertiary group-hover:bg-tertiary/20"} flex items-center justify-center shrink-0 group-hover:scale-110 transition-all duration-500`}>
+    <div className="flex items-start gap-4 p-5 rounded-xl border border-outline-variant/[0.06] hover:border-outline-variant/15 hover:bg-surface-container/30 transition-all duration-300 group">
+      <div className={`w-9 h-9 rounded-lg ${c.bg}/10 ${c.text} group-hover:${c.bg}/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-all duration-500`}>
         <i className={`fa-solid ${icon} text-sm`} />
       </div>
       <div>
@@ -677,13 +706,12 @@ function TestimonialCard({ quote, name, role, featured }: { quote: string; name:
   );
 }
 
-function UseCaseCard({ icon, title, desc, accent }: { icon: string; title: string; desc: string; accent: string }) {
-  const isPrimary = accent === "primary";
+function UseCaseCard({ icon, title, desc, color = "blue" }: { icon: string; title: string; desc: string; color?: string }) {
+  const c = COLOR_MAP[color] ?? COLOR_MAP.blue;
   return (
     <div className="glass-panel noise-overlay rounded-2xl border border-outline-variant/[0.08] p-8 relative overflow-hidden group glow-card hover:border-outline-variant/15 transition-all duration-500">
-      {/* Card accent glow */}
-      <div className={`absolute -top-10 -right-10 w-32 h-32 ${isPrimary ? "bg-primary/[0.08]" : "bg-tertiary/[0.08]"} rounded-full blur-[40px] pointer-events-none group-hover:opacity-150 transition-opacity`} />
-      <div className={`absolute top-6 right-6 w-12 h-12 rounded-xl ${isPrimary ? "bg-primary/10 group-hover:bg-primary/20" : "bg-tertiary/10 group-hover:bg-tertiary/20"} flex items-center justify-center ${isPrimary ? "text-primary" : "text-tertiary"} group-hover:scale-110 transition-all duration-500`}>
+      <div className={`absolute -top-10 -right-10 w-32 h-32 ${c.bg}/[0.08] rounded-full blur-[40px] pointer-events-none group-hover:opacity-150 transition-opacity`} />
+      <div className={`absolute top-6 right-6 w-12 h-12 rounded-xl ${c.bg}/10 group-hover:${c.bg}/20 flex items-center justify-center ${c.text} group-hover:scale-110 transition-all duration-500`}>
         <i className={`fa-solid ${icon} text-lg`} />
       </div>
       <h3 className="text-xl font-bold mb-3 relative z-10 pr-16">{title}</h3>

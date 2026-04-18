@@ -76,6 +76,8 @@ export default async function SettingsPage() {
         avatarUrl={profile?.avatar_url ?? null}
       />
 
+      <DashboardPaletteSection />
+
       <MfaSettingsSection />
 
       <SessionsSection currentSessionId={currentSessionId} />
@@ -98,8 +100,6 @@ export default async function SettingsPage() {
      ───────────────────────────────────────────── */
   const brandingContent = (
     <>
-      <DashboardPaletteSection />
-
       {partner && (
         <section className="rounded-2xl border border-outline-variant/[0.08] bg-surface-container/50 shadow-xl shadow-black/10 p-6 md:p-8">
           <h2 className="text-lg font-bold font-headline text-on-surface mb-4">
