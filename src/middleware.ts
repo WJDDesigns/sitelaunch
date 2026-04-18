@@ -45,7 +45,9 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/forgot-password") ||
       pathname.startsWith("/terms") ||
       pathname.startsWith("/privacy") ||
-      pathname.startsWith("/support");
+      pathname.startsWith("/support") ||
+      pathname.startsWith("/docs") ||
+      pathname.startsWith("/status");
 
     // Routes that are exempt from MFA enforcement (user needs access to complete MFA)
     const isMfaRoute =
