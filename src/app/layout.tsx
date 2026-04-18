@@ -29,7 +29,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "linqme - Client onboarding, launched.",
+        alt: "linqme — Client Onboarding for Agencies",
       },
     ],
   },
