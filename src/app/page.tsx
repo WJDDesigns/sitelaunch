@@ -71,19 +71,20 @@ export default async function LandingPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-primary/10 animate-glow-breathe pointer-events-none hidden md:block" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] rounded-full border border-primary/[0.06] animate-glow-breathe pointer-events-none hidden md:block" style={{ animationDelay: "2s" }} />
 
-        <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="animate-fade-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-primary/20 mb-8 shadow-[0_0_20px_rgba(var(--color-primary),0.08)]">
+        {/* Force light text — Vanta fog is always dark regardless of theme */}
+        <div className="max-w-5xl mx-auto text-center relative z-10 text-white">
+          <div className="animate-fade-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.08] backdrop-blur-xl border border-white/15 mb-8 shadow-[0_0_20px_rgba(var(--color-primary),0.12)]">
             <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-glow-pulse" />
             <span className="text-xs font-semibold text-primary tracking-wide">Now in Public Beta</span>
           </div>
 
-          <h1 className="animate-fade-up delay-1 text-4xl md:text-5xl lg:text-6xl font-headline font-extrabold tracking-tight mb-8 leading-[1.1]">
+          <h1 className="animate-fade-up delay-1 text-4xl md:text-5xl lg:text-6xl font-headline font-extrabold tracking-tight mb-8 leading-[1.1] text-white">
             Your Agency&apos;s
             <br />
             <span className="gradient-text-hero">Command Center.</span>
           </h1>
 
-          <p className="animate-fade-up delay-2 max-w-2xl mx-auto text-lg md:text-xl text-on-surface-variant/80 font-body mb-12 leading-relaxed">
+          <p className="animate-fade-up delay-2 max-w-2xl mx-auto text-lg md:text-xl text-white/70 font-body mb-12 leading-relaxed">
             Build custom forms, collect client data and files, manage entries,
             and visualize it all with real-time insights, under your own brand.
           </p>
@@ -108,7 +109,7 @@ export default async function LandingPage() {
                 </Link>
                 <Link
                   href="/login"
-                  className="px-8 py-4 glass-panel border border-outline-variant/15 rounded-xl hover:border-primary/30 hover:bg-primary/[0.03] transition-all duration-300 text-on-surface font-medium"
+                  className="px-8 py-4 bg-white/[0.08] backdrop-blur-xl border border-white/15 rounded-xl hover:border-primary/40 hover:bg-white/[0.12] transition-all duration-300 text-white font-medium"
                 >
                   Sign in
                 </Link>
@@ -116,8 +117,8 @@ export default async function LandingPage() {
             )}
           </div>
 
-          <p className="animate-fade-up delay-4 text-xs text-on-surface-variant/50">
-            <span className="text-primary/60">Free forever</span> &middot; <span className="text-tertiary/60">No credit card required</span> &middot; <span className="text-primary/60">White-label ready</span>
+          <p className="animate-fade-up delay-4 text-xs text-white/40">
+            <span className="text-primary/80">Free forever</span> &middot; <span className="text-tertiary/80">No credit card required</span> &middot; <span className="text-primary/80">White-label ready</span>
           </p>
         </div>
 
