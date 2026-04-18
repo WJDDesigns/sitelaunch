@@ -143,6 +143,36 @@ export default function EntriesList({ submissions, forms, isSuperadmin }: Props)
 
   const activeFormName = forms.find((f) => f.id === formFilter)?.name;
 
+  function exportCSV() {
+    const headers = ["Name", "Email", "Form", "Status", "Date"];
+    const rows = filtered.map((r) => [
+      r.client_name ?? "",
+      r.client_email ?? "",
+      r.form_name ?? "",
+      r.status,
+      r.submitted_at ?? r.created_at,
+    ]);
+
+    const escape = (s: string) => {
+      // Prevent CSV injection
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const csv = [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const suffix = activeFormName ? activeFormName.replace(/[^a-zA-Z0-9]/g, "_") : "all";
+    a.download = `entries_${suffix}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-4">
       {/* Filters bar */}
@@ -181,6 +211,16 @@ export default function EntriesList({ submissions, forms, isSuperadmin }: Props)
             <option key={s} value={s}>{s.replace("_", " ")}</option>
           ))}
         </select>
+
+        {/* Export CSV */}
+        <button
+          onClick={exportCSV}
+          disabled={filtered.length === 0}
+          className="px-3 py-2 text-xs font-bold text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+        >
+          <i className="fa-solid fa-file-csv text-[10px]" />
+          Export CSV
+        </button>
       </div>
 
       {/* Active form banner */}
@@ -337,6 +377,11 @@ export default function EntriesList({ submissions, forms, isSuperadmin }: Props)
                           </>
                         ) : (
                           <>
+                            <a href={`/dashboard/submissions/${row.id}/pdf`} target="_blank" rel="noreferrer"
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-on-surface-variant/40 hover:text-primary hover:bg-primary/5 transition-all"
+                              title="Export PDF">
+                              <i className="fa-solid fa-file-pdf text-[10px]" />
+                            </a>
                             <Link href={`/dashboard/submissions/${row.id}`}
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-on-surface-variant/40 hover:text-primary hover:bg-primary/5 transition-all"
                               title="View entry">
