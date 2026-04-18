@@ -2,6 +2,7 @@ import Link from "next/link";
 import LinqMeLogo from "@/components/LinqMeLogo";
 import ThemeToggle from "@/components/ThemeToggle";
 import ScrollReveal from "@/components/ScrollReveal";
+import VantaFog from "@/components/VantaFog";
 import HomePricingTeaser from "./HomePricingTeaser";
 import { getSession } from "@/lib/auth";
 
@@ -51,7 +52,7 @@ export default async function LandingPage() {
           HERO — gradient mesh + dot grid + big glows
          ═══════════════════════════════════════════════ */}
       <section className="relative pt-36 md:pt-44 pb-24 md:pb-32 px-6 overflow-hidden">
-        <div className="absolute inset-0 gradient-mesh pointer-events-none" />
+        <VantaFog />
         <div className="absolute inset-0 bg-dot-grid pointer-events-none" />
         {/* Big radial spotlight */}
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[1000px] h-[800px] bg-primary/[0.15] rounded-full blur-[150px] pointer-events-none" />

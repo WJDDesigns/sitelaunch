@@ -71,6 +71,53 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
 
   if (membership) return; // Already has an account
 
+  // Double-check: also look for a partner created by this user (covers edge cases
+  // where partner_members might be missing but the partner exists)
+  const { data: ownedPartner } = await admin
+    .from("partners")
+    .select("id")
+    .eq("created_by", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (ownedPartner) {
+    // Partner exists but membership is missing - re-create the membership link
+    await admin.from("partner_members").upsert(
+      { partner_id: ownedPartner.id, user_id: userId, role: "partner_owner" },
+      { onConflict: "partner_id,user_id" },
+    );
+    return;
+  }
+
+  // Also check by email in case the user re-registered with a different auth provider
+  // but already has a partner under the same email
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .neq("id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingProfile) {
+    // Another user ID with the same email already has an account - don't create a duplicate
+    const { data: existingMembership } = await admin
+      .from("partner_members")
+      .select("partner_id")
+      .eq("user_id", existingProfile.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingMembership) {
+      // Link this new user ID to the existing partner
+      await admin.from("partner_members").upsert(
+        { partner_id: existingMembership.partner_id, user_id: userId, role: "partner_owner" },
+        { onConflict: "partner_id,user_id" },
+      );
+      return;
+    }
+  }
+
   // Generate a slug from the email or name
   const baseName = fullName || email.split("@")[0];
   const slug = baseName
