@@ -891,7 +891,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                                 )}
                                 <div
                                   draggable
-                                  onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; startDragField(step.id, field.id); }}
+                                  onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; startDragField(step.id, field.id); }}
                                   onDragOver={(e) => handleDragOverField(e, step.id, fi)}
                                   onDrop={(e) => handleDrop(e, step.id, fi)}
                                   onDragEnd={handleDragEnd}
