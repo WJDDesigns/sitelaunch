@@ -80,7 +80,7 @@ const FAQ = [
   },
   {
     q: "What counts as a submission?",
-    a: "A submission is one completed client onboarding form. Drafts and in-progress forms don't count toward your limit until the client clicks submit.",
+    a: "A submission is one completed form entry from a client. Drafts and in-progress forms don't count toward your limit until the client clicks submit.",
   },
   {
     q: "Is there a contract or commitment?",
@@ -147,6 +147,8 @@ export default function PricingPage() {
       <section className="px-6 pt-12 md:pt-16 pb-24 md:pb-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-crosshatch pointer-events-none" />
         <div className="absolute inset-0 bg-aurora pointer-events-none" />
+        <div className="absolute top-[20%] right-[-5%] w-[400px] h-[350px] bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[10%] left-[-5%] w-[350px] h-[300px] bg-primary/[0.05] rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative z-10">
           <PricingCards tiers={TIERS} />
         </div>
@@ -158,7 +160,7 @@ export default function PricingPage() {
         <div className="absolute inset-0 bg-corner-glow pointer-events-none" />
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-outline-variant/15 to-transparent" />
         <div className="max-w-4xl mx-auto relative z-10 pt-24 md:pt-32">
-          <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Compare plans at a glance</h2>
+          <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Compare plans <span className="gradient-text">at a glance</span></h2>
           <div className="rounded-2xl overflow-hidden border border-outline-variant/[0.08] bg-surface-container/30">
             <table className="w-full text-sm">
               <thead>
@@ -194,7 +196,7 @@ export default function PricingPage() {
         <div className="absolute top-[20%] left-[-5%] w-[400px] h-[350px] bg-primary/[0.07] rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[20%] right-[-5%] w-[350px] h-[300px] bg-tertiary/[0.06] rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-3xl mx-auto relative z-10 pt-24 md:pt-32">
-          <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Frequently asked questions</h2>
+          <h2 className="text-2xl md:text-3xl font-headline font-bold text-center mb-12">Frequently asked <span className="gradient-text">questions</span></h2>
           <div className="space-y-4">
             {FAQ.map((item) => (
               <div key={item.q} className="glass-panel rounded-2xl border border-outline-variant/[0.08] p-6">
@@ -216,10 +218,10 @@ export default function PricingPage() {
             <div className="relative glass-panel noise-overlay p-12 md:p-16 rounded-3xl overflow-hidden">
               <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-primary/[0.06] rounded-full blur-[80px] pointer-events-none" />
               <h2 className="text-3xl md:text-4xl font-headline font-bold mb-4 relative z-10">
-                Ready to simplify your onboarding?
+                Ready to run your agency smarter?
               </h2>
               <p className="text-on-surface-variant mb-8 relative z-10 max-w-md mx-auto">
-                Start collecting client content in minutes. No credit card required.
+                Build forms and start collecting client data in minutes. No credit card required.
               </p>
               <Link
                 href="/signup"
@@ -242,6 +244,7 @@ export default function PricingPage() {
           <div className="flex flex-wrap justify-center gap-8 text-xs text-on-surface-variant/40 uppercase tracking-widest font-label">
             <Link className="hover:text-primary transition-colors duration-300" href="/privacy">Privacy Policy</Link>
             <Link className="hover:text-primary transition-colors duration-300" href="/terms">Terms of Service</Link>
+            <Link className="hover:text-primary transition-colors duration-300" href="/status">Status</Link>
             <Link className="hover:text-primary transition-colors duration-300" href="/support">Contact</Link>
           </div>
           <div className="text-xs text-on-surface-variant/30">

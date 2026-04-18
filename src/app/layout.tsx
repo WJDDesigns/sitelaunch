@@ -9,7 +9,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "linqme | Forms, Entries & Insights for Agencies", template: "%s · linqme" },
   description:
-    "Build custom forms, collect client data and files, manage entries, and visualize everything with real-time insights — all under your own brand.",
+    "Build custom forms, collect client data and files, manage entries, and visualize everything with real-time insights. All under your own brand.",
   applicationName: "linqme",
   manifest: "/manifest.webmanifest",
   metadataBase: new URL(process.env.NEXT_PUBLIC_MARKETING_URL || "https://linqme.io"),
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
     siteName: "linqme",
     title: "linqme | Forms, Entries & Insights for Agencies",
     description:
-      "Build custom forms, collect client data, manage entries, and visualize it all with real-time insights — under your own brand.",
+      "Build custom forms, collect client data, manage entries, and visualize it all with real-time insights. All under your own brand.",
     url: "/",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "linqme — Forms, Entries & Insights for Agencies",
+        alt: "linqme - Forms, Entries and Insights for Agencies",
       },
     ],
   },

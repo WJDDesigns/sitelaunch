@@ -83,7 +83,7 @@ export default async function LandingPage() {
 
           <p className="animate-fade-up delay-2 max-w-2xl mx-auto text-lg md:text-xl text-on-surface-variant/80 font-body mb-12 leading-relaxed">
             Build custom forms, collect client data and files, manage entries,
-            and visualize it all with real-time insights — under your own brand.
+            and visualize it all with real-time insights, under your own brand.
           </p>
 
           <div className="animate-fade-up delay-3 flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
@@ -316,10 +316,10 @@ export default async function LandingPage() {
 
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <StatBlock value="10,000+" label="Entries collected" icon="fa-paper-plane" />
-            <StatBlock value="500+" label="Agencies onboard" icon="fa-building" />
-            <StatBlock value="99.9%" label="Uptime SLA" icon="fa-shield-halved" />
-            <StatBlock value="30+" label="Field types available" icon="fa-cube" />
+            <StatBlock value="10,000+" label="Entries collected" icon="fa-paper-plane" accent="primary" />
+            <StatBlock value="500+" label="Agencies onboard" icon="fa-building" accent="tertiary" />
+            <StatBlock value="99.9%" label="Uptime SLA" icon="fa-shield-halved" accent="primary" />
+            <StatBlock value="30+" label="Field types available" icon="fa-cube" accent="tertiary" />
           </div>
         </div>
       </section>
@@ -339,12 +339,12 @@ export default async function LandingPage() {
           <div className="text-center mb-16 md:mb-20">
             <span className="inline-block text-xs font-bold text-tertiary uppercase tracking-[0.2em] mb-4">How It Works</span>
             <h2 className="text-4xl md:text-5xl font-headline font-bold text-on-surface leading-tight">
-              Build it. Share it.<br className="hidden md:block" /> Know everything.
+              Build it. Share it.<br className="hidden md:block" /> <span className="gradient-text">Know everything.</span>
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            <StepCard num={1} title="Build Your Forms" desc="Use the drag-and-drop builder to create multi-step forms with 30+ field types — file uploads, packages, repeaters, conditional logic, and more." icon="fa-pen-ruler" delay="delay-1" accent="primary" />
+            <StepCard num={1} title="Build Your Forms" desc="Use the drag-and-drop builder to create multi-step forms with 30+ field types including file uploads, packages, repeaters, conditional logic, and more." icon="fa-pen-ruler" delay="delay-1" accent="primary" />
             <StepCard num={2} title="Collect Data & Files" desc="Share a white-labeled link with clients. They fill it out step by step, upload files, and auto-save as they go. No login needed." icon="fa-inbox" delay="delay-2" accent="tertiary" />
             <StepCard num={3} title="Analyze & Act" desc="Every entry flows into your dashboard. Build custom Insights widgets, export to CSV or PDF, manage accounts, and track trends over time." icon="fa-chart-pie" delay="delay-3" accent="primary" />
           </div>
@@ -364,8 +364,8 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16 md:mb-20">
             <span className="inline-block text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4">Features</span>
-            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Everything Your Agency Needs</h2>
-            <p className="text-on-surface-variant text-lg max-w-xl mx-auto">Forms, entries, insights, team management, and white-label branding — all in one platform.</p>
+            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Everything Your Agency <span className="gradient-text">Needs</span></h2>
+            <p className="text-on-surface-variant text-lg max-w-xl mx-auto">Forms, entries, insights, team management, and white-label branding. All in one platform.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -376,7 +376,7 @@ export default async function LandingPage() {
                     <i className="fa-solid fa-wand-magic-sparkles text-lg" />
                   </div>
                   <h3 className="text-2xl font-bold mb-2 relative z-10">Total White-Labeling</h3>
-                  <p className="text-on-surface-variant max-w-md relative z-10">Your brand, your domain, your colors. Clients see your portal — not ours.</p>
+                  <p className="text-on-surface-variant max-w-md relative z-10">Your brand, your domain, your colors. Clients see your portal, not ours.</p>
                 </div>
               </div>
             </div>
@@ -415,12 +415,12 @@ export default async function LandingPage() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <MiniFeature icon="fa-file-csv" title="CSV & PDF Exports" desc="Download entries as spreadsheets or branded PDFs anytime." />
-            <MiniFeature icon="fa-clock-rotate-left" title="Auto-save Drafts" desc="Clients can leave and come back. Progress is never lost." />
-            <MiniFeature icon="fa-code-branch" title="Conditional Logic" desc="Show or hide fields and steps based on previous answers." />
-            <MiniFeature icon="fa-bell" title="Instant Notifications" desc="Get notified the moment a client submits an entry." />
-            <MiniFeature icon="fa-shield-halved" title="Secure File Storage" desc="Encrypted uploads with signed URLs. Only authorized users can access." />
-            <MiniFeature icon="fa-arrows-repeat" title="Repeater Fields" desc="Let clients add dynamic rows of data like team members or pages." />
+            <MiniFeature icon="fa-file-csv" title="CSV & PDF Exports" desc="Download entries as spreadsheets or branded PDFs anytime." accent="primary" />
+            <MiniFeature icon="fa-clock-rotate-left" title="Auto-save Drafts" desc="Clients can leave and come back. Progress is never lost." accent="tertiary" />
+            <MiniFeature icon="fa-code-branch" title="Conditional Logic" desc="Show or hide fields and steps based on previous answers." accent="primary" />
+            <MiniFeature icon="fa-bell" title="Instant Notifications" desc="Get notified the moment a client submits an entry." accent="tertiary" />
+            <MiniFeature icon="fa-shield-halved" title="Secure File Storage" desc="Encrypted uploads with signed URLs. Only authorized users can access." accent="primary" />
+            <MiniFeature icon="fa-arrows-repeat" title="Repeater Fields" desc="Let clients add dynamic rows of data like team members or pages." accent="tertiary" />
           </div>
         </div>
       </section>
@@ -439,14 +439,14 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16 md:mb-20">
             <span className="inline-block text-xs font-bold text-tertiary uppercase tracking-[0.2em] mb-4">Testimonials</span>
-            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Loved by agencies everywhere</h2>
+            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Loved by agencies <span className="gradient-text">everywhere</span></h2>
             <p className="text-on-surface-variant text-lg max-w-xl mx-auto">See what teams are saying about running their workflow on linqme.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <TestimonialCard quote="We replaced three tools with linqme. Forms, client data, and analytics — it's all in one place now, and our clients think it's our own platform." name="Lena Morales" role="Founder, PixelForge Studio" />
+            <TestimonialCard quote="We replaced three tools with linqme. Forms, client data, and analytics are all in one place now, and our clients think it's our own platform." name="Lena Morales" role="Founder, PixelForge Studio" />
             <TestimonialCard quote="The Insights dashboard changed how we report to stakeholders. We auto-generate charts per form and the data updates in real time." name="Jordan Ellis" role="Creative Director, BrandHive" featured />
-            <TestimonialCard quote="30+ field types, conditional logic, repeater fields — we've built intake forms for web design, branding, and SEO that each feel completely different." name="Priya Sandoval" role="Operations Lead, CreativOps" />
+            <TestimonialCard quote="30+ field types, conditional logic, repeater fields. We've built intake forms for web design, branding, and SEO that each feel completely different." name="Priya Sandoval" role="Operations Lead, CreativOps" />
           </div>
         </div>
       </section>
@@ -467,7 +467,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16 md:mb-20">
             <span className="inline-block text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4">Use Cases</span>
-            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Built for any workflow</h2>
+            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Built for <span className="gradient-text">any workflow</span></h2>
             <p className="text-on-surface-variant text-lg max-w-xl mx-auto">From client intake to ongoing data collection, linqme adapts to how you work.</p>
           </div>
 
@@ -521,7 +521,7 @@ export default async function LandingPage() {
         <div className="max-w-3xl mx-auto relative z-10">
           <div className="text-center mb-16 md:mb-20">
             <span className="inline-block text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4">FAQ</span>
-            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Common questions</h2>
+            <h2 className="text-4xl md:text-5xl font-headline font-bold mb-4">Common <span className="gradient-text">questions</span></h2>
           </div>
 
           <div className="space-y-4">
@@ -579,6 +579,7 @@ export default async function LandingPage() {
             <Link className="hover:text-primary transition-colors duration-300" href="/privacy">Privacy Policy</Link>
             <Link className="hover:text-primary transition-colors duration-300" href="/terms">Terms of Service</Link>
             <Link className="hover:text-primary transition-colors duration-300" href="/pricing">Pricing</Link>
+            <Link className="hover:text-primary transition-colors duration-300" href="/status">Status</Link>
             <Link className="hover:text-primary transition-colors duration-300" href="/support">Contact</Link>
           </div>
           <div className="text-xs text-on-surface-variant/30">
@@ -592,11 +593,12 @@ export default async function LandingPage() {
 
 /* ── Sub-components ───────────────────────────────── */
 
-function StatBlock({ value, label, icon }: { value: string; label: string; icon: string }) {
+function StatBlock({ value, label, icon, accent = "primary" }: { value: string; label: string; icon: string; accent?: "primary" | "tertiary" }) {
+  const isPrimary = accent === "primary";
   return (
     <div className="text-center group">
-      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 border border-primary/10 mb-4 group-hover:bg-primary/20 group-hover:scale-110 group-hover:shadow-[0_0_30px_rgba(var(--color-primary),0.15)] transition-all duration-500">
-        <i className={`fa-solid ${icon} text-primary text-lg`} />
+      <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl ${isPrimary ? "bg-primary/10 border-primary/10" : "bg-tertiary/10 border-tertiary/10"} border mb-4 ${isPrimary ? "group-hover:bg-primary/20 group-hover:shadow-[0_0_30px_rgba(var(--color-primary),0.15)]" : "group-hover:bg-tertiary/20 group-hover:shadow-[0_0_30px_rgba(var(--color-tertiary),0.15)]"} group-hover:scale-110 transition-all duration-500`}>
+        <i className={`fa-solid ${icon} ${isPrimary ? "text-primary" : "text-tertiary"} text-lg`} />
       </div>
       <div className="text-4xl md:text-5xl font-headline font-extrabold gradient-text mb-2">{value}</div>
       <p className="text-sm text-on-surface-variant/60">{label}</p>
@@ -624,10 +626,11 @@ function StepCard({ num, title, desc, icon, delay, accent }: { num: number; titl
   );
 }
 
-function MiniFeature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function MiniFeature({ icon, title, desc, accent = "primary" }: { icon: string; title: string; desc: string; accent?: "primary" | "tertiary" }) {
+  const isPrimary = accent === "primary";
   return (
-    <div className="flex items-start gap-4 p-5 rounded-xl border border-outline-variant/[0.06] hover:border-primary/15 hover:bg-primary/[0.03] transition-all duration-300 group">
-      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500">
+    <div className={`flex items-start gap-4 p-5 rounded-xl border border-outline-variant/[0.06] ${isPrimary ? "hover:border-primary/15 hover:bg-primary/[0.03]" : "hover:border-tertiary/15 hover:bg-tertiary/[0.03]"} transition-all duration-300 group`}>
+      <div className={`w-9 h-9 rounded-lg ${isPrimary ? "bg-primary/10 text-primary group-hover:bg-primary/20" : "bg-tertiary/10 text-tertiary group-hover:bg-tertiary/20"} flex items-center justify-center shrink-0 group-hover:scale-110 transition-all duration-500`}>
         <i className={`fa-solid ${icon} text-sm`} />
       </div>
       <div>
