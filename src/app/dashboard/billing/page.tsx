@@ -2,11 +2,11 @@ import { requireSession, getCurrentAccount, getAccountUsage } from "@/lib/auth";
 import { mapLegacyTier } from "@/lib/stripe";
 import { getPlans } from "@/lib/plans";
 import { createAdminClient } from "@/lib/supabase/admin";
-import TestEmailButton from "./TestEmailButton";
 import UpgradeButton from "./UpgradeButton";
 import SwitchPlanButton from "./SwitchPlanButton";
 import CancelPlanButton from "./CancelPlanButton";
 import ManageSubscriptionButton from "./ManageSubscriptionButton";
+import InvoicesTable from "./InvoicesTable";
 
 export default async function BillingPage() {
   const session = await requireSession();
@@ -50,7 +50,7 @@ export default async function BillingPage() {
     .select("id, status, amount_paid, currency, invoice_url, invoice_pdf, paid_at, period_start, period_end")
     .eq("partner_id", account.id)
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(50);
 
   const hasSubscription = !!activeSub;
   const isPastDue = activeSub?.status === "past_due";
@@ -59,9 +59,9 @@ export default async function BillingPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-10 py-8 space-y-8">
       <header>
-        <h1 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Settings &amp; Plan</h1>
+        <h1 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Billing</h1>
         <p className="text-on-surface-variant mt-1">
-          Manage your subscription, billing, and workspace settings.
+          Manage your subscription, plan, and invoices.
         </p>
       </header>
 
@@ -194,75 +194,8 @@ export default async function BillingPage() {
         })}
       </section>
 
-      {/* Recent invoices */}
-      {(recentInvoices ?? []).length > 0 && (
-        <section className="glass-panel rounded-2xl border border-outline-variant/15 p-6">
-          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">
-            Recent Invoices
-          </h2>
-          <div className="divide-y divide-outline-variant/10">
-            {(recentInvoices ?? []).map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between py-3 gap-4">
-                <div className="min-w-0">
-                  <p className="text-sm text-on-surface font-medium">
-                    ${(inv.amount_paid / 100).toFixed(2)} {inv.currency.toUpperCase()}
-                  </p>
-                  <p className="text-xs text-on-surface-variant/60 mt-0.5">
-                    {inv.paid_at
-                      ? `Paid ${new Date(inv.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-                      : `Status: ${inv.status}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border ${
-                      inv.status === "paid"
-                        ? "bg-tertiary/10 text-tertiary border-tertiary/20"
-                        : inv.status === "open"
-                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                        : "bg-surface-container-high text-on-surface-variant/60 border-outline-variant/15"
-                    }`}
-                  >
-                    {inv.status}
-                  </span>
-                  {inv.invoice_url && (
-                    <a
-                      href={inv.invoice_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline"
-                    >
-                      View
-                    </a>
-                  )}
-                  {inv.invoice_pdf && (
-                    <a
-                      href={inv.invoice_pdf}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-on-surface-variant/60 hover:text-primary"
-                    >
-                      <i className="fa-solid fa-download text-[10px]" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Email notifications */}
-      <section className="glass-panel rounded-2xl border border-outline-variant/15 p-6">
-        <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">
-          Email notifications
-        </h2>
-        <p className="text-xs text-on-surface-variant/60 mb-3">
-          We use Resend to notify you when a client submits. Send a test
-          message to confirm your setup.
-        </p>
-        <TestEmailButton />
-      </section>
+      {/* Invoices table */}
+      <InvoicesTable invoices={recentInvoices ?? []} />
     </div>
   );
 }
