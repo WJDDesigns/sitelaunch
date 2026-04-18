@@ -196,6 +196,19 @@ export default async function FormsListPage() {
                         <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" />
                       </a>
                       <Link
+                        href={`/dashboard/entries?form=${form.id}`}
+                        className="w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-2 flex items-center justify-center text-xs font-bold text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"
+                        title="View entries"
+                      >
+                        <i className="fa-solid fa-inbox text-[10px] sm:mr-1.5" />
+                        <span className="hidden sm:inline">Entries</span>
+                        {(subCountMap[form.id] ?? 0) > 0 && (
+                          <span className="hidden sm:inline ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                            {subCountMap[form.id]}
+                          </span>
+                        )}
+                      </Link>
+                      <Link
                         href={`/dashboard/form/${form.id}`}
                         className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-all whitespace-nowrap"
                       >

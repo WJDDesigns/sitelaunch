@@ -333,9 +333,6 @@ export default function DashboardShell({
               : pathname.startsWith(item.href);
             // Short labels for mobile tab bar
             const shortLabel = item.label
-              .replace("Form Builder", "Forms")
-              .replace("My Customers", "Customers")
-              .replace("Submissions", "Inbox")
               .replace("Dashboard", "Home");
             return (
               <Link key={item.href} href={item.href}

@@ -44,6 +44,7 @@ export async function updateSubmissionStatusAction(submissionId: string, status:
     .eq("id", submissionId);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/submissions");
+  revalidatePath("/dashboard/entries");
   revalidatePath(`/dashboard/submissions/${submissionId}`);
 }
 
@@ -69,6 +70,7 @@ export async function deleteSubmissionAction(submissionId: string) {
     .eq("id", submissionId);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/submissions");
+  revalidatePath("/dashboard/entries");
 }
 
 export async function bulkDeleteSubmissionsAction(submissionIds: string[]) {
@@ -95,6 +97,7 @@ export async function bulkDeleteSubmissionsAction(submissionIds: string[]) {
     .in("id", submissionIds);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/submissions");
+  revalidatePath("/dashboard/entries");
 }
 
 export async function bulkUpdateStatusAction(submissionIds: string[], status: SubmissionStatus) {
@@ -108,6 +111,7 @@ export async function bulkUpdateStatusAction(submissionIds: string[], status: Su
     .in("id", submissionIds);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/submissions");
+  revalidatePath("/dashboard/entries");
 }
 
 export async function getSubmissionsCsvData() {
