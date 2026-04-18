@@ -311,6 +311,12 @@ export interface ShowCondition {
   operator: "equals" | "not_equals" | "contains" | "not_empty" | "is_empty" | "greater_than" | "less_than";
   /** Value to compare against (not used for not_empty / is_empty) */
   value?: string;
+  /** Additional conditions combined via combinator (backward-compat: omit for single condition) */
+  extraConditions?: { fieldId: string; operator: string; value?: string }[];
+  /** How to combine with extraConditions: "and" (all must match) or "or" (any must match). Default "or". */
+  combinator?: "and" | "or";
+  /** Action: "show" (default) makes the target visible when matched; "hide" hides it when matched */
+  action?: "show" | "hide";
 }
 
 export interface FieldDef {
@@ -384,9 +390,51 @@ export interface FormSchema {
   steps: StepDef[];
 }
 
+/** Evaluate a single condition clause against form data */
+function evaluateSingleCondition(
+  fieldId: string,
+  operator: string,
+  value: string | undefined,
+  allData: Record<string, unknown>,
+): boolean {
+  const raw = allData[fieldId];
+  const fieldVal = raw === undefined || raw === null ? "" : String(raw);
+
+  switch (operator) {
+    case "equals":
+      return fieldVal === (value ?? "");
+    case "not_equals":
+      return fieldVal !== (value ?? "");
+    case "contains":
+      return fieldVal.toLowerCase().includes((value ?? "").toLowerCase());
+    case "not_empty":
+      return fieldVal.trim() !== "";
+    case "is_empty":
+      return fieldVal.trim() === "";
+    case "greater_than": {
+      const num = parseFloat(fieldVal);
+      const cmp = parseFloat(value ?? "0");
+      return !isNaN(num) && !isNaN(cmp) && num > cmp;
+    }
+    case "less_than": {
+      const num = parseFloat(fieldVal);
+      const cmp = parseFloat(value ?? "0");
+      return !isNaN(num) && !isNaN(cmp) && num < cmp;
+    }
+    default:
+      return true;
+  }
+}
+
 /**
  * Evaluate a show condition against the current form data.
  * Returns true if the field/step should be visible.
+ *
+ * Supports:
+ * - Single condition (backward compat): just fieldId + operator + value
+ * - Multiple conditions via extraConditions[], combined with combinator ("or" | "and")
+ * - Action "show" (default): visible when conditions match
+ * - Action "hide": visible when conditions do NOT match
  */
 export function evaluateCondition(
   condition: ShowCondition | undefined,
@@ -394,33 +442,27 @@ export function evaluateCondition(
 ): boolean {
   if (!condition || !condition.fieldId) return true;
 
-  const raw = allData[condition.fieldId];
-  const fieldVal = raw === undefined || raw === null ? "" : String(raw);
+  // Build list of all condition clauses
+  const clauses: { fieldId: string; operator: string; value?: string }[] = [
+    { fieldId: condition.fieldId, operator: condition.operator, value: condition.value },
+    ...(condition.extraConditions ?? []),
+  ];
 
-  switch (condition.operator) {
-    case "equals":
-      return fieldVal === (condition.value ?? "");
-    case "not_equals":
-      return fieldVal !== (condition.value ?? "");
-    case "contains":
-      return fieldVal.toLowerCase().includes((condition.value ?? "").toLowerCase());
-    case "not_empty":
-      return fieldVal.trim() !== "";
-    case "is_empty":
-      return fieldVal.trim() === "";
-    case "greater_than": {
-      const num = parseFloat(fieldVal);
-      const cmp = parseFloat(condition.value ?? "0");
-      return !isNaN(num) && !isNaN(cmp) && num > cmp;
-    }
-    case "less_than": {
-      const num = parseFloat(fieldVal);
-      const cmp = parseFloat(condition.value ?? "0");
-      return !isNaN(num) && !isNaN(cmp) && num < cmp;
-    }
-    default:
-      return true;
+  const combinator = condition.combinator ?? "or";
+
+  let matched: boolean;
+  if (combinator === "and") {
+    matched = clauses.every((c) => evaluateSingleCondition(c.fieldId, c.operator, c.value, allData));
+  } else {
+    // "or" — any clause matching is enough
+    matched = clauses.some((c) => evaluateSingleCondition(c.fieldId, c.operator, c.value, allData));
   }
+
+  // If action is "hide", invert: visible when conditions do NOT match
+  if (condition.action === "hide") return !matched;
+
+  // Default action "show": visible when conditions match
+  return matched;
 }
 
 export function mergeSchema(base: FormSchema, overrides: Record<string, unknown>): FormSchema {

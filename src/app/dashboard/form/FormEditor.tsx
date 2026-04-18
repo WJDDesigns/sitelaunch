@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, ShowCondition, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig } from "@/lib/forms";
 import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
 import CloudDestinationButton from "@/components/CloudDestinationButton";
 import IconPicker from "@/components/IconPicker";
@@ -1620,13 +1620,12 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
               <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
             </label>
           </div>
-          <ConditionBuilder
-            condition={field.showCondition}
-            onChange={(c) => onUpdate({ showCondition: c })}
-            allFields={allFields}
-            excludeFieldId={field.id}
-            label="Show field when"
-          />
+          {field.showCondition?.fieldId && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg">
+              <i className="fa-solid fa-code-branch text-[10px] text-amber-400" />
+              <span className="text-[10px] text-amber-300/80">Has display logic &mdash; manage in the <strong>Logic</strong> tab</span>
+            </div>
+          )}
         </section>
 
         <div className="pt-4">
@@ -2194,15 +2193,15 @@ function StepSettingsPanel({
           </label>
         </section>
 
-        <section className="space-y-3">
-          <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Visibility</div>
-          <ConditionBuilder
-            condition={step.showCondition}
-            onChange={(c) => onUpdate({ showCondition: c })}
-            allFields={allFields}
-            label="Show page when"
-          />
-        </section>
+        {step.showCondition?.fieldId && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Visibility</div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg">
+              <i className="fa-solid fa-code-branch text-[10px] text-amber-400" />
+              <span className="text-[10px] text-amber-300/80">Has display logic &mdash; manage in the <strong>Logic</strong> tab</span>
+            </div>
+          </section>
+        )}
 
         <section className="space-y-3">
           <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Summary</div>
@@ -2226,127 +2225,6 @@ function StepSettingsPanel({
   );
 }
 
-/* ── Condition builder (shared by fields and steps) ─────── */
-
-const CONDITION_OPERATORS: { value: ShowCondition["operator"]; label: string }[] = [
-  { value: "equals", label: "Equals" },
-  { value: "not_equals", label: "Does not equal" },
-  { value: "contains", label: "Contains" },
-  { value: "not_empty", label: "Is not empty" },
-  { value: "is_empty", label: "Is empty" },
-  { value: "greater_than", label: "Greater than" },
-  { value: "less_than", label: "Less than" },
-];
-
-function ConditionBuilder({
-  condition,
-  onChange,
-  allFields,
-  excludeFieldId,
-  label,
-}: {
-  condition?: ShowCondition;
-  onChange: (c: ShowCondition | undefined) => void;
-  allFields: FieldDef[];
-  excludeFieldId?: string;
-  label: string;
-}) {
-  const [open, setOpen] = useState(!!condition?.fieldId);
-
-  // Fields that can be used as condition sources (ones with user input)
-  const sourceFields = allFields.filter(
-    (f) => f.id !== excludeFieldId && f.type !== "heading" && f.type !== "file" && f.type !== "files",
-  );
-
-  const selectedField = condition?.fieldId ? sourceFields.find((f) => f.id === condition.fieldId) : null;
-  const hasOptions = selectedField && (selectedField.type === "select" || selectedField.type === "radio" || selectedField.type === "checkbox");
-  const needsValue = condition?.operator && condition.operator !== "not_empty" && condition.operator !== "is_empty";
-
-  return (
-    <div className="bg-surface-container rounded-xl p-3 border border-outline-variant/10">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-          <i className="fa-solid fa-eye text-[9px] mr-1 text-amber-400" />
-          {label}
-        </span>
-        <label className="relative cursor-pointer">
-          <input
-            type="checkbox"
-            checked={open}
-            onChange={(e) => {
-              setOpen(e.target.checked);
-              if (!e.target.checked) onChange(undefined);
-            }}
-            className="sr-only peer"
-          />
-          <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-amber-500 transition-colors" />
-          <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-white transition-all" />
-        </label>
-      </div>
-
-      {open && (
-        <div className="mt-2 space-y-2">
-          <select
-            value={condition?.fieldId ?? ""}
-            onChange={(e) => {
-              if (!e.target.value) {
-                onChange(undefined);
-                return;
-              }
-              onChange({ fieldId: e.target.value, operator: condition?.operator ?? "equals", value: condition?.value });
-            }}
-            className={`${INPUT_CLS} text-xs`}
-          >
-            <option value="">Select a field...</option>
-            {sourceFields.map((f) => (
-              <option key={f.id} value={f.id}>{f.label} ({labelFor(f.type)})</option>
-            ))}
-          </select>
-
-          {condition?.fieldId && (
-            <select
-              value={condition.operator}
-              onChange={(e) => onChange({ ...condition, operator: e.target.value as ShowCondition["operator"] })}
-              className={`${INPUT_CLS} text-xs`}
-            >
-              {CONDITION_OPERATORS.map((op) => (
-                <option key={op.value} value={op.value}>{op.label}</option>
-              ))}
-            </select>
-          )}
-
-          {condition?.fieldId && needsValue && (
-            hasOptions ? (
-              <select
-                value={condition.value ?? ""}
-                onChange={(e) => onChange({ ...condition, value: e.target.value })}
-                className={`${INPUT_CLS} text-xs`}
-              >
-                <option value="">Select a value...</option>
-                {(selectedField!.options ?? []).map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={condition.value ?? ""}
-                onChange={(e) => onChange({ ...condition, value: e.target.value })}
-                placeholder="Value to match..."
-                className={`${INPUT_CLS} text-xs`}
-              />
-            )
-          )}
-
-          {condition?.fieldId && (
-            <p className="text-[9px] text-on-surface-variant/50">
-              This {label.includes("page") ? "page" : "field"} will be hidden unless the condition is met.
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── Repeater settings panel ──────────────────────────────── */
 
