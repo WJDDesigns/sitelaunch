@@ -89,9 +89,9 @@ export default function FormEditorShell({
         {/* Left: back link + mode toggle */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {formId && (
-            <Link href="/dashboard/form" className="text-xs text-on-surface-variant/60 hover:text-primary transition-colors shrink-0">
+            <Link href="/dashboard/form" className="text-xs text-on-surface-variant/60 hover:text-primary transition-colors shrink-0 flex items-center gap-1.5">
               <i className="fa-solid fa-arrow-left text-[10px]" />
-              <span className="hidden sm:inline ml-1">{formName || "Forms"}</span>
+              <span className="hidden sm:inline">Back to Forms</span>
             </Link>
           )}
           <div className="flex items-center gap-0.5 sm:gap-1 bg-surface-container rounded-lg p-0.5">

@@ -377,6 +377,8 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef(JSON.stringify(initialSchema));
   const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "idle">("saved");
+  const [saveSource, setSaveSource] = useState<"manual" | "auto">("auto");
+  const [savedAt, setSavedAt] = useState<string>("");
 
   useEffect(() => {
     if (!formId) return;
@@ -390,6 +392,8 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
       const result = await saveFormSchemaAction(current, formId);
       if (result.ok) {
         lastSavedRef.current = current;
+        setSaveSource("auto");
+        setSavedAt(new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
         setAutoSaveStatus("saved");
       } else {
         setAutoSaveStatus("idle");
@@ -664,7 +668,14 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
     setMessage(null);
     const result = await saveFormSchemaAction(JSON.stringify(schema), formId);
     setSaving(false);
-    setMessage(result.ok ? { kind: "ok", text: "Form saved!" } : { kind: "err", text: result.error ?? "Save failed." });
+    if (result.ok) {
+      lastSavedRef.current = JSON.stringify(schema);
+      setSaveSource("manual");
+      setAutoSaveStatus("saved");
+      setMessage({ kind: "ok", text: "Form saved!" });
+    } else {
+      setMessage({ kind: "err", text: result.error ?? "Save failed." });
+    }
   }
 
   return (
@@ -683,7 +694,11 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
             ) : autoSaveStatus === "saving" ? (
               <><i className="fa-solid fa-circle-notch fa-spin text-[8px] text-on-surface-variant/50" /> <span className="text-on-surface-variant/50">Saving…</span></>
             ) : autoSaveStatus === "saved" ? (
-              <><i className="fa-solid fa-check text-[8px] text-tertiary" /> <span className="text-tertiary">Auto-saved</span></>
+              saveSource === "manual" ? (
+                <><i className="fa-solid fa-check text-[8px] text-tertiary" /> <span className="text-tertiary">Saved</span></>
+              ) : (
+                <><i className="fa-solid fa-check text-[8px] text-tertiary" /> <span className="text-tertiary">Auto-saved{savedAt ? ` at ${savedAt}` : ""}</span></>
+              )
             ) : (
               <><i className="fa-solid fa-circle text-[6px] text-amber-400" /> <span className="text-on-surface-variant/50">Unsaved</span></>
             )}

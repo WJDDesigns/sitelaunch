@@ -170,11 +170,10 @@ export default function FormSettingsPanel({
     <>
       <button
         onClick={() => setShowNotifications(!showNotifications)}
-        className="px-3 py-1.5 text-xs font-bold text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"
+        className="w-8 h-8 flex items-center justify-center text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"
         title="Notification settings"
       >
-        <i className="fa-solid fa-bell text-[10px] mr-1.5" />
-        <span className="hidden sm:inline">Notifications</span>
+        <i className="fa-solid fa-bell text-sm" />
       </button>
 
       <button
