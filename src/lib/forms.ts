@@ -310,6 +310,8 @@ export interface BudgetAllocatorConfig {
   currency?: string;
   /** Show as percentages instead of dollar amounts */
   showAsPercentage?: boolean;
+  /** Allow the form user to enter their own total budget (constrained mode) */
+  allowCustomBudget?: boolean;
 }
 
 /* ── Payment Field types ────────────────────────────────── */
@@ -505,6 +507,8 @@ export interface FieldDef {
     folderId: string;
     folderPath: string;
   };
+  /** Column span in a 4-column grid layout (1-4). Default = 4 (full width). */
+  colSpan?: 1 | 2 | 3 | 4;
 }
 
 export interface UploadedFile {
@@ -526,6 +530,86 @@ export interface StepDef {
 
 export interface FormSchema {
   steps: StepDef[];
+}
+
+/* ── Column layout constants ─────────────────────────────── */
+
+/** Maximum number of columns in the form grid */
+export const GRID_COLUMNS = 4;
+
+/**
+ * Minimum colSpan each field type supports (how narrow it can go).
+ * Fields not listed here default to GRID_COLUMNS (full width only).
+ */
+export const MIN_COL_SPAN: Partial<Record<FieldType, 1 | 2 | 3 | 4>> = {
+  /* Can go as narrow as 1 column */
+  text: 1,
+  email: 1,
+  tel: 1,
+  number: 1,
+  url: 1,
+  date: 1,
+  color: 1,
+  select: 1,
+  toggle: 1,
+  rating: 1,
+  slider: 1,
+  /* Can go as narrow as 2 columns */
+  textarea: 2,
+  radio: 2,
+  checkbox: 2,
+  address: 2,
+  social_handles: 2,
+  consent: 2,
+  heading: 2,
+  captcha: 2,
+  payment: 2,
+  country_state: 2,
+  file: 2,
+  files: 2,
+  /* Full width only (4) -- complex/wide fields */
+  // package, repeater, asset_collection, site_structure, feature_selector,
+  // goal_builder, approval, brand_style, competitor_analyzer, timeline,
+  // budget_allocator, matrix, questionnaire -- all default to GRID_COLUMNS
+};
+
+/** Get the minimum allowed colSpan for a given field type */
+export function getMinColSpan(type: FieldType): number {
+  return MIN_COL_SPAN[type] ?? GRID_COLUMNS;
+}
+
+/** Get the effective colSpan for a field (clamped to valid range) */
+export function getEffectiveColSpan(field: FieldDef): 1 | 2 | 3 | 4 {
+  const min = getMinColSpan(field.type);
+  const span = field.colSpan ?? GRID_COLUMNS;
+  return Math.max(min, Math.min(GRID_COLUMNS, span)) as 1 | 2 | 3 | 4;
+}
+
+/**
+ * Group a flat field array into rows for grid rendering.
+ * Each row is an array of fields whose colSpans sum to <= GRID_COLUMNS.
+ */
+export function groupFieldsIntoRows(fields: FieldDef[]): FieldDef[][] {
+  const rows: FieldDef[][] = [];
+  let currentRow: FieldDef[] = [];
+  let currentWidth = 0;
+
+  for (const field of fields) {
+    const span = getEffectiveColSpan(field);
+    if (currentWidth + span > GRID_COLUMNS && currentRow.length > 0) {
+      rows.push(currentRow);
+      currentRow = [];
+      currentWidth = 0;
+    }
+    currentRow.push(field);
+    currentWidth += span;
+  }
+
+  if (currentRow.length > 0) {
+    rows.push(currentRow);
+  }
+
+  return rows;
 }
 
 /** Evaluate a single condition clause against form data */

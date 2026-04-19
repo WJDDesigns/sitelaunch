@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import type { FormSchema, FieldDef, UploadedFile, PackageRule, RepeaterSubField } from "@/lib/forms";
-import { evaluateCondition } from "@/lib/forms";
+import { evaluateCondition, getEffectiveColSpan } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
 import FileField from "./FileField";
 
@@ -23,6 +23,7 @@ interface Props {
   deleteFile: (fileId: string) => Promise<void>;
   partnerId?: string;
   layoutStyle?: "default" | "top-nav" | "no-nav" | "conversation";
+  hasPaymentGateway?: boolean;
 }
 
 /* ── animation styles ──────────────────────────────────────── */
@@ -80,6 +81,7 @@ export default function SubmissionForm({
   partnerName, partnerLogoUrl,
   saveStep, submit, uploadFile, deleteFile, partnerId,
   layoutStyle = "default",
+  hasPaymentGateway = true,
 }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -223,22 +225,27 @@ export default function SubmissionForm({
 
   /* ── Shared field renderer ── */
   const renderField = (f: FieldDef, i: number, animClass = "sl-fade-up") => {
+    const colSpan = getEffectiveColSpan(f);
+    const colCls = colSpan === 1 ? "col-span-1 sm:col-span-1"
+      : colSpan === 2 ? "col-span-4 sm:col-span-2"
+      : colSpan === 3 ? "col-span-4 sm:col-span-3"
+      : "col-span-4";
     if (f.type === "file" || f.type === "files") {
       return (
-        <div key={f.id} className={`${animClass} sl-d${Math.min(i + 2, 5)}`}>
+        <div key={f.id} className={`${colCls} ${animClass} sl-d${Math.min(i + 2, 5)}`}>
           <FileField field={f} initialFiles={initialFiles[f.id] ?? []} upload={uploadFile} remove={deleteFile} primaryColor={primaryColor} />
         </div>
       );
     }
     if (f.type === "repeater" && f.repeaterConfig) {
       return (
-        <div key={f.id} className={`${animClass} sl-d${Math.min(i + 2, 5)}`}>
+        <div key={f.id} className={`${colCls} ${animClass} sl-d${Math.min(i + 2, 5)}`}>
           <RepeaterField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} />
         </div>
       );
     }
     return (
-      <div key={f.id} className={`${animClass} sl-d${Math.min(i + 2, 5)}`}>
+      <div key={f.id} className={`${colCls} ${animClass} sl-d${Math.min(i + 2, 5)}`}>
         <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} />
       </div>
     );
@@ -483,9 +490,9 @@ export default function SubmissionForm({
               )}
             </div>
 
-            <form onSubmit={handleNext} className={`space-y-6 ${transitioning ? "sl-fade-out" : "sl-fade-in"}`}>
+            <form onSubmit={handleNext} className={`grid grid-cols-4 gap-x-4 gap-y-6 ${transitioning ? "sl-fade-out" : "sl-fade-in"}`}>
               {visibleFields.map((f, i) => renderField(f, i))}
-              {renderNavButtons()}
+              <div className="col-span-4">{renderNavButtons()}</div>
             </form>
           </div>
         </main>
@@ -542,9 +549,9 @@ export default function SubmissionForm({
               )}
             </div>
 
-            <form onSubmit={handleNext} className={`space-y-6 ${transitioning ? "sl-fade-out" : "sl-fade-in"}`}>
+            <form onSubmit={handleNext} className={`grid grid-cols-4 gap-x-4 gap-y-6 ${transitioning ? "sl-fade-out" : "sl-fade-in"}`}>
               {visibleFields.map((f, i) => renderField(f, i))}
-              {renderNavButtons()}
+              <div className="col-span-4">{renderNavButtons()}</div>
             </form>
           </div>
         </main>
@@ -758,9 +765,9 @@ export default function SubmissionForm({
           </div>
 
           {/* Fields */}
-          <form onSubmit={handleNext} className={`space-y-6 ${transitioning ? "sl-fade-out" : "sl-fade-in"}`}>
+          <form onSubmit={handleNext} className={`grid grid-cols-4 gap-x-4 gap-y-6 ${transitioning ? "sl-fade-out" : "sl-fade-in"}`}>
             {visibleFields.map((f, i) => renderField(f, i))}
-            {renderNavButtons()}
+            <div className="col-span-4">{renderNavButtons()}</div>
           </form>
         </div>
       </main>
@@ -1920,7 +1927,9 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
   const cfg = field.budgetAllocatorConfig!;
   const currency = cfg.currency ?? "$";
   const isConstrained = cfg.mode === "constrained";
-  const totalBudget = cfg.totalBudget ?? 0;
+  const defaultBudget = cfg.totalBudget ?? 0;
+  const [customBudget, setCustomBudget] = useState<number>(defaultBudget);
+  const totalBudget = (cfg.allowCustomBudget && isConstrained) ? customBudget : defaultBudget;
 
   const allocation: Record<string, number> = (() => {
     try {
@@ -2012,9 +2021,28 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
             <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
               <i className="fa-solid fa-wallet mr-1" style={{ color: primaryColor }} />Total Budget
             </span>
-            <span className="text-sm font-bold" style={{ color: totalAllocated > totalBudget ? "var(--color-error)" : primaryColor }}>
-              {currency}{totalAllocated.toLocaleString()} / {currency}{totalBudget.toLocaleString()}
-            </span>
+            {cfg.allowCustomBudget ? (
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-bold" style={{ color: totalAllocated > totalBudget ? "var(--color-error)" : primaryColor }}>
+                  {currency}{totalAllocated.toLocaleString()} /
+                </span>
+                <div className="relative">
+                  <span className="text-sm font-bold text-on-surface-variant/40 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none">{currency}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={customBudget}
+                    onChange={(e) => setCustomBudget(Math.max(0, Number(e.target.value)))}
+                    className="text-sm font-bold tabular-nums bg-surface-container-highest border border-outline-variant/30 rounded-lg pl-4 pr-2 py-0.5 w-28 text-right outline-none focus:border-primary/40 transition-colors"
+                    style={{ color: primaryColor }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <span className="text-sm font-bold" style={{ color: totalAllocated > totalBudget ? "var(--color-error)" : primaryColor }}>
+                {currency}{totalAllocated.toLocaleString()} / {currency}{totalBudget.toLocaleString()}
+              </span>
+            )}
           </div>
           <div className="h-2 rounded-full bg-surface-container-highest overflow-hidden">
             <div className="h-full rounded-full transition-all duration-300"
@@ -2028,6 +2056,34 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
               <i className="fa-solid fa-triangle-exclamation mr-1" />Over budget by {currency}{(totalAllocated - totalBudget).toLocaleString()}
             </p>
           )}
+          {cfg.allowCustomBudget && (
+            <p className="text-[10px] text-on-surface-variant/50 mt-1.5">
+              <i className="fa-solid fa-pen text-[8px] mr-1" />You can edit the total budget above to match your available spend.
+            </p>
+          )}
+        </div>
+      )}
+      {/* Custom budget input for when there's no preset budget (constrained + allowCustomBudget + no default) */}
+      {isConstrained && cfg.allowCustomBudget && defaultBudget === 0 && (
+        <div className="rounded-xl border border-outline-variant/50 bg-surface-container p-3 mb-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
+              <i className="fa-solid fa-wallet mr-1" style={{ color: primaryColor }} />Your Budget
+            </span>
+            <div className="relative">
+              <span className="text-sm font-bold text-on-surface-variant/40 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">{currency}</span>
+              <input
+                type="number"
+                min={0}
+                value={customBudget || ""}
+                onChange={(e) => setCustomBudget(Math.max(0, Number(e.target.value)))}
+                placeholder="Enter your budget"
+                className="text-sm font-bold tabular-nums bg-surface-container-highest border border-outline-variant/30 rounded-lg pl-6 pr-2 py-1 w-36 text-right outline-none focus:border-primary/40 transition-colors"
+                style={{ color: primaryColor }}
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-on-surface-variant/50 mt-1.5">Enter your total budget to divide across channels.</p>
         </div>
       )}
 
@@ -2117,6 +2173,34 @@ function CelestialField({
         <h3 className="text-lg font-bold text-on-surface font-headline">{field.label}</h3>
         {field.content && <p className="text-sm text-on-surface-variant mt-1 leading-relaxed">{field.content}</p>}
         {field.hint && <p className="text-xs text-on-surface-variant/60 mt-1">{field.hint}</p>}
+      </div>
+    );
+  }
+
+  /* Bot Protection — renders as a non-interactive shield badge */
+  if (field.type === "captcha") {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest/50">
+        <i className="fa-solid fa-shield-halved text-lg" style={{ color: primaryColor }} />
+        <span className="text-xs text-on-surface-variant/70">This form is protected by bot detection.</span>
+      </div>
+    );
+  }
+
+  /* Payment field — show notice if no gateway is connected */
+  if (field.type === "payment") {
+    return (
+      <div>
+        <label className="block text-sm font-medium text-on-surface mb-2">{field.label}{field.required && <span className="text-error ml-0.5">*</span>}</label>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 flex items-start gap-3">
+          <i className="fa-solid fa-credit-card text-lg text-amber-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-on-surface mb-1">Payment is not available right now</p>
+            <p className="text-xs text-on-surface-variant/70 leading-relaxed">
+              The payment system for this form is still being configured. You can complete the rest of the form and payment details will be collected separately.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

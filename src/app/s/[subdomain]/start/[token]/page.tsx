@@ -47,6 +47,18 @@ export default async function SubmissionPage({ params }: Props) {
     ? String((partner as Record<string, unknown>).custom_footer_text)
     : null;
 
+  // Check if the partner has a payment gateway connected (needed for payment field warning)
+  const hasPaymentField = schema.steps.some((s) => s.fields.some((f) => f.type === "payment"));
+  let hasPaymentGateway = true; // default true so no warning when there's no payment field
+  if (hasPaymentField) {
+    const { data: payGw } = await admin
+      .from("payment_integrations")
+      .select("id")
+      .eq("partner_id", partner.id)
+      .limit(1);
+    hasPaymentGateway = (payGw ?? []).length > 0;
+  }
+
   const { data: existingFiles } = await admin
     .from("submission_files")
     .select("id, filename, mime_type, size_bytes, storage_path, field_key")
@@ -84,6 +96,7 @@ export default async function SubmissionPage({ params }: Props) {
         deleteFile={boundDelete}
         partnerId={partner.id}
         layoutStyle={layoutStyle as "default" | "top-nav" | "no-nav" | "conversation"}
+        hasPaymentGateway={hasPaymentGateway}
       />
 
       {/* Footer — only visible on desktop (mobile footer is less useful with sidebar layout) */}

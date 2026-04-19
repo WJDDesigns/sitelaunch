@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import type { FormSchema, FieldDef } from "@/lib/forms";
-import { evaluateCondition } from "@/lib/forms";
+import { evaluateCondition, getEffectiveColSpan } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
 
 type DeviceSize = "desktop" | "tablet" | "phone";
@@ -276,17 +276,25 @@ export default function FormPreview({ schema, primaryColor }: Props) {
                   </div>
                 )}
 
-                <div className="space-y-5">
-                  {visibleFields.map((field) => (
-                    <PreviewField
-                      key={field.id}
-                      field={field}
-                      primaryColor={primaryColor}
-                      isPhone={isPhone}
-                      previewValue={previewData[field.id]}
-                      onPreviewChange={(v) => setPreviewData((prev) => ({ ...prev, [field.id]: v }))}
-                    />
-                  ))}
+                <div className="grid grid-cols-4 gap-x-4 gap-y-5">
+                  {visibleFields.map((field) => {
+                    const colSpan = getEffectiveColSpan(field);
+                    const colCls = colSpan === 1 ? "col-span-1"
+                      : colSpan === 2 ? "col-span-2"
+                      : colSpan === 3 ? "col-span-3"
+                      : "col-span-4";
+                    return (
+                      <div key={field.id} className={colCls}>
+                        <PreviewField
+                          field={field}
+                          primaryColor={primaryColor}
+                          isPhone={isPhone}
+                          previewValue={previewData[field.id]}
+                          onPreviewChange={(v) => setPreviewData((prev) => ({ ...prev, [field.id]: v }))}
+                        />
+                      </div>
+                    );
+                  })}
 
                   {visibleFields.length === 0 && (
                     <div className="text-center py-8 text-sm text-on-surface-variant/40 border-2 border-dashed border-outline-variant/20 rounded-xl">

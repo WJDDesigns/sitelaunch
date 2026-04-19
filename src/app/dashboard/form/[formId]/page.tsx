@@ -83,6 +83,14 @@ export default async function FormEditorPage({ params }: PageProps) {
     .limit(1);
   const hasAI = (aiIntegrations ?? []).length > 0;
 
+  // Check if partner has any payment gateway connected
+  const { data: paymentIntegrations } = await admin
+    .from("payment_integrations")
+    .select("id")
+    .eq("partner_id", account.id)
+    .limit(1);
+  const hasPaymentGateway = (paymentIntegrations ?? []).length > 0;
+
   return (
     <div className="flex flex-col h-screen">
       <FormEditorShell
@@ -94,6 +102,7 @@ export default async function FormEditorPage({ params }: PageProps) {
         formName={pf.name}
         isActive={pf.is_active ?? true}
         hasAI={hasAI}
+        hasPaymentGateway={hasPaymentGateway}
         settingsSlot={
           <FormSettingsPanel
             formId={formId}

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider, RatingConfig, SliderConfig, SocialHandlesConfig, SocialPlatformId, CountryStateConfig, MatrixConfig, QuestionnaireConfig, QuestionnaireQuestion } from "@/lib/forms";
-import { SOCIAL_PLATFORMS } from "@/lib/forms";
+import { SOCIAL_PLATFORMS, GRID_COLUMNS, MIN_COL_SPAN, getMinColSpan, getEffectiveColSpan } from "@/lib/forms";
 import { COUNTRIES } from "@/data/countries";
 import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
 import CloudDestinationButton from "@/components/CloudDestinationButton";
@@ -69,13 +69,13 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "country_state", label: "Country / State", icon: "fa-earth-americas", group: "standard", category: "general", description: "Country and state/province picker" },
   { type: "matrix", label: "Matrix / Grid", icon: "fa-table-cells-large", group: "advanced", category: "smart", description: "Row-by-column selection grid" },
   { type: "questionnaire", label: "Questionnaire", icon: "fa-clipboard-question", group: "advanced", category: "smart", description: "Scored questions with points" },
-  // Payments (coming soon -- renderer not yet implemented)
-  { type: "payment", label: "Payment (Coming Soon)", icon: "fa-credit-card", group: "advanced", category: "smart", description: "Collect payments via Stripe, PayPal, or Square", disabled: true },
+  // Payments
+  { type: "payment", label: "Payment", icon: "fa-credit-card", group: "advanced", category: "smart", description: "Collect payments via Stripe, PayPal, or Square" },
   // Layout & Logic
   { type: "heading", label: "Section Heading", icon: "fa-heading", group: "advanced", category: "layout", description: "Display-only section header" },
   { type: "consent", label: "Consent / Terms", icon: "fa-file-contract", group: "advanced", category: "layout", description: "Agreement with checkbox" },
-  // Bot protection (coming soon -- renderer not yet implemented)
-  { type: "captcha", label: "Bot Protection (Coming Soon)", icon: "fa-shield-halved", group: "advanced", category: "layout", description: "reCAPTCHA or Cloudflare Turnstile", disabled: true },
+  // Bot protection
+  { type: "captcha", label: "Bot Protection", icon: "fa-shield-halved", group: "advanced", category: "layout", description: "reCAPTCHA or Cloudflare Turnstile" },
 ];
 
 function iconFor(type: FieldType) {
@@ -339,7 +339,7 @@ const INPUT_CLS =
 
 /* ── Main editor ───────────────────────────────────────────── */
 
-export default function FormEditor({ initialSchema, onOpenTemplates, formId, hasAI }: { initialSchema: FormSchema; onOpenTemplates?: () => void; formId?: string; hasAI?: boolean }) {
+export default function FormEditor({ initialSchema, onOpenTemplates, formId, hasAI, hasPaymentGateway }: { initialSchema: FormSchema; onOpenTemplates?: () => void; formId?: string; hasAI?: boolean; hasPaymentGateway?: boolean }) {
   const [schema, setSchemaRaw] = useState<FormSchema>(initialSchema);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -352,7 +352,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
   const [mobilePanel, setMobilePanel] = useState<"palette" | "canvas" | "settings">("canvas");
 
   const dragPayload = useRef<DragPayload | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ stepId: string; index: number } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ stepId: string; index: number; side?: "left" | "right" } | null>(null);
   const [stepDropTarget, setStepDropTarget] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const autoExpandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -545,7 +545,35 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
   function handleDragOverField(e: React.DragEvent, stepId: string, index: number) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setDropTarget({ stepId, index });
+    // Detect side-drop: check if mouse is on left or right 30% of the field card
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = x / rect.width;
+    // Get the field being hovered over
+    const step = schema.steps.find((s) => s.id === stepId);
+    const hoveredField = step?.fields[index];
+    const hoveredSpan = hoveredField ? getEffectiveColSpan(hoveredField) : GRID_COLUMNS;
+    // Only allow side-drop if the hovered field isn't already at minimum span
+    // and the hovered field has room to share
+    const hoveredMin = hoveredField ? getMinColSpan(hoveredField.type) : GRID_COLUMNS;
+    // Determine the dragged field's minimum span
+    let draggedMin = 1;
+    if (dragPayload.current?.kind === "palette") {
+      draggedMin = getMinColSpan(dragPayload.current.fieldType);
+    } else if (dragPayload.current?.kind === "field") {
+      const dragFieldId = (dragPayload.current as { fieldId: string }).fieldId;
+      const df = schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragFieldId);
+      if (df) draggedMin = getMinColSpan(df.type);
+    }
+    // Can fit side by side? Both at their minimums must fit in GRID_COLUMNS
+    const canSideDrop = hoveredMin + draggedMin <= GRID_COLUMNS && hoveredSpan > hoveredMin;
+    if (canSideDrop && pct < 0.3) {
+      setDropTarget({ stepId, index, side: "left" });
+    } else if (canSideDrop && pct > 0.7) {
+      setDropTarget({ stepId, index, side: "right" });
+    } else {
+      setDropTarget({ stepId, index });
+    }
   }
   function handleDragOverStep(e: React.DragEvent, stepId: string) {
     e.preventDefault();
@@ -626,41 +654,113 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
     const payload = dragPayload.current;
     if (!payload) return;
 
+    const side = dropTarget?.side;
+
     if (payload.kind === "palette") {
       const field = makeField(payload.fieldType, payload.label);
-      insertField(stepId, index, field);
-      selectField(stepId, field.id);
+      if (side) {
+        // Side drop: insert beside the target field and auto-size both
+        const step = schema.steps.find((s) => s.id === stepId);
+        const targetField = step?.fields[index];
+        if (targetField) {
+          const targetSpan = getEffectiveColSpan(targetField);
+          const droppedMin = getMinColSpan(field.type) as 1 | 2 | 3 | 4;
+          const targetMin = getMinColSpan(targetField.type) as 1 | 2 | 3 | 4;
+          // Split available space: give dropped field half (clamped to min), target keeps the rest
+          const halfSpan = Math.max(droppedMin, Math.floor(GRID_COLUMNS / 2)) as 1 | 2 | 3 | 4;
+          const newDroppedSpan = Math.min(halfSpan, GRID_COLUMNS - targetMin) as 1 | 2 | 3 | 4;
+          const newTargetSpan = Math.min(GRID_COLUMNS - newDroppedSpan, targetSpan) as 1 | 2 | 3 | 4;
+          field.colSpan = newDroppedSpan;
+          const insertIdx = side === "left" ? index : index + 1;
+          setSchema((prev) => ({
+            steps: prev.steps.map((s) => {
+              if (s.id !== stepId) return s;
+              const fields = s.fields.map((f) =>
+                f.id === targetField.id ? { ...f, colSpan: newTargetSpan } : f,
+              );
+              fields.splice(insertIdx, 0, field);
+              return { ...s, fields };
+            }),
+          }));
+          selectField(stepId, field.id);
+        }
+      } else {
+        insertField(stepId, index, field);
+        selectField(stepId, field.id);
+      }
     } else if (payload.kind === "field") {
       const sourceStep = schema.steps.find((s) => s.id === payload.sourceStepId);
       const field = sourceStep?.fields.find((f) => f.id === payload.fieldId);
       if (!field) return;
 
-      let adjustedIndex = index;
-      if (payload.sourceStepId === stepId) {
-        const oldIndex = sourceStep!.fields.findIndex((f) => f.id === payload.fieldId);
-        if (oldIndex < index) adjustedIndex--;
-      }
+      if (side) {
+        // Side drop with existing field
+        const step = schema.steps.find((s) => s.id === stepId);
+        const targetField = step?.fields[index];
+        if (targetField && targetField.id !== field.id) {
+          const targetSpan = getEffectiveColSpan(targetField);
+          const droppedMin = getMinColSpan(field.type) as 1 | 2 | 3 | 4;
+          const targetMin = getMinColSpan(targetField.type) as 1 | 2 | 3 | 4;
+          const halfSpan = Math.max(droppedMin, Math.floor(GRID_COLUMNS / 2)) as 1 | 2 | 3 | 4;
+          const newDroppedSpan = Math.min(halfSpan, GRID_COLUMNS - targetMin) as 1 | 2 | 3 | 4;
+          const newTargetSpan = Math.min(GRID_COLUMNS - newDroppedSpan, targetSpan) as 1 | 2 | 3 | 4;
+          const insertIdx = side === "left" ? index : index + 1;
+          setSchema((prev) => {
+            // First remove the field from its source
+            let steps = prev.steps.map((s) => {
+              if (s.id === payload.sourceStepId) {
+                return { ...s, fields: s.fields.filter((f) => f.id !== payload.fieldId) };
+              }
+              return s;
+            });
+            // Then insert beside target with new spans
+            steps = steps.map((s) => {
+              if (s.id !== stepId) return s;
+              const fields = s.fields.map((f) =>
+                f.id === targetField.id ? { ...f, colSpan: newTargetSpan } : f,
+              );
+              // Recalculate insert index after potential removal from same step
+              const actualIdx = Math.min(
+                side === "left"
+                  ? fields.findIndex((f) => f.id === targetField.id)
+                  : fields.findIndex((f) => f.id === targetField.id) + 1,
+                fields.length,
+              );
+              fields.splice(actualIdx, 0, { ...field, colSpan: newDroppedSpan });
+              return { ...s, fields };
+            });
+            return { steps };
+          });
+          selectField(stepId, field.id);
+        }
+      } else {
+        let adjustedIndex = index;
+        if (payload.sourceStepId === stepId) {
+          const oldIndex = sourceStep!.fields.findIndex((f) => f.id === payload.fieldId);
+          if (oldIndex < index) adjustedIndex--;
+        }
 
-      setSchema((prev) => {
-        const steps = prev.steps.map((s) => {
-          if (s.id === payload.sourceStepId) {
-            return { ...s, fields: s.fields.filter((f) => f.id !== payload.fieldId) };
-          }
-          return s;
-        }).map((s) => {
-          if (s.id === stepId) {
-            const fields = [...s.fields];
-            const insertAt = payload.sourceStepId === stepId
-              ? Math.min(adjustedIndex, fields.length)
-              : Math.min(index, fields.length);
-            fields.splice(insertAt, 0, field);
-            return { ...s, fields };
-          }
-          return s;
+        setSchema((prev) => {
+          const steps = prev.steps.map((s) => {
+            if (s.id === payload.sourceStepId) {
+              return { ...s, fields: s.fields.filter((f) => f.id !== payload.fieldId) };
+            }
+            return s;
+          }).map((s) => {
+            if (s.id === stepId) {
+              const fields = [...s.fields];
+              const insertAt = payload.sourceStepId === stepId
+                ? Math.min(adjustedIndex, fields.length)
+                : Math.min(index, fields.length);
+              fields.splice(insertAt, 0, field);
+              return { ...s, fields };
+            }
+            return s;
+          });
+          return { steps };
         });
-        return { steps };
-      });
-      selectField(stepId, field.id);
+        selectField(stepId, field.id);
+      }
     }
 
     dragPayload.current = null;
@@ -799,6 +899,18 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
         </div>
       </div>
 
+      {/* ── Payment gateway warning ─────────────────────── */}
+      {!hasPaymentGateway && schema.steps.some((s) => s.fields.some((f) => f.type === "payment")) && (
+        <div className="shrink-0 px-6 lg:px-8 py-3 bg-amber-500/[0.06] border-b border-amber-500/15 flex items-center gap-3">
+          <i className="fa-solid fa-triangle-exclamation text-sm text-amber-400" />
+          <p className="text-xs text-amber-300/90 leading-relaxed">
+            <strong className="font-bold">No payment gateway connected.</strong>{" "}
+            Your form includes a payment field, but no payment provider is set up. Payments will not process until you connect one in{" "}
+            <a href="/dashboard/settings" className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">Settings &rarr; Integrations</a>.
+          </p>
+        </div>
+      )}
+
       {/* ── Mobile panel switcher (visible < lg) ──────────── */}
       <div className="lg:hidden shrink-0 flex border-b border-outline-variant/10 bg-surface-container-low/30">
         {(["palette", "canvas", "settings"] as const).map((panel) => (
@@ -910,7 +1022,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                       {/* Step body */}
                       {isExpanded && (
                         <div
-                          className="px-4 sm:px-6 pb-5 space-y-2"
+                          className="px-4 sm:px-6 pb-5"
                           onDragOver={(e) => handleDragOverStep(e, step.id)}
                           onDrop={(e) => handleDrop(e, step.id, step.fields.length)}
                         >
@@ -930,68 +1042,96 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                             </div>
                           )}
 
+                          {/* Grid layout for fields */}
+                          <div className="grid grid-cols-4 gap-2">
                           {step.fields.map((field, fi) => {
                             const isSelected = selectedStepId === step.id && selectedFieldId === field.id;
-                            const isDropBefore = dropTarget?.stepId === step.id && dropTarget?.index === fi;
+                            const isDropBefore = dropTarget?.stepId === step.id && dropTarget?.index === fi && !dropTarget?.side;
+                            const isDropLeft = dropTarget?.stepId === step.id && dropTarget?.index === fi && dropTarget?.side === "left";
+                            const isDropRight = dropTarget?.stepId === step.id && dropTarget?.index === fi && dropTarget?.side === "right";
+                            const colSpan = getEffectiveColSpan(field);
+                            const minSpan = getMinColSpan(field.type);
                             // Get info about the dragged field for the ghost
                             const dragInfo = dragPayload.current;
                             const ghostLabel = dragInfo?.kind === "palette" ? dragInfo.label : dragInfo?.kind === "field" ? schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragInfo.fieldId)?.label ?? "Field" : "Field";
                             const ghostIcon = dragInfo?.kind === "palette" ? iconFor(dragInfo.fieldType) : dragInfo?.kind === "field" ? iconFor(schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragInfo.fieldId)?.type ?? "text") : "fa-question";
 
+                            const colSpanCls =
+                              colSpan === 1 ? "col-span-1"
+                              : colSpan === 2 ? "col-span-2"
+                              : colSpan === 3 ? "col-span-3"
+                              : "col-span-4";
+
                             return (
-                              <div key={field.id}>
+                              <React.Fragment key={field.id}>
                                 {isDropBefore && (
-                                  <div className="flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 my-1 transition-all">
+                                  <div className="col-span-4 flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 transition-all">
                                     <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center text-sm text-primary/60 shrink-0">
                                       <FaIcon name={ghostIcon} />
                                     </div>
                                     <span className="text-sm font-medium text-primary/60 truncate">{ghostLabel}</span>
                                   </div>
                                 )}
-                                <div
-                                  draggable
-                                  onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; startDragField(step.id, field.id); }}
-                                  onDragOver={(e) => handleDragOverField(e, step.id, fi)}
-                                  onDrop={(e) => handleDrop(e, step.id, fi)}
-                                  onDragEnd={handleDragEnd}
-                                  onClick={() => selectField(step.id, field.id)}
-                                  className={`flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl cursor-grab active:cursor-grabbing transition-all duration-200 ${
-                                    isSelected
-                                      ? "bg-primary/10 border border-primary/40"
-                                      : "bg-surface-container-low border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-container-high"
-                                  }`}
-                                >
-                                  <div className="text-on-surface-variant/40 hover:text-on-surface-variant cursor-grab select-none shrink-0"><i className="fa-solid fa-grip-vertical text-[10px]" /></div>
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0 ${
-                                    isSelected ? "bg-primary/20 text-primary" : "bg-surface-container-highest text-primary"
-                                  }`}>
-                                    <FaIcon name={iconFor(field.type)} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium text-on-surface truncate">{field.label}</div>
-                                    <div className="text-xs text-on-surface-variant/60 truncate">
-                                      {labelFor(field.type)}
-                                      {field.required && <span className="ml-1 text-tertiary font-medium">&middot; Required</span>}
-                                      {field.showCondition?.fieldId && <span className="ml-1 text-amber-400 font-medium">&middot; <i className="fa-solid fa-eye text-[9px]" /> Conditional</span>}
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); removeField(step.id, field.id); }}
-                                    className="p-1 text-on-surface-variant/40 hover:text-error text-sm transition-colors shrink-0"
+                                <div className={`${colSpanCls} relative`}>
+                                  {/* Left side-drop indicator */}
+                                  {isDropLeft && (
+                                    <div className="absolute -left-1 top-0 bottom-0 w-1 rounded-full bg-primary z-10" />
+                                  )}
+                                  {/* Right side-drop indicator */}
+                                  {isDropRight && (
+                                    <div className="absolute -right-1 top-0 bottom-0 w-1 rounded-full bg-primary z-10" />
+                                  )}
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; startDragField(step.id, field.id); }}
+                                    onDragOver={(e) => handleDragOverField(e, step.id, fi)}
+                                    onDrop={(e) => handleDrop(e, step.id, fi)}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => selectField(step.id, field.id)}
+                                    className={`flex items-center gap-2 px-2.5 sm:px-3 py-2.5 rounded-xl cursor-grab active:cursor-grabbing transition-all duration-200 ${
+                                      isSelected
+                                        ? "bg-primary/10 border border-primary/40"
+                                        : "bg-surface-container-low border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-container-high"
+                                    }`}
                                   >
-                                    <i className="fa-solid fa-xmark text-xs" />
-                                  </button>
+                                    <div className="text-on-surface-variant/40 hover:text-on-surface-variant cursor-grab select-none shrink-0"><i className="fa-solid fa-grip-vertical text-[10px]" /></div>
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${
+                                      isSelected ? "bg-primary/20 text-primary" : "bg-surface-container-highest text-primary"
+                                    }`}>
+                                      <FaIcon name={iconFor(field.type)} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-medium text-on-surface truncate leading-tight">{field.label}</div>
+                                      <div className="text-[10px] text-on-surface-variant/60 truncate flex items-center gap-1">
+                                        {labelFor(field.type)}
+                                        {field.required && <span className="text-tertiary font-medium">&middot; Req</span>}
+                                        {field.showCondition?.fieldId && <span className="text-amber-400 font-medium">&middot; <i className="fa-solid fa-eye text-[8px]" /></span>}
+                                      </div>
+                                    </div>
+                                    {/* Column span badge */}
+                                    {colSpan < GRID_COLUMNS && (
+                                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0 tabular-nums" title={`${colSpan} of ${GRID_COLUMNS} columns${minSpan < GRID_COLUMNS ? ` (min ${minSpan})` : ""}`}>
+                                        {colSpan}/{GRID_COLUMNS}
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); removeField(step.id, field.id); }}
+                                      className="p-1 text-on-surface-variant/40 hover:text-error text-sm transition-colors shrink-0"
+                                    >
+                                      <i className="fa-solid fa-xmark text-xs" />
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
+                              </React.Fragment>
                             );
                           })}
 
-                          {dropTarget?.stepId === step.id && dropTarget?.index === step.fields.length && step.fields.length > 0 && (() => {
+                          {dropTarget?.stepId === step.id && dropTarget?.index === step.fields.length && !dropTarget?.side && step.fields.length > 0 && (() => {
                             const dragInfo = dragPayload.current;
                             const ghostLabel = dragInfo?.kind === "palette" ? dragInfo.label : dragInfo?.kind === "field" ? schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragInfo.fieldId)?.label ?? "Field" : "Field";
                             const ghostIcon = dragInfo?.kind === "palette" ? iconFor(dragInfo.fieldType) : dragInfo?.kind === "field" ? iconFor(schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragInfo.fieldId)?.type ?? "text") : "fa-question";
                             return (
-                              <div className="flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 my-1 transition-all">
+                              <div className="col-span-4 flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 transition-all">
                                 <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center text-sm text-primary/60 shrink-0">
                                   <FaIcon name={ghostIcon} />
                                 </div>
@@ -999,6 +1139,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                               </div>
                             );
                           })()}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1052,6 +1193,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                 onClose={clearSelection}
                 allFields={schema.steps.flatMap((s) => s.fields)}
                 hasAI={hasAI}
+                hasPaymentGateway={hasPaymentGateway}
               />
             ) : selectedStep && !selectedFieldId ? (
               <StepSettingsPanel
@@ -1200,12 +1342,13 @@ function FieldPalette({ onDragStart, onClickAdd }: {
 
 /* ── Field settings panel ──────────────────────────────────── */
 
-function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
+function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPaymentGateway }: {
   field: FieldDef;
   onUpdate: (patch: Partial<FieldDef>) => void;
   onClose: () => void;
   allFields: FieldDef[];
   hasAI?: boolean;
+  hasPaymentGateway?: boolean;
 }) {
   return (
     <div>
@@ -1238,6 +1381,39 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
             </label>
           </div>
         </section>
+
+        {/* ── Column Width ── */}
+        {(() => {
+          const minSpan = getMinColSpan(field.type);
+          if (minSpan >= GRID_COLUMNS) return null; // Full-width only
+          const currentSpan = getEffectiveColSpan(field);
+          const widthOptions = Array.from({ length: GRID_COLUMNS - minSpan + 1 }, (_, i) => minSpan + i) as (1 | 2 | 3 | 4)[];
+          return (
+            <section className="space-y-3">
+              <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Column Width</div>
+              <div className="flex gap-1.5">
+                {widthOptions.map((span) => (
+                  <button
+                    key={span}
+                    onClick={() => onUpdate({ colSpan: span })}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${
+                      currentSpan === span
+                        ? "bg-primary text-on-primary border-primary"
+                        : "bg-surface-container text-on-surface-variant border-outline-variant/15 hover:border-primary/40"
+                    }`}
+                  >
+                    {span}/{GRID_COLUMNS}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-on-surface-variant/50">
+                {currentSpan === GRID_COLUMNS ? "Full width" : `${currentSpan} of ${GRID_COLUMNS} columns`}.
+                {minSpan < GRID_COLUMNS && ` This field can go as narrow as ${minSpan}/${GRID_COLUMNS}.`}
+                {" "}Drag a field to the side of another field to create columns automatically.
+              </p>
+            </section>
+          );
+        })()}
 
         {(field.type === "select" || field.type === "radio" || field.type === "checkbox") && (
           <section className="space-y-3">
@@ -1626,11 +1802,24 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
               <p className="text-[10px] text-on-surface-variant/50 mt-0.5">{field.budgetAllocatorConfig.mode === "constrained" ? "Moving one slider automatically adjusts others to keep the total fixed." : "Each channel slider is independent — no shared total."}</p>
             </div>
             {field.budgetAllocatorConfig.mode === "constrained" && (
-              <div>
-                <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Total Budget ({field.budgetAllocatorConfig.currency ?? "$"})</span>
-                <input type="number" min={0} value={field.budgetAllocatorConfig.totalBudget ?? 5000} onChange={e => onUpdate({ budgetAllocatorConfig: { ...field.budgetAllocatorConfig!, totalBudget: Number(e.target.value) } })} className={INPUT_CLS} />
-                <p className="text-[10px] text-on-surface-variant/50 mt-0.5">The fixed amount clients divide across channels.</p>
-              </div>
+              <>
+                <div>
+                  <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Default Total Budget ({field.budgetAllocatorConfig.currency ?? "$"})</span>
+                  <input type="number" min={0} value={field.budgetAllocatorConfig.totalBudget ?? 5000} onChange={e => onUpdate({ budgetAllocatorConfig: { ...field.budgetAllocatorConfig!, totalBudget: Number(e.target.value) } })} className={INPUT_CLS} />
+                  <p className="text-[10px] text-on-surface-variant/50 mt-0.5">{field.budgetAllocatorConfig.allowCustomBudget ? "Starting budget shown to the client. They can change it." : "The fixed amount clients divide across channels."}</p>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+                  <div>
+                    <span className="text-xs font-medium text-on-surface block">Allow Custom Budget</span>
+                    <p className="text-[10px] text-on-surface-variant/50 mt-0.5">Let the client enter their own total budget.</p>
+                  </div>
+                  <label className="relative cursor-pointer shrink-0 ml-3">
+                    <input type="checkbox" checked={!!field.budgetAllocatorConfig.allowCustomBudget} onChange={e => onUpdate({ budgetAllocatorConfig: { ...field.budgetAllocatorConfig!, allowCustomBudget: e.target.checked } })} className="sr-only peer" />
+                    <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+                    <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+                  </label>
+                </div>
+              </>
             )}
             {field.budgetAllocatorConfig.mode === "independent" && (
               <div>
@@ -1928,10 +2117,23 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
         {field.type === "payment" && field.paymentConfig && (
           <section className="space-y-3">
             <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Payment Settings</div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/[0.04] border border-primary/15">
-              <i className="fa-solid fa-circle-info text-[10px] text-primary" />
-              <span className="text-[10px] text-on-surface-variant/70">Connect your payment provider in <strong>Settings &rarr; Integrations</strong> before publishing.</span>
-            </div>
+            {hasPaymentGateway ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-tertiary/[0.06] border border-tertiary/15">
+                <i className="fa-solid fa-circle-check text-[10px] text-tertiary" />
+                <span className="text-[10px] text-on-surface-variant/70">Payment gateway connected. Payments will process when the form is published.</span>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <i className="fa-solid fa-triangle-exclamation text-xs text-amber-500" />
+                  <span className="text-xs font-bold text-amber-500">No Payment Gateway</span>
+                </div>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  Payments will not process until you connect a provider (Stripe, PayPal, or Square) in{" "}
+                  <a href="/dashboard/settings" className="text-primary underline underline-offset-2">Settings &rarr; Integrations</a>.
+                </p>
+              </div>
+            )}
             <div>
               <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Provider</span>
               <select value={field.paymentConfig.provider} onChange={e => onUpdate({ paymentConfig: { ...field.paymentConfig!, provider: e.target.value as PaymentProvider } })} className={INPUT_CLS}>

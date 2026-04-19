@@ -19,6 +19,7 @@ export default function FormEditorShell({
   formName,
   isActive: initialIsActive,
   hasAI,
+  hasPaymentGateway,
   settingsSlot,
 }: {
   initialSchema: FormSchema | null;
@@ -29,6 +30,7 @@ export default function FormEditorShell({
   formName?: string;
   isActive?: boolean;
   hasAI?: boolean;
+  hasPaymentGateway?: boolean;
   settingsSlot?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -201,6 +203,7 @@ export default function FormEditorShell({
             onOpenTemplates={() => setShowTemplates(true)}
             formId={formId}
             hasAI={hasAI}
+            hasPaymentGateway={hasPaymentGateway}
           />
         ) : mode === "logic" ? (
           <ConditionalFlowCanvas
