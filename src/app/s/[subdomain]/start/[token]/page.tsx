@@ -59,6 +59,43 @@ export default async function SubmissionPage({ params }: Props) {
     hasPaymentGateway = (payGw ?? []).length > 0;
   }
 
+  // Fetch captcha integration site key (needed for bot protection field)
+  const hasCaptchaField = schema.steps.some((s) => s.fields.some((f) => f.type === "captcha"));
+  let captchaSiteKey: string | null = null;
+  let captchaProvider: "recaptcha" | "turnstile" | null = null;
+  if (hasCaptchaField) {
+    const captchaField = schema.steps.flatMap((s) => s.fields).find((f) => f.type === "captcha");
+    const preferredProvider = captchaField?.captchaConfig?.provider ?? "recaptcha";
+    const { data: captchaInt } = await admin
+      .from("captcha_integrations")
+      .select("provider, site_key")
+      .eq("partner_id", partner.id)
+      .eq("provider", preferredProvider)
+      .maybeSingle();
+    if (captchaInt) {
+      captchaSiteKey = captchaInt.site_key;
+      captchaProvider = captchaInt.provider as "recaptcha" | "turnstile";
+    }
+  }
+
+  // Fetch Google Maps API key for address autocomplete
+  const hasAutocompleteAddress = schema.steps.some((s) => s.fields.some((f) => f.type === "address" && f.addressConfig?.mode === "autocomplete"));
+  let googleMapsApiKey: string | null = null;
+  if (hasAutocompleteAddress) {
+    // Try partner-level Google integration first, fall back to platform env var
+    try {
+      const { data: googleInt } = await admin
+        .from("google_integrations")
+        .select("api_key")
+        .eq("partner_id", partner.id)
+        .maybeSingle();
+      if (googleInt) googleMapsApiKey = googleInt.api_key;
+    } catch { /* table may not exist yet */ }
+    if (!googleMapsApiKey) {
+      googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY ?? null;
+    }
+  }
+
   const { data: existingFiles } = await admin
     .from("submission_files")
     .select("id, filename, mime_type, size_bytes, storage_path, field_key")
@@ -97,6 +134,9 @@ export default async function SubmissionPage({ params }: Props) {
         partnerId={partner.id}
         layoutStyle={layoutStyle as "default" | "top-nav" | "no-nav" | "conversation"}
         hasPaymentGateway={hasPaymentGateway}
+        captchaSiteKey={captchaSiteKey}
+        captchaProvider={captchaProvider}
+        googleMapsApiKey={googleMapsApiKey}
       />
 
       {/* Footer — only visible on desktop (mobile footer is less useful with sidebar layout) */}

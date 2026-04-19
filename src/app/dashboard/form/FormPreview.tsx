@@ -929,7 +929,11 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
               <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2.5">
                 <i className="fa-solid fa-diamond mr-1" style={{ color: primaryColor }} />Milestones
               </p>
-              <div className="space-y-2.5">
+              <div className={
+                cfg.milestoneColumns === 3 ? "grid grid-cols-1 sm:grid-cols-3 gap-3" :
+                cfg.milestoneColumns === 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" :
+                "space-y-2.5"
+              }>
                 {cfg.milestones.map((m) => (
                   <div key={m.id}>
                     <label className="block text-xs text-on-surface mb-1 ml-0.5">
@@ -1002,26 +1006,60 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
     );
   }
 
-  /* Country / State Picker — preview */
-  if (field.type === "country_state") {
+  /* Address (structured) -- preview */
+  if (field.type === "address" && field.addressConfig?.mode) {
+    const addrFields = field.addressConfig.fields ?? ["street", "street2", "city", "state", "zip", "country"];
+    const placeholders: Record<string, string> = { street: "123 Main St", street2: "Apt, Suite, Unit", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
     return (
       <div>
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {field.addressConfig.mode === "autocomplete" && (
+          <p className="text-[10px] text-primary/70 mb-2 ml-1"><i className="fa-solid fa-magnifying-glass-location mr-1" />Google Places autocomplete enabled</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <select className={INPUT_CLS} style={focusRing} defaultValue="">
-            <option value="">Select country...</option>
-            <option value="US">United States</option>
-            <option value="CA">Canada</option>
-            <option value="GB">United Kingdom</option>
-            <option value="AU">Australia</option>
-          </select>
+          {addrFields.map((fld) => {
+            const isFullWidth = fld === "street" || fld === "street2";
+            return (
+              <div key={fld} className={isFullWidth ? "sm:col-span-2" : ""}>
+                <input type="text" readOnly placeholder={placeholders[fld]} className={INPUT_CLS} style={focusRing} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  /* Country / State Picker -- preview */
+  if (field.type === "country_state") {
+    const isStateOnly = field.countryStateConfig?.stateOnly;
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {isStateOnly ? (
           <select className={INPUT_CLS} style={focusRing} defaultValue="">
             <option value="">Select state/province...</option>
           </select>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <select className={INPUT_CLS} style={focusRing} defaultValue="">
+              <option value="">Select country...</option>
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+              <option value="GB">United Kingdom</option>
+              <option value="AU">Australia</option>
+            </select>
+            <select className={INPUT_CLS} style={focusRing} defaultValue="">
+              <option value="">Select state/province...</option>
+            </select>
+          </div>
+        )}
       </div>
     );
   }
@@ -1206,7 +1244,7 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
           {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
-        <div className="space-y-2">
+        <div className={field.socialHandlesConfig!.columns === 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
           {enabledPlatforms.map((p) => (
             <div key={p.id} className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center shrink-0">

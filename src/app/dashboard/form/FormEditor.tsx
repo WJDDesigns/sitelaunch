@@ -44,7 +44,7 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "date", label: "Date Picker", icon: "fa-calendar", group: "standard", category: "general", description: "Date selector" },
   { type: "url", label: "URL", icon: "fa-link", group: "advanced", category: "general", description: "Website URL with validation" },
   { type: "color", label: "Color Picker", icon: "fa-palette", group: "advanced", category: "general", description: "Hex color selector" },
-  { type: "address", label: "Address", icon: "fa-location-dot", group: "advanced", category: "general", description: "Multi-line address" },
+  { type: "address", label: "Address", icon: "fa-location-dot", group: "advanced", category: "general", description: "Structured address with optional autocomplete" },
   { type: "file", label: "File Upload", icon: "fa-paperclip", group: "advanced", category: "general", description: "Single file upload" },
   { type: "files", label: "Multi-File", icon: "fa-folder-open", group: "advanced", category: "general", description: "Multiple file uploads" },
   // Smart Fields
@@ -296,9 +296,13 @@ function makeField(type: FieldType, label: string): FieldDef {
     base.label = "Social Media Handles";
     base.socialHandlesConfig = { platforms: ["instagram", "facebook", "x", "linkedin", "tiktok", "youtube"] };
   }
+  if (type === "address") {
+    base.label = "Address";
+    base.addressConfig = { mode: "manual", region: "us", fields: ["street", "street2", "city", "state", "zip", "country"] };
+  }
   if (type === "country_state") {
     base.label = "Country / State";
-    base.countryStateConfig = { allowedCountries: [], requireState: false };
+    base.countryStateConfig = { allowedCountries: [], requireState: false, stateOnly: false, stateOnlyCountry: "US" };
   }
   if (type === "matrix") {
     base.label = "Rate Each Area";
@@ -1753,6 +1757,21 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
               </label>
             </div>
             <div>
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Milestone Layout</span>
+              <p className="text-[10px] text-on-surface-variant/50 mb-2">How many columns for milestone date fields.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([1, 2, 3] as const).map((cols) => {
+                  const active = (field.timelineConfig!.milestoneColumns ?? 1) === cols;
+                  return (
+                    <button key={cols} type="button" onClick={() => onUpdate({ timelineConfig: { ...field.timelineConfig!, milestoneColumns: cols } })}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
+                      {cols} Col{cols > 1 ? "s" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
               <span className="text-[11px] font-medium text-on-surface-variant mb-1.5 block">Milestones</span>
               <p className="text-[10px] text-on-surface-variant/50 mb-2">Key project phases the client needs to set dates for. Drag to reorder.</p>
               <div className="space-y-1.5">
@@ -1880,41 +1899,128 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
           </section>
         )}
 
+        {/* -- Address Settings -- */}
+        {field.type === "address" && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Address Settings</div>
+            <div>
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Input Mode</span>
+              <div className="grid grid-cols-2 gap-2">
+                {(["manual", "autocomplete"] as const).map((m) => {
+                  const active = (field.addressConfig?.mode ?? "manual") === m;
+                  return (
+                    <button key={m} type="button" onClick={() => onUpdate({ addressConfig: { ...field.addressConfig, mode: m } })}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
+                      <i className={`fa-solid ${m === "manual" ? "fa-pen" : "fa-magnifying-glass-location"} mr-1.5`} />
+                      {m === "manual" ? "Manual Entry" : "Google Autocomplete"}
+                    </button>
+                  );
+                })}
+              </div>
+              {field.addressConfig?.mode === "autocomplete" && (
+                <p className="text-[10px] text-on-surface-variant/50 mt-2">
+                  <i className="fa-solid fa-circle-info mr-1" />
+                  Requires a Google Maps API key in Settings &gt; Integrations.
+                </p>
+              )}
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Region</span>
+              <div className="grid grid-cols-2 gap-2">
+                {(["us", "international"] as const).map((r) => {
+                  const active = (field.addressConfig?.region ?? "us") === r;
+                  return (
+                    <button key={r} type="button" onClick={() => onUpdate({ addressConfig: { ...field.addressConfig, region: r, fields: r === "us" ? ["street", "street2", "city", "state", "zip"] : ["street", "street2", "city", "state", "zip", "country"] } })}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
+                      <i className={`fa-solid ${r === "us" ? "fa-flag-usa" : "fa-globe"} mr-1.5`} />
+                      {r === "us" ? "United States" : "International"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Address Fields</span>
+              <p className="text-[10px] text-on-surface-variant/50 mb-2">Choose which sub-fields to collect.</p>
+              <div className="space-y-1">
+                {(["street", "street2", "city", "state", "zip", "country"] as const).map((fld) => {
+                  const labels: Record<string, string> = { street: "Street Address", street2: "Address Line 2", city: "City", state: "State / Province", zip: "ZIP / Postal Code", country: "Country" };
+                  const fields = field.addressConfig?.fields ?? ["street", "street2", "city", "state", "zip", "country"];
+                  const checked = fields.includes(fld);
+                  return (
+                    <label key={fld} className="flex items-center gap-2 px-3 py-1.5 hover:bg-surface-container/50 rounded-lg cursor-pointer transition-colors">
+                      <input type="checkbox" checked={checked} onChange={(e) => {
+                        const next = e.target.checked ? [...fields, fld] : fields.filter((f) => f !== fld);
+                        onUpdate({ addressConfig: { ...field.addressConfig, fields: next } });
+                      }} className="h-3.5 w-3.5 rounded" style={{ accentColor: "var(--color-primary)" }} />
+                      <span className="text-xs text-on-surface">{labels[fld]}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* -- Country/State Settings -- */}
         {field.type === "country_state" && (
           <section className="space-y-3">
             <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Country/State Settings</div>
             <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
               <div>
-                <span className="text-xs font-medium text-on-surface block">Require State/Province</span>
-                <p className="text-[10px] text-on-surface-variant/50 mt-0.5">When a country has states/provinces, require selection.</p>
+                <span className="text-xs font-medium text-on-surface block">State/Province Only</span>
+                <p className="text-[10px] text-on-surface-variant/50 mt-0.5">Show only the state/province dropdown without country selection.</p>
               </div>
               <label className="relative cursor-pointer shrink-0 ml-3">
-                <input type="checkbox" checked={!!field.countryStateConfig?.requireState} onChange={(e) => onUpdate({ countryStateConfig: { ...field.countryStateConfig!, requireState: e.target.checked } })} className="sr-only peer" />
+                <input type="checkbox" checked={!!field.countryStateConfig?.stateOnly} onChange={(e) => onUpdate({ countryStateConfig: { ...field.countryStateConfig!, stateOnly: e.target.checked, stateOnlyCountry: field.countryStateConfig?.stateOnlyCountry || "US" } })} className="sr-only peer" />
                 <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
                 <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
               </label>
             </div>
-            <div>
-              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Restrict to Countries</span>
-              <p className="text-[10px] text-on-surface-variant/50 mb-2">Leave empty to show all countries. Select specific countries to limit the dropdown.</p>
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-outline-variant/20 divide-y divide-outline-variant/10">
-                {COUNTRIES.map((c) => {
-                  const allowed = field.countryStateConfig?.allowedCountries ?? [];
-                  const isSelected = allowed.includes(c.code);
-                  return (
-                    <label key={c.code} className="flex items-center gap-2 px-3 py-2 hover:bg-surface-container/50 cursor-pointer transition-colors">
-                      <input type="checkbox" checked={isSelected} onChange={(e) => {
-                        const next = e.target.checked ? [...allowed, c.code] : allowed.filter((cc) => cc !== c.code);
-                        onUpdate({ countryStateConfig: { ...field.countryStateConfig!, allowedCountries: next } });
-                      }} className="h-3.5 w-3.5 rounded" style={{ accentColor: "var(--color-primary)" }} />
-                      <span className="text-xs text-on-surface">{c.name}</span>
-                      <span className="text-[10px] text-on-surface-variant/40 ml-auto">{c.code}</span>
-                    </label>
-                  );
-                })}
+            {field.countryStateConfig?.stateOnly && (
+              <div>
+                <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Country for States</span>
+                <p className="text-[10px] text-on-surface-variant/50 mb-2">Which country's states/provinces to show.</p>
+                <select value={field.countryStateConfig?.stateOnlyCountry ?? "US"} onChange={(e) => onUpdate({ countryStateConfig: { ...field.countryStateConfig!, stateOnlyCountry: e.target.value } })} className={INPUT_CLS}>
+                  {COUNTRIES.filter((c) => c.states.length > 0).map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
               </div>
-            </div>
+            )}
+            {!field.countryStateConfig?.stateOnly && (
+              <>
+                <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+                  <div>
+                    <span className="text-xs font-medium text-on-surface block">Require State/Province</span>
+                    <p className="text-[10px] text-on-surface-variant/50 mt-0.5">When a country has states/provinces, require selection.</p>
+                  </div>
+                  <label className="relative cursor-pointer shrink-0 ml-3">
+                    <input type="checkbox" checked={!!field.countryStateConfig?.requireState} onChange={(e) => onUpdate({ countryStateConfig: { ...field.countryStateConfig!, requireState: e.target.checked } })} className="sr-only peer" />
+                    <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+                    <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+                  </label>
+                </div>
+                <div>
+                  <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Restrict to Countries</span>
+                  <p className="text-[10px] text-on-surface-variant/50 mb-2">Leave empty to show all countries. Select specific countries to limit the dropdown.</p>
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-outline-variant/20 divide-y divide-outline-variant/10">
+                    {COUNTRIES.map((c) => {
+                      const allowed = field.countryStateConfig?.allowedCountries ?? [];
+                      const isSelected = allowed.includes(c.code);
+                      return (
+                        <label key={c.code} className="flex items-center gap-2 px-3 py-2 hover:bg-surface-container/50 cursor-pointer transition-colors">
+                          <input type="checkbox" checked={isSelected} onChange={(e) => {
+                            const next = e.target.checked ? [...allowed, c.code] : allowed.filter((cc) => cc !== c.code);
+                            onUpdate({ countryStateConfig: { ...field.countryStateConfig!, allowedCountries: next } });
+                          }} className="h-3.5 w-3.5 rounded" style={{ accentColor: "var(--color-primary)" }} />
+                          <span className="text-xs text-on-surface">{c.name}</span>
+                          <span className="text-[10px] text-on-surface-variant/40 ml-auto">{c.code}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         )}
 
@@ -2068,7 +2174,19 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
         {/* -- Social Media Handles Settings -- */}
         {field.type === "social_handles" && (
           <section className="space-y-3">
-            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Platforms</div>
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Layout</div>
+            <div className="grid grid-cols-2 gap-2">
+              {([1, 2] as const).map((cols) => {
+                const active = (field.socialHandlesConfig?.columns ?? 1) === cols;
+                return (
+                  <button key={cols} type="button" onClick={() => onUpdate({ socialHandlesConfig: { ...field.socialHandlesConfig!, columns: cols } })}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
+                    {cols === 1 ? "Stacked" : "2 Columns"}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pt-2">Platforms</div>
             <p className="text-[10px] text-on-surface-variant/50">Toggle which social platforms to show.</p>
             <div className="space-y-1.5">
               {SOCIAL_PLATFORMS.map((p) => {

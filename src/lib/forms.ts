@@ -283,6 +283,8 @@ export interface TimelineConfig {
   allowBlackoutDates?: boolean;
   /** Minimum date (ISO string) — defaults to today */
   minDate?: string;
+  /** Number of columns for milestone date fields (1 = stacked, 2 or 3 = side by side). Default 1. */
+  milestoneColumns?: 1 | 2 | 3;
 }
 
 /* ── Budget Allocator Slider types ───────────────────────── */
@@ -388,6 +390,8 @@ export type SocialPlatformId = typeof SOCIAL_PLATFORMS[number]["id"];
 export interface SocialHandlesConfig {
   /** Which platforms to show (defaults to all) */
   platforms: SocialPlatformId[];
+  /** Number of columns for handle inputs (1 = stacked, 2 = side by side). Default 1. */
+  columns?: 1 | 2;
 }
 
 /* -- Country/State Picker types ------------------------------------------- */
@@ -397,6 +401,21 @@ export interface CountryStateConfig {
   allowedCountries?: string[];
   /** Require state/province selection when available */
   requireState?: boolean;
+  /** Show only the state/province dropdown (no country selector). Defaults to US states. */
+  stateOnly?: boolean;
+  /** When stateOnly is true, which country's states to show. Defaults to "US". */
+  stateOnlyCountry?: string;
+}
+
+/* -- Address types -------------------------------------------------------- */
+
+export interface AddressConfig {
+  /** Input mode: manual fields or Google Places autocomplete */
+  mode?: "manual" | "autocomplete";
+  /** Region scope for autocomplete: "us" restricts to US, "international" allows worldwide */
+  region?: "us" | "international";
+  /** Which address sub-fields to collect */
+  fields?: ("street" | "street2" | "city" | "state" | "zip" | "country")[];
 }
 
 /* -- Matrix/Grid types ---------------------------------------------------- */
@@ -495,6 +514,8 @@ export interface FieldDef {
   socialHandlesConfig?: SocialHandlesConfig;
   /** For country_state fields — country/state picker config */
   countryStateConfig?: CountryStateConfig;
+  /** For address fields — structured address / autocomplete config */
+  addressConfig?: AddressConfig;
   /** For matrix fields — grid/table config */
   matrixConfig?: MatrixConfig;
   /** For questionnaire fields — scored questions config */
@@ -766,6 +787,14 @@ export function validateStepData(
       const cfg = f.sliderConfig ?? { min: 0, max: 100, step: 1 };
       if (Number.isNaN(n) || n < cfg.min || n > cfg.max) errors[f.id] = `Must be between ${cfg.min} and ${cfg.max}`;
     }
+    if (f.type === "address" && f.addressConfig?.mode === "manual" && typeof v === "string") {
+      try {
+        const addr = JSON.parse(v);
+        const reqFields = (f.addressConfig.fields ?? ["street", "city", "state", "zip"]).filter((fld) => fld !== "street2");
+        const missing = reqFields.filter((fld) => !addr[fld]?.trim());
+        if (f.required && missing.length > 0) errors[f.id] = "Please fill in all address fields";
+      } catch { /* plain text fallback, already validated by required check above */ }
+    }
     if (f.type === "social_handles" && typeof v === "string") {
       try {
         const handles = JSON.parse(v);
@@ -777,9 +806,13 @@ export function validateStepData(
     if (f.type === "country_state" && typeof v === "string") {
       try {
         const parsed = JSON.parse(v);
-        if (f.required && !parsed.country) errors[f.id] = "Please select a country";
-        else if (f.countryStateConfig?.requireState && parsed.country && !parsed.state) errors[f.id] = "Please select a state/province";
-      } catch { if (f.required) errors[f.id] = "Please select a country"; }
+        if (f.countryStateConfig?.stateOnly) {
+          if (f.required && !parsed.state) errors[f.id] = "Please select a state/province";
+        } else {
+          if (f.required && !parsed.country) errors[f.id] = "Please select a country";
+          else if (f.countryStateConfig?.requireState && parsed.country && !parsed.state) errors[f.id] = "Please select a state/province";
+        }
+      } catch { if (f.required) errors[f.id] = f.countryStateConfig?.stateOnly ? "Please select a state/province" : "Please select a country"; }
     }
     if (f.type === "matrix" && typeof v === "string") {
       try {

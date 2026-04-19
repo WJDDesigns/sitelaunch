@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { FormSchema, FieldDef, UploadedFile, PackageRule, RepeaterSubField } from "@/lib/forms";
 import { evaluateCondition, getEffectiveColSpan } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
+import { COUNTRIES as COUNTRIES_DATA } from "@/data/countries";
 import FileField from "./FileField";
 
 interface Props {
@@ -24,6 +25,9 @@ interface Props {
   partnerId?: string;
   layoutStyle?: "default" | "top-nav" | "no-nav" | "conversation";
   hasPaymentGateway?: boolean;
+  captchaSiteKey?: string | null;
+  captchaProvider?: "recaptcha" | "turnstile" | null;
+  googleMapsApiKey?: string | null;
 }
 
 /* ── animation styles ──────────────────────────────────────── */
@@ -82,6 +86,9 @@ export default function SubmissionForm({
   saveStep, submit, uploadFile, deleteFile, partnerId,
   layoutStyle = "default",
   hasPaymentGateway = true,
+  captchaSiteKey,
+  captchaProvider,
+  googleMapsApiKey,
 }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -95,6 +102,35 @@ export default function SubmissionForm({
   const logoClickRef = useRef(0);
   const logoTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const captchaTokenRef = useRef<string | null>(null);
+
+  // Load Google Maps Places script for address autocomplete
+  useEffect(() => {
+    if (!googleMapsApiKey) return;
+    if (typeof document !== "undefined" && document.getElementById("google-maps-script")) return;
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }, [googleMapsApiKey]);
+
+  // Load captcha script (reCAPTCHA v3 or Turnstile)
+  useEffect(() => {
+    if (!captchaSiteKey || !captchaProvider) return;
+    const scriptId = `captcha-script-${captchaProvider}`;
+    if (typeof document !== "undefined" && document.getElementById(scriptId)) return;
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.async = true;
+    if (captchaProvider === "recaptcha") {
+      script.src = `https://www.google.com/recaptcha/api.js?render=${captchaSiteKey}`;
+    } else {
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    }
+    document.head.appendChild(script);
+  }, [captchaSiteKey, captchaProvider]);
 
   // Conversation mode: tracks which field within the flattened field list is shown
   const [convoIdx, setConvoIdx] = useState(0);
@@ -246,7 +282,7 @@ export default function SubmissionForm({
     }
     return (
       <div key={f.id} className={`${colCls} ${animClass} sl-d${Math.min(i + 2, 5)}`}>
-        <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} />
+        <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} captchaSiteKey={captchaSiteKey} captchaProvider={captchaProvider} captchaTokenRef={captchaTokenRef} hasPaymentGateway={hasPaymentGateway} />
       </div>
     );
   };
@@ -1724,27 +1760,31 @@ function TimelineField({ field, value, error, onChange, primaryColor }: {
         )}
 
         {/* Milestones */}
-        {cfg.milestones && cfg.milestones.length > 0 && (
-          <div className="rounded-xl border border-outline-variant/50 bg-surface-container p-3">
-            <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2.5">
-              <i className="fa-solid fa-diamond mr-1" style={{ color: primaryColor }} />Milestones
-            </p>
-            <div className="space-y-2.5">
-              {cfg.milestones.map((m) => (
-                <div key={m.id}>
-                  <label className="block text-xs text-on-surface mb-1 ml-0.5">
-                    {m.label}
-                    {m.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
-                  </label>
-                  <input type="date" value={data.milestones[m.id] ?? ""} min={cfg.minDate}
-                    onChange={(e) => setMilestone(m.id, e.target.value)}
-                    className={INPUT_CLS}
-                    style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties} />
-                </div>
-              ))}
+        {cfg.milestones && cfg.milestones.length > 0 && (() => {
+          const cols = cfg.milestoneColumns ?? 1;
+          const gridCls = cols === 3 ? "grid grid-cols-1 sm:grid-cols-3 gap-3" : cols === 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2.5";
+          return (
+            <div className="rounded-xl border border-outline-variant/50 bg-surface-container p-3">
+              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2.5">
+                <i className="fa-solid fa-diamond mr-1" style={{ color: primaryColor }} />Milestones
+              </p>
+              <div className={gridCls}>
+                {cfg.milestones!.map((m) => (
+                  <div key={m.id}>
+                    <label className="block text-xs text-on-surface mb-1 ml-0.5">
+                      {m.label}
+                      {m.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+                    </label>
+                    <input type="date" value={data.milestones[m.id] ?? ""} min={cfg.minDate}
+                      onChange={(e) => setMilestone(m.id, e.target.value)}
+                      className={INPUT_CLS}
+                      style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties} />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Blackout dates */}
         {cfg.allowBlackoutDates && (
@@ -1884,7 +1924,7 @@ function SocialHandlesField({ field, value, error, onChange, primaryColor }: {
         {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
       </label>
       {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
-      <div className="space-y-2">
+      <div className={field.socialHandlesConfig?.columns === 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
         {enabledPlatforms.map((p) => {
           const handle = getHandle(p.id);
           const status = verifyStatus[p.id];
@@ -2159,8 +2199,10 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
 
 function CelestialField({
   field, value, error, onChange, primaryColor, allData, partnerId,
+  captchaSiteKey, captchaProvider, captchaTokenRef, hasPaymentGateway,
 }: {
   field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>; partnerId?: string;
+  captchaSiteKey?: string | null; captchaProvider?: "recaptcha" | "turnstile" | null; captchaTokenRef?: React.MutableRefObject<string | null>; hasPaymentGateway?: boolean;
 }) {
   const str = (value as string) ?? "";
   const focusRing = { "--tw-ring-color": primaryColor + "66" } as React.CSSProperties;
@@ -2177,30 +2219,140 @@ function CelestialField({
     );
   }
 
-  /* Bot Protection — renders as a non-interactive shield badge */
+  /* Bot Protection -- renders captcha widget or invisible badge */
   if (field.type === "captcha") {
+    const provider = field.captchaConfig?.provider ?? "recaptcha";
+    const siteKey = captchaSiteKey;
+    const mode = field.captchaConfig?.mode ?? "visible";
+
+    // No site key configured: show friendly notice
+    if (!siteKey) {
+      return (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest/50">
+          <i className="fa-solid fa-shield-halved text-lg" style={{ color: primaryColor }} />
+          <span className="text-xs text-on-surface-variant/70">This form is protected by bot detection.</span>
+        </div>
+      );
+    }
+
+    // reCAPTCHA v3 (invisible) -- auto-executes on form submission
+    if (provider === "recaptcha" && mode === "invisible") {
+      return (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest/50">
+          <i className="fa-solid fa-shield-halved text-lg text-green-500" />
+          <span className="text-xs text-on-surface-variant/70">Protected by reCAPTCHA</span>
+        </div>
+      );
+    }
+
+    // Turnstile visible widget
+    if (provider === "turnstile") {
+      const turnstileRef = useRef<HTMLDivElement>(null);
+      useEffect(() => {
+        if (!turnstileRef.current || typeof window === "undefined") return;
+        const w = window as unknown as { turnstile?: { render: (el: HTMLElement, opts: Record<string, unknown>) => string } };
+        if (!w.turnstile) return;
+        // Clear previous render
+        turnstileRef.current.innerHTML = "";
+        w.turnstile.render(turnstileRef.current, {
+          sitekey: siteKey,
+          callback: (token: string) => {
+            if (captchaTokenRef) captchaTokenRef.current = token;
+            onChange(token);
+          },
+          theme: "dark",
+        });
+      }, [siteKey, onChange]);
+      return (
+        <div className="group">
+          <div ref={turnstileRef} className="flex items-center justify-center" />
+          {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+        </div>
+      );
+    }
+
+    // reCAPTCHA v3 visible checkbox
+    const recaptchaRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+      if (!recaptchaRef.current || typeof window === "undefined") return;
+      const w = window as unknown as { grecaptcha?: { ready: (fn: () => void) => void; execute: (key: string, opts: Record<string, string>) => Promise<string> } };
+      if (!w.grecaptcha) return;
+      w.grecaptcha.ready(() => {
+        w.grecaptcha!.execute(siteKey, { action: "submit" }).then((token) => {
+          if (captchaTokenRef) captchaTokenRef.current = token;
+          onChange(token);
+        });
+      });
+    }, [siteKey, onChange]);
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest/50">
-        <i className="fa-solid fa-shield-halved text-lg" style={{ color: primaryColor }} />
-        <span className="text-xs text-on-surface-variant/70">This form is protected by bot detection.</span>
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-green-500/20 bg-green-500/[0.06]">
+        <i className="fa-solid fa-shield-halved text-lg text-green-500" />
+        <span className="text-xs text-on-surface-variant/70">Protected by reCAPTCHA</span>
       </div>
     );
   }
 
-  /* Payment field — show notice if no gateway is connected */
+  /* Payment field -- Stripe card input or fallback notice */
   if (field.type === "payment") {
-    return (
-      <div>
-        <label className="block text-sm font-medium text-on-surface mb-2">{field.label}{field.required && <span className="text-error ml-0.5">*</span>}</label>
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 flex items-start gap-3">
-          <i className="fa-solid fa-credit-card text-lg text-amber-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-on-surface mb-1">Payment is not available right now</p>
-            <p className="text-xs text-on-surface-variant/70 leading-relaxed">
-              The payment system for this form is still being configured. You can complete the rest of the form and payment details will be collected separately.
-            </p>
+    if (!hasPaymentGateway) {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-on-surface mb-2">{field.label}{field.required && <span className="text-error ml-0.5">*</span>}</label>
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 flex items-start gap-3">
+            <i className="fa-solid fa-credit-card text-lg text-amber-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-on-surface mb-1">Payment is not available right now</p>
+              <p className="text-xs text-on-surface-variant/70 leading-relaxed">
+                The payment system for this form is still being configured. You can complete the rest of the form and payment details will be collected separately.
+              </p>
+            </div>
           </div>
         </div>
+      );
+    }
+    // Payment gateway is connected: show card collection UI
+    const cfg = field.paymentConfig;
+    const amount = cfg?.amountCents ? (cfg.amountCents / 100).toFixed(2) : null;
+    const currency = (cfg?.currency ?? "usd").toUpperCase();
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {amount && (
+          <div className="flex items-center gap-2 mb-3 px-4 py-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest/50">
+            <i className="fa-solid fa-receipt text-sm" style={{ color: primaryColor }} />
+            <span className="text-sm font-medium text-on-surface">Amount due: <strong>{currency} ${amount}</strong></span>
+          </div>
+        )}
+        <div className="rounded-xl border-2 border-outline-variant/20 bg-surface-container-lowest/80 p-4 space-y-3">
+          <div>
+            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Card Number</label>
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg border border-outline-variant/10 bg-surface-container-lowest/50">
+              <i className="fa-solid fa-credit-card text-on-surface-variant/40" />
+              <input type="text" placeholder="4242 4242 4242 4242" maxLength={19}
+                className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant/40 outline-none"
+                value={typeof value === "string" ? value : ""} onChange={(e) => onChange(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Expiry</label>
+              <input type="text" placeholder="MM/YY" maxLength={5} className={INPUT_CLS} style={focusRing} />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">CVC</label>
+              <input type="text" placeholder="123" maxLength={4} className={INPUT_CLS} style={focusRing} />
+            </div>
+          </div>
+          <p className="text-[10px] text-on-surface-variant/50 flex items-center gap-1.5">
+            <i className="fa-solid fa-lock text-[9px]" />
+            Secured by {cfg?.provider === "paypal" ? "PayPal" : cfg?.provider === "square" ? "Square" : "Stripe"}. Your card details are encrypted.
+          </p>
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
       </div>
     );
   }
@@ -2843,44 +2995,196 @@ function CelestialField({
     return <BudgetAllocatorField field={field} value={value} error={error} onChange={onChange} primaryColor={primaryColor} />;
   }
 
+  /* ── Address (structured) ── */
+  if (field.type === "address" && field.addressConfig?.mode === "manual") {
+    const addrFields = field.addressConfig.fields ?? ["street", "street2", "city", "state", "zip", "country"];
+    let addr: Record<string, string> = {};
+    try { addr = typeof value === "string" && value ? JSON.parse(value) : {}; } catch { /* legacy plain text */ }
+    const updateAddr = (key: string, val: string) => {
+      const next = { ...addr, [key]: val };
+      onChange(JSON.stringify(next));
+    };
+    const labels: Record<string, string> = { street: "Street Address", street2: "Address Line 2", city: "City", state: "State / Province", zip: "ZIP / Postal Code", country: "Country" };
+    const placeholders: Record<string, string> = { street: "123 Main St", street2: "Apt, Suite, Unit (optional)", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
+    // US states for the state dropdown in US mode
+    const usStates = field.addressConfig.region === "us" ? (COUNTRIES_DATA.find((c) => c.code === "US")?.states ?? []) : [];
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {addrFields.map((fld) => {
+            // Street fields span full width
+            const isFullWidth = fld === "street" || fld === "street2";
+            const cls = isFullWidth ? "sm:col-span-2" : "";
+            // State field in US mode renders as dropdown
+            if (fld === "state" && field.addressConfig?.region === "us") {
+              return (
+                <div key={fld} className={cls}>
+                  <select value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
+                    className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
+                    <option value="">Select state...</option>
+                    {usStates.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+                  </select>
+                </div>
+              );
+            }
+            // Country field in international mode renders as dropdown
+            if (fld === "country") {
+              return (
+                <div key={fld} className={cls}>
+                  <select value={addr.country ?? ""} onChange={(e) => updateAddr("country", e.target.value)}
+                    className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
+                    <option value="">Select country...</option>
+                    {COUNTRIES_DATA.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
+                </div>
+              );
+            }
+            return (
+              <div key={fld} className={cls}>
+                <input type="text" placeholder={placeholders[fld]} value={addr[fld] ?? ""} onChange={(e) => updateAddr(fld, e.target.value)}
+                  className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
+              </div>
+            );
+          })}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Address (Google Places autocomplete) ── */
+  if (field.type === "address" && field.addressConfig?.mode === "autocomplete") {
+    const addrFields = field.addressConfig.fields ?? ["street", "street2", "city", "state", "zip", "country"];
+    let addr: Record<string, string> = {};
+    try { addr = typeof value === "string" && value ? JSON.parse(value) : {}; } catch { /* legacy plain text */ }
+    const updateAddr = (key: string, val: string) => {
+      const next = { ...addr, [key]: val };
+      onChange(JSON.stringify(next));
+    };
+    const placeholders: Record<string, string> = { street: "Start typing an address...", street2: "Apt, Suite, Unit (optional)", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
+    const usStates = field.addressConfig.region === "us" ? (COUNTRIES_DATA.find((c) => c.code === "US")?.states ?? []) : [];
+    // Google Places autocomplete ref
+    const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    useEffect(() => {
+      if (!inputRef.current || typeof google === "undefined" || !google.maps?.places) return;
+      if (autocompleteRef.current) return; // already initialized
+      const options: google.maps.places.AutocompleteOptions = {
+        types: ["address"],
+        fields: ["address_components", "formatted_address"],
+      };
+      if (field.addressConfig?.region === "us") {
+        options.componentRestrictions = { country: "us" };
+      }
+      autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, options);
+      autocompleteRef.current.addListener("place_changed", () => {
+        const place = autocompleteRef.current!.getPlace();
+        if (!place.address_components) return;
+        const get = (type: string) => place.address_components!.find((c) => c.types.includes(type));
+        const next: Record<string, string> = {
+          street: `${get("street_number")?.long_name ?? ""} ${get("route")?.long_name ?? ""}`.trim(),
+          city: get("locality")?.long_name ?? get("sublocality_level_1")?.long_name ?? "",
+          state: get("administrative_area_level_1")?.short_name ?? "",
+          zip: get("postal_code")?.long_name ?? "",
+          country: get("country")?.short_name ?? "",
+        };
+        onChange(JSON.stringify(next));
+      });
+    }, [field.addressConfig?.region, onChange]);
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Street field with autocomplete */}
+          {addrFields.includes("street") && (
+            <div className="sm:col-span-2">
+              <input ref={inputRef} type="text" placeholder={placeholders.street} value={addr.street ?? ""} onChange={(e) => updateAddr("street", e.target.value)}
+                className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} autoComplete="off" />
+            </div>
+          )}
+          {addrFields.includes("street2") && (
+            <div className="sm:col-span-2">
+              <input type="text" placeholder={placeholders.street2} value={addr.street2 ?? ""} onChange={(e) => updateAddr("street2", e.target.value)}
+                className={INPUT_CLS} style={focusRing} />
+            </div>
+          )}
+          {addrFields.includes("city") && (
+            <input type="text" placeholder={placeholders.city} value={addr.city ?? ""} onChange={(e) => updateAddr("city", e.target.value)}
+              className={INPUT_CLS} style={focusRing} />
+          )}
+          {addrFields.includes("state") && field.addressConfig.region === "us" ? (
+            <select value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
+              className={INPUT_CLS} style={focusRing}>
+              <option value="">Select state...</option>
+              {usStates.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+            </select>
+          ) : addrFields.includes("state") ? (
+            <input type="text" placeholder={placeholders.state} value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
+              className={INPUT_CLS} style={focusRing} />
+          ) : null}
+          {addrFields.includes("zip") && (
+            <input type="text" placeholder={placeholders.zip} value={addr.zip ?? ""} onChange={(e) => updateAddr("zip", e.target.value)}
+              className={INPUT_CLS} style={focusRing} />
+          )}
+          {addrFields.includes("country") && (
+            <select value={addr.country ?? ""} onChange={(e) => updateAddr("country", e.target.value)}
+              className={INPUT_CLS} style={focusRing}>
+              <option value="">Select country...</option>
+              {COUNTRIES_DATA.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+            </select>
+          )}
+        </div>
+        {typeof google === "undefined" && (
+          <p className="text-[10px] text-on-surface-variant/50 mt-2 ml-1">
+            <i className="fa-solid fa-circle-info mr-1" />
+            Google Places autocomplete is not loaded. Address can still be entered manually.
+          </p>
+        )}
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
   /* ── Country / State Picker ── */
   if (field.type === "country_state" && field.countryStateConfig) {
-    const allCountries: { code: string; name: string; states: { code: string; name: string }[] }[] = [
-      { code: "US", name: "United States", states: [
-        { code: "AL", name: "Alabama" },{ code: "AK", name: "Alaska" },{ code: "AZ", name: "Arizona" },{ code: "AR", name: "Arkansas" },{ code: "CA", name: "California" },{ code: "CO", name: "Colorado" },{ code: "CT", name: "Connecticut" },{ code: "DE", name: "Delaware" },{ code: "FL", name: "Florida" },{ code: "GA", name: "Georgia" },{ code: "HI", name: "Hawaii" },{ code: "ID", name: "Idaho" },{ code: "IL", name: "Illinois" },{ code: "IN", name: "Indiana" },{ code: "IA", name: "Iowa" },{ code: "KS", name: "Kansas" },{ code: "KY", name: "Kentucky" },{ code: "LA", name: "Louisiana" },{ code: "ME", name: "Maine" },{ code: "MD", name: "Maryland" },{ code: "MA", name: "Massachusetts" },{ code: "MI", name: "Michigan" },{ code: "MN", name: "Minnesota" },{ code: "MS", name: "Mississippi" },{ code: "MO", name: "Missouri" },{ code: "MT", name: "Montana" },{ code: "NE", name: "Nebraska" },{ code: "NV", name: "Nevada" },{ code: "NH", name: "New Hampshire" },{ code: "NJ", name: "New Jersey" },{ code: "NM", name: "New Mexico" },{ code: "NY", name: "New York" },{ code: "NC", name: "North Carolina" },{ code: "ND", name: "North Dakota" },{ code: "OH", name: "Ohio" },{ code: "OK", name: "Oklahoma" },{ code: "OR", name: "Oregon" },{ code: "PA", name: "Pennsylvania" },{ code: "RI", name: "Rhode Island" },{ code: "SC", name: "South Carolina" },{ code: "SD", name: "South Dakota" },{ code: "TN", name: "Tennessee" },{ code: "TX", name: "Texas" },{ code: "UT", name: "Utah" },{ code: "VT", name: "Vermont" },{ code: "VA", name: "Virginia" },{ code: "WA", name: "Washington" },{ code: "WV", name: "West Virginia" },{ code: "WI", name: "Wisconsin" },{ code: "WY", name: "Wyoming" },{ code: "DC", name: "District of Columbia" }] },
-      { code: "CA", name: "Canada", states: [{ code: "AB", name: "Alberta" },{ code: "BC", name: "British Columbia" },{ code: "MB", name: "Manitoba" },{ code: "NB", name: "New Brunswick" },{ code: "NL", name: "Newfoundland and Labrador" },{ code: "NS", name: "Nova Scotia" },{ code: "NT", name: "Northwest Territories" },{ code: "NU", name: "Nunavut" },{ code: "ON", name: "Ontario" },{ code: "PE", name: "Prince Edward Island" },{ code: "QC", name: "Quebec" },{ code: "SK", name: "Saskatchewan" },{ code: "YT", name: "Yukon" }] },
-      { code: "GB", name: "United Kingdom", states: [{ code: "ENG", name: "England" },{ code: "SCT", name: "Scotland" },{ code: "WLS", name: "Wales" },{ code: "NIR", name: "Northern Ireland" }] },
-      { code: "AU", name: "Australia", states: [{ code: "ACT", name: "Australian Capital Territory" },{ code: "NSW", name: "New South Wales" },{ code: "NT", name: "Northern Territory" },{ code: "QLD", name: "Queensland" },{ code: "SA", name: "South Australia" },{ code: "TAS", name: "Tasmania" },{ code: "VIC", name: "Victoria" },{ code: "WA", name: "Western Australia" }] },
-      { code: "MX", name: "Mexico", states: [{ code: "AGU", name: "Aguascalientes" },{ code: "BCN", name: "Baja California" },{ code: "BCS", name: "Baja California Sur" },{ code: "CAM", name: "Campeche" },{ code: "CHP", name: "Chiapas" },{ code: "CHH", name: "Chihuahua" },{ code: "COA", name: "Coahuila" },{ code: "COL", name: "Colima" },{ code: "DUR", name: "Durango" },{ code: "GUA", name: "Guanajuato" },{ code: "GRO", name: "Guerrero" },{ code: "HID", name: "Hidalgo" },{ code: "JAL", name: "Jalisco" },{ code: "MEX", name: "Mexico State" },{ code: "MIC", name: "Michoacan" },{ code: "MOR", name: "Morelos" },{ code: "NAY", name: "Nayarit" },{ code: "NLE", name: "Nuevo Leon" },{ code: "OAX", name: "Oaxaca" },{ code: "PUE", name: "Puebla" },{ code: "QUE", name: "Queretaro" },{ code: "ROO", name: "Quintana Roo" },{ code: "SLP", name: "San Luis Potosi" },{ code: "SIN", name: "Sinaloa" },{ code: "SON", name: "Sonora" },{ code: "TAB", name: "Tabasco" },{ code: "TAM", name: "Tamaulipas" },{ code: "TLA", name: "Tlaxcala" },{ code: "VER", name: "Veracruz" },{ code: "YUC", name: "Yucatan" },{ code: "ZAC", name: "Zacatecas" },{ code: "CMX", name: "Mexico City" }] },
-      { code: "DE", name: "Germany", states: [] }, { code: "FR", name: "France", states: [] },
-      { code: "BR", name: "Brazil", states: [] }, { code: "IN", name: "India", states: [] },
-      { code: "IE", name: "Ireland", states: [] }, { code: "NZ", name: "New Zealand", states: [] },
-      { code: "SG", name: "Singapore", states: [] }, { code: "AE", name: "United Arab Emirates", states: [] },
-      { code: "JP", name: "Japan", states: [] }, { code: "KR", name: "South Korea", states: [] },
-      { code: "IT", name: "Italy", states: [] }, { code: "ES", name: "Spain", states: [] },
-      { code: "NL", name: "Netherlands", states: [] }, { code: "SE", name: "Sweden", states: [] },
-      { code: "NO", name: "Norway", states: [] }, { code: "DK", name: "Denmark", states: [] },
-      { code: "FI", name: "Finland", states: [] }, { code: "CH", name: "Switzerland", states: [] },
-      { code: "AT", name: "Austria", states: [] }, { code: "BE", name: "Belgium", states: [] },
-      { code: "PT", name: "Portugal", states: [] }, { code: "PL", name: "Poland", states: [] },
-      { code: "ZA", name: "South Africa", states: [] }, { code: "PH", name: "Philippines", states: [] },
-      { code: "ID", name: "Indonesia", states: [] }, { code: "TH", name: "Thailand", states: [] },
-      { code: "VN", name: "Vietnam", states: [] }, { code: "MY", name: "Malaysia", states: [] },
-      { code: "CL", name: "Chile", states: [] }, { code: "CO", name: "Colombia", states: [] },
-      { code: "AR", name: "Argentina", states: [] }, { code: "PE", name: "Peru", states: [] },
-      { code: "NG", name: "Nigeria", states: [] }, { code: "EG", name: "Egypt", states: [] },
-      { code: "KE", name: "Kenya", states: [] }, { code: "GH", name: "Ghana", states: [] },
-      { code: "IL", name: "Israel", states: [] }, { code: "SA", name: "Saudi Arabia", states: [] },
-      { code: "TR", name: "Turkey", states: [] }, { code: "RO", name: "Romania", states: [] },
-      { code: "CZ", name: "Czech Republic", states: [] }, { code: "HU", name: "Hungary", states: [] },
-      { code: "GR", name: "Greece", states: [] }, { code: "HR", name: "Croatia", states: [] },
-    ];
     const cfg = field.countryStateConfig;
-    const countries = cfg.allowedCountries && cfg.allowedCountries.length > 0
-      ? allCountries.filter((c) => cfg.allowedCountries!.includes(c.code))
-      : allCountries;
     let parsed: { country?: string; state?: string } = {};
     try { parsed = typeof value === "string" && value ? JSON.parse(value) : {}; } catch { /* */ }
+
+    // State-only mode: show only the state dropdown for a specific country
+    if (cfg.stateOnly) {
+      const targetCountry = COUNTRIES_DATA.find((c) => c.code === (cfg.stateOnlyCountry || "US"));
+      const states = targetCountry?.states ?? [];
+      return (
+        <div className="group">
+          <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+            <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+            {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+          </label>
+          {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+          <select value={parsed.state ?? ""} onChange={(e) => onChange(JSON.stringify({ country: cfg.stateOnlyCountry || "US", state: e.target.value }))}
+            className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
+            <option value="">Select state/province...</option>
+            {states.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+          </select>
+          {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+        </div>
+      );
+    }
+
+    // Full country + state mode
+    const countries = cfg.allowedCountries && cfg.allowedCountries.length > 0
+      ? COUNTRIES_DATA.filter((c) => cfg.allowedCountries!.includes(c.code))
+      : COUNTRIES_DATA;
     const selectedCountry = countries.find((c) => c.code === parsed.country);
     const states = selectedCountry?.states ?? [];
     return (
@@ -3234,7 +3538,8 @@ function CelestialField({
           </label>
         </div>
 
-      ) : field.type === "address" ? (
+      ) : field.type === "address" && !field.addressConfig?.mode ? (
+        /* Legacy address fallback (no addressConfig) -- plain textarea */
         <textarea id={field.id} name={field.id} required={field.required} placeholder={field.placeholder || "Street address, City, State, ZIP"} rows={3} value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
 
       ) : (
