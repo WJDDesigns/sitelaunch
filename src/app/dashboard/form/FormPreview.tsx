@@ -1006,25 +1006,32 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
     );
   }
 
-  /* Address (structured) -- preview */
-  if (field.type === "address" && field.addressConfig?.mode) {
-    const addrFields = field.addressConfig.fields ?? ["street", "street2", "city", "state", "zip", "country"];
-    const placeholders: Record<string, string> = { street: "123 Main St", street2: "Apt, Suite, Unit", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
+  /* Name (structured) -- preview */
+  if (field.type === "name") {
+    const nameFields = field.nameConfig?.fields ?? ["first", "last"];
+    const labels: Record<string, string> = { prefix: "Prefix", first: "First Name", middle: "Middle Name", last: "Last Name", suffix: "Suffix" };
+    const placeholders: Record<string, string> = { prefix: "Mr.", first: "First", middle: "Middle", last: "Last", suffix: "Jr." };
+    const isInline = (field.nameConfig?.layout ?? "inline") === "inline";
     return (
       <div>
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
-        {field.addressConfig.mode === "autocomplete" && (
-          <p className="text-[10px] text-primary/70 mb-2 ml-1"><i className="fa-solid fa-magnifying-glass-location mr-1" />Google Places autocomplete enabled</p>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {addrFields.map((fld) => {
-            const isFullWidth = fld === "street" || fld === "street2";
+        <div className={isInline ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}>
+          {nameFields.map((fld) => {
+            const isSmall = fld === "prefix" || fld === "suffix" || fld === "middle";
             return (
-              <div key={fld} className={isFullWidth ? "sm:col-span-2" : ""}>
-                <input type="text" readOnly placeholder={placeholders[fld]} className={INPUT_CLS} style={focusRing} />
+              <div key={fld} className={isInline && isSmall ? "" : ""}>
+                <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels[fld]}</label>
+                {fld === "prefix" ? (
+                  <select className={INPUT_CLS} style={focusRing} defaultValue="">
+                    <option value="">Select...</option>
+                    {(field.nameConfig?.prefixes ?? ["Mr.", "Mrs.", "Ms.", "Dr."]).map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" readOnly placeholder={placeholders[fld]} className={INPUT_CLS} style={focusRing} />
+                )}
               </div>
             );
           })}
@@ -1033,33 +1040,87 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
     );
   }
 
-  /* Country / State Picker -- preview */
-  if (field.type === "country_state") {
-    const isStateOnly = field.countryStateConfig?.stateOnly;
+  /* Email -- preview */
+  if (field.type === "email") {
     return (
       <div>
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
-        {isStateOnly ? (
-          <select className={INPUT_CLS} style={focusRing} defaultValue="">
-            <option value="">Select state/province...</option>
-          </select>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select className={INPUT_CLS} style={focusRing} defaultValue="">
-              <option value="">Select country...</option>
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-              <option value="GB">United Kingdom</option>
-              <option value="AU">Australia</option>
-            </select>
-            <select className={INPUT_CLS} style={focusRing} defaultValue="">
-              <option value="">Select state/province...</option>
-            </select>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Email Address</label>
+            <input type="email" readOnly placeholder={field.placeholder || "you@example.com"} className={INPUT_CLS} style={focusRing} />
           </div>
+          {field.emailConfig?.confirmEmail && (
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Confirm Email</label>
+              <input type="email" readOnly placeholder="Re-enter email address" className={INPUT_CLS} style={focusRing} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* Phone -- preview */
+  if (field.type === "tel") {
+    const isUS = (field.phoneConfig?.format ?? "us") === "us";
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className={field.phoneConfig?.showExtension ? "grid grid-cols-1 sm:grid-cols-3 gap-3" : ""}>
+          <div className={field.phoneConfig?.showExtension ? "sm:col-span-2" : ""}>
+            <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Phone Number</label>
+            <div className="relative">
+              {!isUS && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant/40">
+                  <i className="fa-solid fa-globe mr-1 text-[10px]" />+
+                </span>
+              )}
+              <input type="tel" readOnly placeholder={isUS ? "(555) 555-5555" : "+1 555 555 5555"} className={INPUT_CLS} style={{ ...focusRing, paddingLeft: !isUS ? "3rem" : undefined }} />
+            </div>
+          </div>
+          {field.phoneConfig?.showExtension && (
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Ext.</label>
+              <input type="text" readOnly placeholder="Ext." className={INPUT_CLS} style={focusRing} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* Address (structured) -- preview */
+  if (field.type === "address") {
+    const addrFields = (field.addressConfig?.fields ?? ["street", "street2", "city", "state", "zip", "country"]);
+    const labels: Record<string, string> = { street: "Street Address", street2: "Address Line 2", city: "City", state: "State / Province", zip: "ZIP / Postal Code", country: "Country" };
+    const placeholders: Record<string, string> = { street: "123 Main St", street2: "Apt, Suite, Unit", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {field.addressConfig?.mode === "autocomplete" && (
+          <p className="text-[10px] text-primary/70 mb-2 ml-1"><i className="fa-solid fa-magnifying-glass-location mr-1" />Google Places autocomplete enabled</p>
         )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {addrFields.map((fld) => {
+            const isFullWidth = fld === "street" || fld === "street2";
+            return (
+              <div key={fld} className={isFullWidth ? "sm:col-span-2" : ""}>
+                <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels[fld]}</label>
+                <input type="text" readOnly placeholder={placeholders[fld]} className={INPUT_CLS} style={focusRing} />
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -1270,10 +1331,10 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
       </label>
       {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
 
-      {field.type === "textarea" || field.type === "address" ? (
+      {field.type === "textarea" ? (
         <textarea
           rows={field.rows ?? 4}
-          placeholder={field.placeholder || (field.type === "address" ? "Street address, City, State, ZIP" : undefined)}
+          placeholder={field.placeholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className={INPUT_CLS}
@@ -1404,7 +1465,7 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
         </div>
       ) : (
         <input
-          type={field.type === "email" ? "email" : field.type === "tel" ? "tel" : field.type === "url" ? "url" : field.type === "number" ? "number" : "text"}
+          type={field.type === "url" ? "url" : field.type === "number" ? "number" : "text"}
           placeholder={field.placeholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}

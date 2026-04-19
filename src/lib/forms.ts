@@ -2,6 +2,7 @@
 
 export type FieldType =
   | "text"
+  | "name"
   | "textarea"
   | "email"
   | "tel"
@@ -34,7 +35,6 @@ export type FieldType =
   | "toggle"
   | "slider"
   | "social_handles"
-  | "country_state"
   | "matrix"
   | "questionnaire";
 
@@ -394,17 +394,48 @@ export interface SocialHandlesConfig {
   columns?: 1 | 2;
 }
 
-/* -- Country/State Picker types ------------------------------------------- */
+/* -- Name types ----------------------------------------------------------- */
 
-export interface CountryStateConfig {
-  /** Restrict to specific country codes (empty = all available) */
-  allowedCountries?: string[];
-  /** Require state/province selection when available */
-  requireState?: boolean;
-  /** Show only the state/province dropdown (no country selector). Defaults to US states. */
-  stateOnly?: boolean;
-  /** When stateOnly is true, which country's states to show. Defaults to "US". */
-  stateOnlyCountry?: string;
+export interface NameConfig {
+  /** Which sub-fields to show */
+  fields?: ("prefix" | "first" | "middle" | "last" | "suffix")[];
+  /** Layout: stacked or inline (2-col first/last) */
+  layout?: "stacked" | "inline";
+  /** Available prefixes (e.g. Mr., Mrs., Ms., Dr.) */
+  prefixes?: string[];
+}
+
+/* -- Phone types ---------------------------------------------------------- */
+
+export interface PhoneConfig {
+  /** Phone format */
+  format?: "us" | "international";
+  /** Default country code for international format */
+  defaultCountry?: string;
+  /** Show extension field */
+  showExtension?: boolean;
+  /** Placeholder override */
+  phonePlaceholder?: string;
+}
+
+/* -- Email types ---------------------------------------------------------- */
+
+export interface EmailConfig {
+  /** Require user to type email twice to confirm */
+  confirmEmail?: boolean;
+  /** Blocked email domains (e.g. ["example.com", "test.com"]) */
+  blockedDomains?: string[];
+  /** Allowed email domains -- if set, only these are accepted */
+  allowedDomains?: string[];
+}
+
+/* -- Text types ----------------------------------------------------------- */
+
+export interface TextConfig {
+  /** Maximum character length */
+  maxLength?: number;
+  /** Input mask/format hint (display only) */
+  inputMask?: string;
 }
 
 /* -- Address types -------------------------------------------------------- */
@@ -512,10 +543,16 @@ export interface FieldDef {
   sliderConfig?: SliderConfig;
   /** For social_handles fields — which platforms to show */
   socialHandlesConfig?: SocialHandlesConfig;
-  /** For country_state fields — country/state picker config */
-  countryStateConfig?: CountryStateConfig;
   /** For address fields — structured address / autocomplete config */
   addressConfig?: AddressConfig;
+  /** For name fields -- sub-field and layout config */
+  nameConfig?: NameConfig;
+  /** For phone fields -- formatting and country code config */
+  phoneConfig?: PhoneConfig;
+  /** For email fields -- confirmation and domain rules */
+  emailConfig?: EmailConfig;
+  /** For text fields -- max length and mask config */
+  textConfig?: TextConfig;
   /** For matrix fields — grid/table config */
   matrixConfig?: MatrixConfig;
   /** For questionnaire fields — scored questions config */
@@ -576,6 +613,7 @@ export const MIN_COL_SPAN: Partial<Record<FieldType, 1 | 2 | 3 | 4>> = {
   rating: 1,
   slider: 1,
   /* Can go as narrow as 2 columns */
+  name: 2,
   textarea: 2,
   radio: 2,
   checkbox: 2,
@@ -585,7 +623,6 @@ export const MIN_COL_SPAN: Partial<Record<FieldType, 1 | 2 | 3 | 4>> = {
   heading: 2,
   captcha: 2,
   payment: 2,
-  country_state: 2,
   file: 2,
   files: 2,
   /* Full width only (4) -- complex/wide fields */
@@ -761,6 +798,21 @@ export function validateStepData(
     if (f.type === "email" && typeof v === "string") {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) errors[f.id] = "Invalid email";
     }
+    if (f.type === "email" && f.emailConfig?.confirmEmail && typeof v === "string") {
+      const confirmVal = data[f.id + "_confirm"];
+      if (typeof confirmVal === "string" && confirmVal !== v) errors[f.id + "_confirm"] = "Email addresses do not match";
+    }
+    if (f.type === "name" && typeof v === "string") {
+      try {
+        const parsed = JSON.parse(v);
+        const reqFields = (f.nameConfig?.fields ?? ["first", "last"]).filter((fld) => fld !== "middle" && fld !== "prefix" && fld !== "suffix");
+        const missing = reqFields.filter((fld) => !parsed[fld]?.trim());
+        if (f.required && missing.length > 0) errors[f.id] = "Please fill in all name fields";
+      } catch { if (f.required) errors[f.id] = "Please enter your name"; }
+    }
+    if (f.type === "tel" && f.phoneConfig?.format === "international" && typeof v === "string") {
+      if (v.length > 0 && !/^\+?\d[\d\s\-().]{4,}$/.test(v)) errors[f.id] = "Please enter a valid phone number";
+    }
     if (f.type === "url" && typeof v === "string") {
       try {
         new URL(v);
@@ -802,17 +854,6 @@ export function validateStepData(
           errors[f.id] = "At least one social handle is required";
         }
       } catch { if (f.required) errors[f.id] = "At least one social handle is required"; }
-    }
-    if (f.type === "country_state" && typeof v === "string") {
-      try {
-        const parsed = JSON.parse(v);
-        if (f.countryStateConfig?.stateOnly) {
-          if (f.required && !parsed.state) errors[f.id] = "Please select a state/province";
-        } else {
-          if (f.required && !parsed.country) errors[f.id] = "Please select a country";
-          else if (f.countryStateConfig?.requireState && parsed.country && !parsed.state) errors[f.id] = "Please select a state/province";
-        }
-      } catch { if (f.required) errors[f.id] = f.countryStateConfig?.stateOnly ? "Please select a state/province" : "Please select a country"; }
     }
     if (f.type === "matrix" && typeof v === "string") {
       try {

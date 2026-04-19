@@ -2995,6 +2995,155 @@ function CelestialField({
     return <BudgetAllocatorField field={field} value={value} error={error} onChange={onChange} primaryColor={primaryColor} />;
   }
 
+  /* ── Name (structured sub-fields) ── */
+  if (field.type === "name") {
+    const nameFields = field.nameConfig?.fields ?? ["first", "last"];
+    const labels: Record<string, string> = { prefix: "Prefix", first: "First Name", middle: "Middle Name", last: "Last Name", suffix: "Suffix" };
+    let nameData: Record<string, string> = {};
+    try { nameData = typeof value === "string" && value ? JSON.parse(value) : {}; } catch { /* */ }
+    const updateName = (key: string, val: string) => {
+      const next = { ...nameData, [key]: val };
+      onChange(JSON.stringify(next));
+    };
+    const isInline = (field.nameConfig?.layout ?? "inline") === "inline";
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className={isInline ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}>
+          {nameFields.map((fld) => (
+            <div key={fld}>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels[fld]}</label>
+              {fld === "prefix" ? (
+                <select value={nameData.prefix ?? ""} onChange={(e) => updateName("prefix", e.target.value)}
+                  className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
+                  <option value="">Select...</option>
+                  {(field.nameConfig?.prefixes ?? ["Mr.", "Mrs.", "Ms.", "Dr.", "Prof."]).map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              ) : (
+                <input type="text" value={nameData[fld] ?? ""} onChange={(e) => updateName(fld, e.target.value)}
+                  placeholder={fld === "first" ? "First" : fld === "middle" ? "Middle" : fld === "last" ? "Last" : fld === "suffix" ? "Jr., Sr., III" : ""}
+                  className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
+              )}
+            </div>
+          ))}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Email (with optional confirmation) ── */
+  if (field.type === "email") {
+    const hasConfirm = !!field.emailConfig?.confirmEmail;
+    const confirmKey = field.id + "_confirm";
+    const confirmVal = typeof allData?.[confirmKey] === "string" ? (allData[confirmKey] as string) : "";
+    const confirmErr = hasConfirm && str && confirmVal && str !== confirmVal ? "Email addresses do not match" : "";
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Email Address</label>
+            <input id={field.id} name={field.id} type="email" required={field.required}
+              placeholder={field.placeholder || "you@example.com"} value={str}
+              onChange={(e) => onChange(e.target.value)}
+              className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
+          </div>
+          {hasConfirm && (
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Confirm Email</label>
+              <input id={confirmKey} name={confirmKey} type="email" required={field.required}
+                placeholder="Re-enter your email address" value={confirmVal}
+                onChange={(e) => {
+                  if (typeof allData === "object" && allData) {
+                    (allData as Record<string, unknown>)[confirmKey] = e.target.value;
+                  }
+                  // Force re-render
+                  onChange(str);
+                }}
+                className={INPUT_CLS} style={{ ...focusRing, borderColor: confirmErr ? primaryColor : undefined }} />
+              {confirmErr && (
+                <p className="text-sm text-error mt-1 flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{confirmErr}</p>
+              )}
+            </div>
+          )}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Phone (with formatting and extension) ── */
+  if (field.type === "tel") {
+    const isUS = (field.phoneConfig?.format ?? "us") === "us";
+    const showExt = !!field.phoneConfig?.showExtension;
+    let phoneData: { phone: string; ext?: string } = { phone: str };
+    try {
+      const parsed = typeof value === "string" && value.startsWith("{") ? JSON.parse(value) : null;
+      if (parsed && typeof parsed.phone === "string") phoneData = parsed;
+    } catch { /* plain string fallback */ }
+    const formatUSPhone = (raw: string) => {
+      const digits = raw.replace(/\D/g, "").slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    };
+    const updatePhone = (key: "phone" | "ext", val: string) => {
+      if (showExt) {
+        const next = { ...phoneData, [key]: val };
+        onChange(JSON.stringify(next));
+      } else {
+        onChange(val);
+      }
+    };
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className={showExt ? "grid grid-cols-1 sm:grid-cols-3 gap-3" : ""}>
+          <div className={showExt ? "sm:col-span-2" : ""}>
+            <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Phone Number</label>
+            <div className="relative">
+              {!isUS && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant/40">
+                  <i className="fa-solid fa-globe mr-1 text-[10px]" />+
+                </span>
+              )}
+              <input id={field.id} name={field.id} type="tel" required={field.required}
+                placeholder={isUS ? "(555) 555-5555" : "+1 555 555 5555"}
+                value={isUS ? formatUSPhone(phoneData.phone) : phoneData.phone}
+                onChange={(e) => {
+                  const raw = isUS ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value;
+                  updatePhone("phone", raw);
+                }}
+                className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder, paddingLeft: !isUS ? "3rem" : undefined }} />
+            </div>
+          </div>
+          {showExt && (
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">Ext.</label>
+              <input type="text" placeholder="Ext." value={phoneData.ext ?? ""}
+                onChange={(e) => updatePhone("ext", e.target.value)}
+                className={INPUT_CLS} style={focusRing} />
+            </div>
+          )}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
   /* ── Address (structured) ── */
   if (field.type === "address" && field.addressConfig?.mode === "manual") {
     const addrFields = field.addressConfig.fields ?? ["street", "street2", "city", "state", "zip", "country"];
@@ -3024,6 +3173,7 @@ function CelestialField({
             if (fld === "state" && field.addressConfig?.region === "us") {
               return (
                 <div key={fld} className={cls}>
+                  <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels[fld]}</label>
                   <select value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
                     className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
                     <option value="">Select state...</option>
@@ -3036,6 +3186,7 @@ function CelestialField({
             if (fld === "country") {
               return (
                 <div key={fld} className={cls}>
+                  <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels[fld]}</label>
                   <select value={addr.country ?? ""} onChange={(e) => updateAddr("country", e.target.value)}
                     className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
                     <option value="">Select country...</option>
@@ -3046,6 +3197,7 @@ function CelestialField({
             }
             return (
               <div key={fld} className={cls}>
+                <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels[fld]}</label>
                 <input type="text" placeholder={placeholders[fld]} value={addr[fld] ?? ""} onChange={(e) => updateAddr(fld, e.target.value)}
                   className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
               </div>
@@ -3066,6 +3218,7 @@ function CelestialField({
       const next = { ...addr, [key]: val };
       onChange(JSON.stringify(next));
     };
+    const labels: Record<string, string> = { street: "Street Address", street2: "Address Line 2", city: "City", state: "State / Province", zip: "ZIP / Postal Code", country: "Country" };
     const placeholders: Record<string, string> = { street: "Start typing an address...", street2: "Apt, Suite, Unit (optional)", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
     const usStates = field.addressConfig.region === "us" ? (COUNTRIES_DATA.find((c) => c.code === "US")?.states ?? []) : [];
     // Google Places autocomplete ref
@@ -3107,40 +3260,57 @@ function CelestialField({
           {/* Street field with autocomplete */}
           {addrFields.includes("street") && (
             <div className="sm:col-span-2">
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.street}</label>
               <input ref={inputRef} type="text" placeholder={placeholders.street} value={addr.street ?? ""} onChange={(e) => updateAddr("street", e.target.value)}
                 className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} autoComplete="off" />
             </div>
           )}
           {addrFields.includes("street2") && (
             <div className="sm:col-span-2">
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.street2}</label>
               <input type="text" placeholder={placeholders.street2} value={addr.street2 ?? ""} onChange={(e) => updateAddr("street2", e.target.value)}
                 className={INPUT_CLS} style={focusRing} />
             </div>
           )}
           {addrFields.includes("city") && (
-            <input type="text" placeholder={placeholders.city} value={addr.city ?? ""} onChange={(e) => updateAddr("city", e.target.value)}
-              className={INPUT_CLS} style={focusRing} />
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.city}</label>
+              <input type="text" placeholder={placeholders.city} value={addr.city ?? ""} onChange={(e) => updateAddr("city", e.target.value)}
+                className={INPUT_CLS} style={focusRing} />
+            </div>
           )}
           {addrFields.includes("state") && field.addressConfig.region === "us" ? (
-            <select value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
-              className={INPUT_CLS} style={focusRing}>
-              <option value="">Select state...</option>
-              {usStates.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
-            </select>
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.state}</label>
+              <select value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
+                className={INPUT_CLS} style={focusRing}>
+                <option value="">Select state...</option>
+                {usStates.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+              </select>
+            </div>
           ) : addrFields.includes("state") ? (
-            <input type="text" placeholder={placeholders.state} value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
-              className={INPUT_CLS} style={focusRing} />
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.state}</label>
+              <input type="text" placeholder={placeholders.state} value={addr.state ?? ""} onChange={(e) => updateAddr("state", e.target.value)}
+                className={INPUT_CLS} style={focusRing} />
+            </div>
           ) : null}
           {addrFields.includes("zip") && (
-            <input type="text" placeholder={placeholders.zip} value={addr.zip ?? ""} onChange={(e) => updateAddr("zip", e.target.value)}
-              className={INPUT_CLS} style={focusRing} />
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.zip}</label>
+              <input type="text" placeholder={placeholders.zip} value={addr.zip ?? ""} onChange={(e) => updateAddr("zip", e.target.value)}
+                className={INPUT_CLS} style={focusRing} />
+            </div>
           )}
           {addrFields.includes("country") && (
-            <select value={addr.country ?? ""} onChange={(e) => updateAddr("country", e.target.value)}
-              className={INPUT_CLS} style={focusRing}>
-              <option value="">Select country...</option>
-              {COUNTRIES_DATA.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-            </select>
+            <div>
+              <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.country}</label>
+              <select value={addr.country ?? ""} onChange={(e) => updateAddr("country", e.target.value)}
+                className={INPUT_CLS} style={focusRing}>
+                <option value="">Select country...</option>
+                {COUNTRIES_DATA.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </div>
           )}
         </div>
         {typeof google === "undefined" && (
@@ -3149,65 +3319,6 @@ function CelestialField({
             Google Places autocomplete is not loaded. Address can still be entered manually.
           </p>
         )}
-        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
-      </div>
-    );
-  }
-
-  /* ── Country / State Picker ── */
-  if (field.type === "country_state" && field.countryStateConfig) {
-    const cfg = field.countryStateConfig;
-    let parsed: { country?: string; state?: string } = {};
-    try { parsed = typeof value === "string" && value ? JSON.parse(value) : {}; } catch { /* */ }
-
-    // State-only mode: show only the state dropdown for a specific country
-    if (cfg.stateOnly) {
-      const targetCountry = COUNTRIES_DATA.find((c) => c.code === (cfg.stateOnlyCountry || "US"));
-      const states = targetCountry?.states ?? [];
-      return (
-        <div className="group">
-          <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
-            <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
-            {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
-          </label>
-          {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
-          <select value={parsed.state ?? ""} onChange={(e) => onChange(JSON.stringify({ country: cfg.stateOnlyCountry || "US", state: e.target.value }))}
-            className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
-            <option value="">Select state/province...</option>
-            {states.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
-          </select>
-          {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
-        </div>
-      );
-    }
-
-    // Full country + state mode
-    const countries = cfg.allowedCountries && cfg.allowedCountries.length > 0
-      ? COUNTRIES_DATA.filter((c) => cfg.allowedCountries!.includes(c.code))
-      : COUNTRIES_DATA;
-    const selectedCountry = countries.find((c) => c.code === parsed.country);
-    const states = selectedCountry?.states ?? [];
-    return (
-      <div className="group">
-        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
-          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
-          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
-        </label>
-        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <select value={parsed.country ?? ""} onChange={(e) => onChange(JSON.stringify({ country: e.target.value, state: "" }))}
-            className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }}>
-            <option value="">Select country...</option>
-            {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-          </select>
-          {states.length > 0 && (
-            <select value={parsed.state ?? ""} onChange={(e) => onChange(JSON.stringify({ ...parsed, state: e.target.value }))}
-              className={INPUT_CLS} style={focusRing}>
-              <option value="">Select state/province...</option>
-              {states.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
-            </select>
-          )}
-        </div>
         {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
       </div>
     );
@@ -3543,12 +3654,21 @@ function CelestialField({
         <textarea id={field.id} name={field.id} required={field.required} placeholder={field.placeholder || "Street address, City, State, ZIP"} rows={3} value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
 
       ) : (
-        <input
-          id={field.id} name={field.id} required={field.required} placeholder={field.placeholder}
-          type={field.type === "email" ? "email" : field.type === "tel" ? "tel" : field.type === "url" ? "url" : field.type === "number" ? "number" : "text"}
-          value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS}
-          style={{ ...focusRing, borderColor: errBorder }}
-        />
+        <>
+          <input
+            id={field.id} name={field.id} required={field.required} placeholder={field.placeholder}
+            type={field.type === "url" ? "url" : field.type === "number" ? "number" : "text"}
+            maxLength={field.textConfig?.maxLength}
+            value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS}
+            style={{ ...focusRing, borderColor: errBorder }}
+          />
+          {field.type === "text" && field.textConfig?.maxLength && (
+            <p className="text-[10px] text-on-surface-variant/40 mt-1 ml-1 text-right">{str.length} / {field.textConfig.maxLength}</p>
+          )}
+          {field.type === "text" && field.textConfig?.inputMask && (
+            <p className="text-[10px] text-on-surface-variant/40 mt-1 ml-1">Format: {field.textConfig.inputMask}</p>
+          )}
+        </>
       )}
 
       {error && (
