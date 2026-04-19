@@ -222,6 +222,8 @@ export default async function SubmissionDetailPage({ params }: Props) {
                                 <div className="text-sm text-on-surface leading-relaxed whitespace-pre-line"
                                   dangerouslySetInnerHTML={{
                                     __html: comp.analysis.aiSnapshot
+                                      .replace(/</g, "&lt;")
+                                      .replace(/>/g, "&gt;")
                                       .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold">$1</strong>')
                                   }}
                                 />

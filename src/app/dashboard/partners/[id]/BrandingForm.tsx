@@ -16,7 +16,7 @@ interface Props {
   partner: Partner;
   rootHost: string;
   canEdit: boolean;
-  updateAction: (formData: FormData) => Promise<void>;
+  updateAction: (formData: FormData) => Promise<void | { ok: boolean; error?: string }>;
 }
 
 const INPUT_CLS =

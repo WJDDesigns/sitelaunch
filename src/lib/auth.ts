@@ -104,7 +104,8 @@ export async function getVisiblePartners() {
     const { data } = await supabase
       .from("partners")
       .select(selectCols)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
     return data ?? [];
   }
 
@@ -160,7 +161,7 @@ export async function getAllAccountContexts(userId: string): Promise<AccountSwit
 
   const { data: memberships } = await supabase
     .from("partner_members")
-    .select("partner_id, role")
+    .select("partner_id, role, partners ( id, slug, name, parent_partner_id )")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -169,11 +170,7 @@ export async function getAllAccountContexts(userId: string): Promise<AccountSwit
   const contexts: AccountSwitchContext[] = [];
 
   for (const m of memberships) {
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("id, slug, name, parent_partner_id")
-      .eq("id", m.partner_id)
-      .maybeSingle();
+    const partner = Array.isArray(m.partners) ? m.partners[0] : m.partners;
     if (!partner) continue;
 
     const isOwn = m.role === "partner_owner" && !partner.parent_partner_id;
@@ -237,7 +234,7 @@ export async function getCurrentAccount(userId: string): Promise<AccountContext 
 
   const { data: memberships } = await supabase
     .from("partner_members")
-    .select("partner_id, created_at")
+    .select("partner_id, created_at, partners ( id, slug, name, parent_partner_id, plan_type, plan_tier, submissions_monthly_limit )")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -254,23 +251,18 @@ export async function getCurrentAccount(userId: string): Promise<AccountContext 
   // Walk to the top-level partner for each membership; pick the first one we
   // find. Most users will have exactly one.
   for (const m of ordered) {
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("id, slug, name, parent_partner_id, plan_type, plan_tier, submissions_monthly_limit")
-      .eq("id", m.partner_id)
-      .maybeSingle();
+    const partner = Array.isArray(m.partners) ? m.partners[0] : m.partners;
     if (!partner) continue;
 
-    // If this is a sub-partner, walk up.
+    // If this is a sub-partner, walk up (usually just 1 level).
     let current = partner;
-    while (current.parent_partner_id) {
+    if (current.parent_partner_id) {
       const { data: parent } = await supabase
         .from("partners")
         .select("id, slug, name, parent_partner_id, plan_type, plan_tier, submissions_monthly_limit")
         .eq("id", current.parent_partner_id)
         .maybeSingle();
-      if (!parent) break;
-      current = parent;
+      if (parent) current = parent;
     }
 
     return {

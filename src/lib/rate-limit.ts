@@ -1,8 +1,11 @@
 /**
- * Simple in-memory rate limiter using a Map.
- * Tracks requests by a composite key (e.g. "login:<ip>") with configurable
- * window sizes and max attempts. Good enough for single-process deployments;
- * swap for Redis when you need cross-instance coordination.
+ * In-memory rate limiter using a Map.
+ *
+ * PRODUCTION NOTE: This limiter is per-process and will NOT work
+ * across multiple serverless instances on Vercel. For true cross-instance
+ * rate limiting, migrate to Upstash Redis (@upstash/ratelimit).
+ * This is still useful as a first line of defense within a single
+ * function invocation lifespan.
  */
 
 interface RateLimitEntry {
@@ -19,12 +22,18 @@ interface RateLimitResult {
 const store = new Map<string, RateLimitEntry>();
 
 // Periodically prune expired entries every 60 seconds
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of store) {
-    if (now > entry.resetAt) store.delete(key);
+if (typeof globalThis !== "undefined") {
+  // Avoid duplicate intervals across hot-reloads in dev
+  const key = "__rl_cleanup__";
+  if (!(globalThis as Record<string, unknown>)[key]) {
+    (globalThis as Record<string, unknown>)[key] = setInterval(() => {
+      const now = Date.now();
+      for (const [k, entry] of store) {
+        if (now > entry.resetAt) store.delete(k);
+      }
+    }, 60_000);
   }
-}, 60_000);
+}
 
 /**
  * Check (and consume) a rate limit token.

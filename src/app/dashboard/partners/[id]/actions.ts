@@ -20,56 +20,57 @@ function sanitizeDomain(raw: string): string | null {
   return v;
 }
 
-export async function updatePartnerAction(partnerId: string, formData: FormData) {
-  const session = await requireSession();
-  // Partner owners can update their own partner; superadmin can update any.
-  if (session.role !== "superadmin") {
-    // Ensure caller is a member of this partner (RLS will also protect us, but
-    // we double-check here for a clearer error).
-    const supabase = await createClient();
-    const { data: membership } = await supabase
-      .from("partner_members")
-      .select("role")
-      .eq("partner_id", partnerId)
-      .eq("user_id", session.userId)
-      .maybeSingle();
-    if (!membership || membership.role !== "partner_owner") {
-      throw new Error("Not authorized");
+export async function updatePartnerAction(partnerId: string, formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const session = await requireSession();
+    if (session.role !== "superadmin") {
+      const supabase = await createClient();
+      const { data: membership } = await supabase
+        .from("partner_members")
+        .select("role")
+        .eq("partner_id", partnerId)
+        .eq("user_id", session.userId)
+        .maybeSingle();
+      if (!membership || membership.role !== "partner_owner") {
+        return { ok: false, error: "Not authorized." };
+      }
     }
+
+    const name = String(formData.get("name") ?? "").trim();
+    const primary_color = String(formData.get("primary_color") ?? "#2563eb");
+    const accent_color = String(formData.get("accent_color") ?? "#f97316");
+    const support_email =
+      String(formData.get("support_email") ?? "").trim() || null;
+    const support_phone =
+      String(formData.get("support_phone") ?? "").trim() || null;
+
+    if (!name) return { ok: false, error: "Name is required." };
+    if (!isHexColor(primary_color)) return { ok: false, error: "Invalid primary color." };
+    if (!isHexColor(accent_color)) return { ok: false, error: "Invalid accent color." };
+
+    const updatePayload: Record<string, unknown> = {
+      name,
+      primary_color,
+      accent_color,
+      support_email,
+      support_phone,
+    };
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("partners")
+      .update(updatePayload)
+      .eq("id", partnerId);
+
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath(`/dashboard/partners/${partnerId}`);
+    revalidatePath("/dashboard/partners");
+    revalidatePath("/dashboard");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "An unexpected error occurred." };
   }
-
-  const name = String(formData.get("name") ?? "").trim();
-  const primary_color = String(formData.get("primary_color") ?? "#2563eb");
-  const accent_color = String(formData.get("accent_color") ?? "#f97316");
-  const support_email =
-    String(formData.get("support_email") ?? "").trim() || null;
-  const support_phone =
-    String(formData.get("support_phone") ?? "").trim() || null;
-
-  if (!name) throw new Error("Name is required");
-  if (!isHexColor(primary_color)) throw new Error("Invalid primary color");
-  if (!isHexColor(accent_color)) throw new Error("Invalid accent color");
-
-  const updatePayload: Record<string, unknown> = {
-    name,
-    primary_color,
-    accent_color,
-    support_email,
-    support_phone,
-  };
-
-  // Use admin client — authorization was already verified above.
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from("partners")
-    .update(updatePayload)
-    .eq("id", partnerId);
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath(`/dashboard/partners/${partnerId}`);
-  revalidatePath("/dashboard/partners");
-  revalidatePath("/dashboard");
 }
 
 export async function updateWhiteLabelAction(partnerId: string, formData: FormData) {

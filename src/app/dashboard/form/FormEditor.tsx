@@ -18,6 +18,7 @@ interface FieldTypeInfo {
   group: "standard" | "advanced";
   category: FieldCategory;
   description?: string;
+  disabled?: boolean;
 }
 
 const FIELD_CATEGORIES: { id: FieldCategory; label: string; icon: string }[] = [
@@ -58,12 +59,13 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "competitor_analyzer", label: "Competitor Analyzer", icon: "fa-magnifying-glass-chart", group: "advanced", category: "smart", description: "Enter competitors, auto-scrape & AI summarize" },
   { type: "timeline", label: "Timeline Selector", icon: "fa-calendar-days", group: "advanced", category: "smart", description: "Project dates, milestones & blackout dates" },
   { type: "budget_allocator", label: "Budget Allocator", icon: "fa-sliders", group: "advanced", category: "smart", description: "Visual budget sliders across channels" },
-  // Payments
-  { type: "payment", label: "Payment", icon: "fa-credit-card", group: "advanced", category: "smart", description: "Collect payments via Stripe, PayPal, or Square" },
+  // Payments (coming soon -- renderer not yet implemented)
+  { type: "payment", label: "Payment (Coming Soon)", icon: "fa-credit-card", group: "advanced", category: "smart", description: "Collect payments via Stripe, PayPal, or Square", disabled: true },
   // Layout & Logic
   { type: "heading", label: "Section Heading", icon: "fa-heading", group: "advanced", category: "layout", description: "Display-only section header" },
   { type: "consent", label: "Consent / Terms", icon: "fa-file-contract", group: "advanced", category: "layout", description: "Agreement with checkbox" },
-  { type: "captcha", label: "Bot Protection", icon: "fa-shield-halved", group: "advanced", category: "layout", description: "reCAPTCHA or Cloudflare Turnstile" },
+  // Bot protection (coming soon -- renderer not yet implemented)
+  { type: "captcha", label: "Bot Protection (Coming Soon)", icon: "fa-shield-halved", group: "advanced", category: "layout", description: "reCAPTCHA or Cloudflare Turnstile", disabled: true },
 ];
 
 function iconFor(type: FieldType) {
@@ -1109,12 +1111,12 @@ function FieldPalette({ onDragStart, onClickAdd }: {
               {group.fields.map((f) => (
                 <button
                   key={f.type}
-                  draggable
-                  onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(f.type, f.label); }}
-                  onClick={() => onClickAdd(f.type, f.label)}
-                  className="w-full p-2 bg-surface-container rounded-xl border border-outline-variant/10 cursor-grab hover:border-primary/40 hover:bg-surface-container-high transition-all flex items-center gap-2.5 group"
+                  draggable={!f.disabled}
+                  onDragStart={(e) => { if (f.disabled) { e.preventDefault(); return; } e.dataTransfer.effectAllowed = "move"; onDragStart(f.type, f.label); }}
+                  onClick={() => { if (!f.disabled) onClickAdd(f.type, f.label); }}
+                  className={`w-full p-2 bg-surface-container rounded-xl border border-outline-variant/10 transition-all flex items-center gap-2.5 group ${f.disabled ? "opacity-40 cursor-not-allowed" : "cursor-grab hover:border-primary/40 hover:bg-surface-container-high"}`}
                 >
-                  <div className="w-7 h-7 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors text-xs shrink-0">
+                  <div className={`w-7 h-7 rounded-lg bg-surface-container-highest flex items-center justify-center transition-colors text-xs shrink-0 ${f.disabled ? "text-on-surface-variant/40" : "text-primary group-hover:bg-primary/20"}`}>
                     <FaIcon name={f.icon} />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
@@ -1134,12 +1136,12 @@ function FieldPalette({ onDragStart, onClickAdd }: {
           {filtered.map((f) => (
             <button
               key={f.type}
-              draggable
-              onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(f.type, f.label); }}
-              onClick={() => onClickAdd(f.type, f.label)}
-              className="w-full p-2 bg-surface-container rounded-xl border border-outline-variant/10 cursor-grab hover:border-primary/40 hover:bg-surface-container-high transition-all flex items-center gap-2.5 group"
+              draggable={!f.disabled}
+              onDragStart={(e) => { if (f.disabled) { e.preventDefault(); return; } e.dataTransfer.effectAllowed = "move"; onDragStart(f.type, f.label); }}
+              onClick={() => { if (!f.disabled) onClickAdd(f.type, f.label); }}
+              className={`w-full p-2 bg-surface-container rounded-xl border border-outline-variant/10 transition-all flex items-center gap-2.5 group ${f.disabled ? "opacity-40 cursor-not-allowed" : "cursor-grab hover:border-primary/40 hover:bg-surface-container-high"}`}
             >
-              <div className="w-7 h-7 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors text-xs shrink-0">
+              <div className={`w-7 h-7 rounded-lg bg-surface-container-highest flex items-center justify-center transition-colors text-xs shrink-0 ${f.disabled ? "text-on-surface-variant/40" : "text-primary group-hover:bg-primary/20"}`}>
                 <FaIcon name={f.icon} />
               </div>
               <div className="flex-1 min-w-0 text-left">
