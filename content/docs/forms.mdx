@@ -1,0 +1,64 @@
+---
+title: Forms
+---
+
+# Forms
+
+Forms are the core of LinqMe. Each form is a multi-step questionnaire that your clients fill out through a branded, hosted page. You can build anything from simple contact forms to complex onboarding workflows.
+
+## Creating a Form
+
+From the Forms page, click "New Form." You will see a form editor with a sidebar for steps and fields, and a live preview area. Forms start with one step by default.
+
+> [!NOTE]
+> On the Free plan you can create up to 1 form. Starter and Agency plans allow unlimited forms.
+
+Each form has a name (displayed to your clients), a slug (used in the URL), and an optional description. You can also set a confirmation message that appears after submission, or redirect clients to an external URL.
+
+## Field Types
+
+LinqMe supports over 25 field types, from simple text inputs to advanced components like budget allocators and competitor analyzers. See the [Field Reference](/docs/field-reference) section for a complete breakdown of every available field type.
+
+## Multi-Step Forms
+
+Break long forms into manageable steps. Each step has its own title and description, and clients see a progress indicator as they move through. Use the form editor sidebar to add, reorder, or remove steps.
+
+Steps can be made conditional so they only appear when certain criteria are met. For example, you might show a "Brand Guidelines" step only if the client selected "Branding" in a previous step.
+
+## Conditional Logic
+
+Any field or step can be shown or hidden based on the value of another field. This is configured through the Logic tab in the form editor. Conditions support operators like equals, not equals, contains, is empty, and is not empty.
+
+> [!TIP]
+> Use the visual flow canvas in the Logic tab to see how your conditions connect fields together. Drag connections between fields to build complex logic trees.
+
+When a step has all its visible fields hidden by conditions, the step is automatically skipped during the form flow so clients never see an empty page.
+
+## Form Settings
+
+Each form has additional settings accessible through the Settings panel in the form editor:
+
+| Setting | Description |
+| --- | --- |
+| Active / Inactive | Toggle whether the form accepts new submissions |
+| Default Form | Set one form as the default that appears on your storefront |
+| Confirmation Page | Custom heading and body text shown after submission |
+| Redirect URL | Send clients to an external URL after submission |
+| Notifications | Configure who gets email notifications for new submissions |
+
+## Layout Styles
+
+LinqMe offers four different layout styles for how your form appears to clients:
+
+| Layout | Description |
+| --- | --- |
+| Sidebar (default) | Traditional layout with step navigation on the left side |
+| Top Navigation | Step tabs across the top of the page for a modern feel |
+| No Navigation | Full-screen single-step layout. Navigation buttons only, no step list |
+| Conversation | One question at a time, typeform-style. Great for shorter forms |
+
+You can change the layout style per form from the form settings panel. The layout can be previewed in the editor.
+
+## Templates and Duplication
+
+Save time by duplicating an existing form. From the Forms list, use the menu on any form card to create a copy. The duplicate will have all the same steps, fields, and settings but a new slug.

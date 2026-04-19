@@ -1,0 +1,34 @@
+---
+title: Security
+---
+
+# Security
+
+LinqMe takes security seriously. Your data is stored on Supabase with row-level security policies, and all communication happens over HTTPS.
+
+## Authentication Methods
+
+LinqMe supports multiple ways to sign in:
+
+| Method | Description |
+| --- | --- |
+| Email and Password | Traditional email/password authentication |
+| Magic Link | Passwordless login via a secure email link |
+| Google OAuth | Sign in with your Google account |
+| GitHub OAuth | Sign in with your GitHub account |
+
+## Multi-Factor Authentication
+
+Add an extra layer of security with MFA. Go to Settings, then the General tab, and look for MFA Settings. You can set up a TOTP authenticator app (like Google Authenticator or Authy) that generates a code each time you log in.
+
+When you enable MFA, you will also receive recovery codes. Store these somewhere safe in case you lose access to your authenticator app.
+
+## Passkeys
+
+Passkeys offer the most secure and convenient sign-in experience. Using WebAuthn, you can register a biometric authenticator (like Touch ID or Face ID) or a hardware security key.
+
+Manage your passkeys in Settings under the General tab. You can register multiple passkeys and remove ones you no longer use.
+
+## Session Management
+
+View all your active sessions in Settings under the General tab. Each session shows the browser, operating system, IP address, and last activity time. You can revoke any session to sign it out remotely, which is useful if you suspect unauthorized access.

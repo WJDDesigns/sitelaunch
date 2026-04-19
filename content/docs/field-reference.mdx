@@ -1,0 +1,64 @@
+---
+title: Field Reference
+---
+
+# Field Reference
+
+Below is a complete reference of every field type available in the form builder, organized by category. Each field can be configured with a label, placeholder, help text, icon, required toggle, and conditional visibility.
+
+## Basic Fields
+
+| Field | Description |
+| --- | --- |
+| Text | Single-line text input. Good for names, titles, short answers |
+| Textarea | Multi-line text area with configurable rows. Use for descriptions, bios, long answers |
+| Email | Email input with built-in validation |
+| Phone | Phone number input |
+| URL | URL input with validation |
+| Number | Numeric input. Accepts whole numbers and decimals |
+| Date | Date picker with calendar popup. Respects light/dark theme |
+| Color | Color picker that saves hex values. Useful for brand color collection |
+| Address | Full address field with autocomplete support |
+
+## Selection Fields
+
+| Field | Description |
+| --- | --- |
+| Select (Dropdown) | Single-choice dropdown menu. Configure options in the field settings |
+| Radio | Single-choice radio buttons displayed as a visual list |
+| Checkbox | Multiple-choice checkboxes. You can set a maximum selection limit |
+| Package Selector | Pricing/service tier picker with a built-in rules engine for complex pricing logic |
+| Feature Selector | Feature checkboxes with complexity indicators and optional pricing display |
+| Brand Style | Visual style palette selector showing color mood boards and typography samples |
+| Goal Builder | Goal picker with refinement questions to help define project objectives |
+
+## File Upload Fields
+
+| Field | Description |
+| --- | --- |
+| File | Single file upload. Files are stored securely and can be routed to connected cloud storage |
+| Files (Multiple) | Multiple file upload with drag-and-drop support |
+| Asset Collection | Advanced multi-file asset picker with tagging, categorization, and cloud storage routing to Google Drive, Dropbox, OneDrive, or Box |
+
+> [!NOTE]
+> File upload destinations can be configured per field. Connect your cloud storage in Settings to route uploaded files directly to your Google Drive, Dropbox, OneDrive, or Box.
+
+## Advanced Fields
+
+| Field | Description |
+| --- | --- |
+| Repeater | Nested rows that clients can add and remove. Define sub-fields like a mini-form within a form. Supports icons per row |
+| Consent | Scrollable agreement text with a checkbox. Use for terms of service, NDAs, or project agreements |
+| Site Structure | Interactive sitemap/page builder with drag-and-drop tree editing. Clients can define their website structure |
+| Competitor Analyzer | Enter competitor URLs and get AI-generated competitive analysis summaries. Requires an AI integration |
+| Timeline | Milestone date picker with availability blocker for scheduling project timelines |
+| Budget Allocator | Multi-channel budget slider. Choose between constrained mode (must total 100%) or independent mode |
+| Payment | Collect payments directly in the form via Stripe, PayPal, or Square. Requires a payment integration |
+| Captcha | Bot protection using reCAPTCHA v3 or Cloudflare Turnstile. Can be visible or invisible |
+| Approval | Sign-off field with a canvas-based draw-to-sign signature pad |
+
+## Display Fields
+
+| Field | Description |
+| --- | --- |
+| Heading | Display-only section header with rich content. Use to add context, instructions, or visual breaks between fields. Not an input field |

@@ -1,0 +1,16 @@
+export default {
+  index: "Introduction",
+  "getting-started": "Getting Started",
+  forms: "Forms",
+  "field-reference": "Field Reference",
+  entries: "Entries and Submissions",
+  accounts: "Client Accounts",
+  branding: "Branding and White-Label",
+  integrations: "Integrations",
+  "analytics-insights": "Analytics and Insights",
+  team: "Team Management",
+  partners: "Partner Management",
+  billing: "Billing and Plans",
+  security: "Security",
+  settings: "Settings",
+};

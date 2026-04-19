@@ -9,3 +9,5 @@ out/
 .vercel
 next-env.d.ts
 coverage/
+_pagefind/
+public/nextra-theme.css
