@@ -2624,6 +2624,159 @@ function CelestialField({
     return <BudgetAllocatorField field={field} value={value} error={error} onChange={onChange} primaryColor={primaryColor} />;
   }
 
+  /* ── Rating / Stars ── */
+  if (field.type === "rating") {
+    const maxStars = field.ratingConfig?.maxStars ?? 5;
+    const allowHalf = field.ratingConfig?.allowHalf ?? false;
+    const currentVal = typeof value === "string" ? Number(value) || 0 : typeof value === "number" ? value : 0;
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: maxStars }, (_, i) => {
+            const starVal = i + 1;
+            const halfVal = i + 0.5;
+            const isFull = currentVal >= starVal;
+            const isHalf = allowHalf && !isFull && currentVal >= halfVal;
+            return (
+              <button key={i} type="button" className="relative text-2xl transition-transform hover:scale-110 focus:outline-none" onClick={() => {
+                if (allowHalf) {
+                  if (currentVal === starVal) onChange(String(halfVal));
+                  else if (currentVal === halfVal) onChange("");
+                  else onChange(String(starVal));
+                } else {
+                  onChange(currentVal === starVal ? "" : String(starVal));
+                }
+              }}>
+                <i className={`fa-solid fa-star ${isFull ? "" : isHalf ? "opacity-0" : "opacity-20"}`} style={isFull ? { color: primaryColor } : undefined} />
+                {isHalf && <i className="fa-solid fa-star-half-stroke absolute inset-0" style={{ color: primaryColor }} />}
+              </button>
+            );
+          })}
+          {currentVal > 0 && <span className="text-sm font-bold ml-2" style={{ color: primaryColor }}>{currentVal}</span>}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Yes/No Toggle ── */
+  if (field.type === "toggle") {
+    const isYes = value === "yes";
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <button type="button" onClick={() => onChange(isYes ? "no" : "yes")}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 w-full"
+          style={value ? { borderColor: primaryColor, backgroundColor: primaryColor + "08" } : { borderColor: "var(--color-outline-variant)" }}>
+          <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${isYes ? "" : "bg-surface-container-highest"}`}
+            style={isYes ? { backgroundColor: primaryColor } : undefined}>
+            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${isYes ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+          </div>
+          <span className="text-sm font-semibold text-on-surface">{isYes ? "Yes" : value === "no" ? "No" : "Select..."}</span>
+        </button>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Slider / Range ── */
+  if (field.type === "slider" && field.sliderConfig) {
+    const cfg = field.sliderConfig;
+    const numVal = typeof value === "string" ? Number(value) : typeof value === "number" ? value : cfg.min;
+    const pct = ((numVal - cfg.min) / (cfg.max - cfg.min)) * 100;
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="px-1">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-on-surface-variant">{cfg.min}{cfg.unit}</span>
+            {cfg.showValue !== false && <span className="text-lg font-bold" style={{ color: primaryColor }}>{numVal}{cfg.unit}</span>}
+            <span className="text-xs text-on-surface-variant">{cfg.max}{cfg.unit}</span>
+          </div>
+          <div className="relative">
+            <div className="h-2 rounded-full bg-surface-container-highest" />
+            <div className="absolute top-0 left-0 h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: primaryColor }} />
+            <input type="range" min={cfg.min} max={cfg.max} step={cfg.step} value={numVal}
+              onChange={(e) => onChange(e.target.value)}
+              className="absolute inset-0 w-full opacity-0 cursor-pointer"
+              style={{ height: "8px" }} />
+            <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 bg-white shadow-md pointer-events-none"
+              style={{ left: `calc(${pct}% - 10px)`, borderColor: primaryColor }} />
+          </div>
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Social Media Handles ── */
+  if (field.type === "social_handles" && field.socialHandlesConfig) {
+    const platforms = field.socialHandlesConfig.platforms ?? [];
+    const allPlatforms: { id: string; label: string; icon: string; prefix: string }[] = [
+      { id: "instagram", label: "Instagram", icon: "fa-brands fa-instagram", prefix: "@" },
+      { id: "facebook", label: "Facebook", icon: "fa-brands fa-facebook", prefix: "" },
+      { id: "x", label: "X / Twitter", icon: "fa-brands fa-x-twitter", prefix: "@" },
+      { id: "linkedin", label: "LinkedIn", icon: "fa-brands fa-linkedin", prefix: "" },
+      { id: "tiktok", label: "TikTok", icon: "fa-brands fa-tiktok", prefix: "@" },
+      { id: "youtube", label: "YouTube", icon: "fa-brands fa-youtube", prefix: "" },
+      { id: "pinterest", label: "Pinterest", icon: "fa-brands fa-pinterest", prefix: "" },
+      { id: "threads", label: "Threads", icon: "fa-brands fa-threads", prefix: "@" },
+    ];
+    const enabledPlatforms = allPlatforms.filter((p) => platforms.includes(p.id as never));
+    let handles: { platform: string; handle: string }[] = [];
+    try { handles = typeof value === "string" && value ? JSON.parse(value) : []; } catch { /* */ }
+    const getHandle = (pid: string) => handles.find((h) => h.platform === pid)?.handle ?? "";
+    const setHandle = (pid: string, val: string) => {
+      const next = enabledPlatforms.map((p) => ({
+        platform: p.id,
+        handle: p.id === pid ? val : getHandle(p.id),
+      })).filter((h) => h.handle.trim());
+      onChange(next.length > 0 ? JSON.stringify(next) : "");
+    };
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="space-y-2">
+          {enabledPlatforms.map((p) => (
+            <div key={p.id} className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center shrink-0">
+                <i className={`${p.icon} text-lg`} style={{ color: primaryColor }} />
+              </div>
+              <div className="flex-1 relative">
+                {p.prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant/40">{p.prefix}</span>}
+                <input
+                  placeholder={p.label}
+                  value={getHandle(p.id)}
+                  onChange={(e) => setHandle(p.id, e.target.value)}
+                  className={INPUT_CLS}
+                  style={{ ...focusRing, paddingLeft: p.prefix ? "1.75rem" : undefined }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
   const isMultiCheckbox = field.type === "checkbox" && field.options && field.options.length > 0;
   /* Parse multi-checkbox value as array */
   const checkedValues: string[] = isMultiCheckbox

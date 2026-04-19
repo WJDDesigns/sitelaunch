@@ -29,7 +29,11 @@ export type FieldType =
   | "timeline"
   | "budget_allocator"
   | "payment"
-  | "captcha";
+  | "captcha"
+  | "rating"
+  | "toggle"
+  | "slider"
+  | "social_handles";
 
 /* ââ Package Selector types âââââââââââââââââââââââââââââââ */
 
@@ -337,6 +341,50 @@ export interface CaptchaConfig {
   mode?: "visible" | "invisible";
 }
 
+/* -- Rating field types --------------------------------------------------- */
+
+export interface RatingConfig {
+  /** Maximum number of stars (default 5) */
+  maxStars: number;
+  /** Allow half-star selections */
+  allowHalf?: boolean;
+}
+
+/* -- Slider field types --------------------------------------------------- */
+
+export interface SliderConfig {
+  /** Minimum value (default 0) */
+  min: number;
+  /** Maximum value (default 100) */
+  max: number;
+  /** Step increment (default 1) */
+  step: number;
+  /** Unit label shown after the value, e.g. "%", "$", "days" */
+  unit?: string;
+  /** Show the current value next to the slider */
+  showValue?: boolean;
+}
+
+/* -- Social Media Handles types ------------------------------------------- */
+
+export const SOCIAL_PLATFORMS = [
+  { id: "instagram", label: "Instagram", icon: "fa-brands fa-instagram", prefix: "@" },
+  { id: "facebook", label: "Facebook", icon: "fa-brands fa-facebook", prefix: "" },
+  { id: "x", label: "X / Twitter", icon: "fa-brands fa-x-twitter", prefix: "@" },
+  { id: "linkedin", label: "LinkedIn", icon: "fa-brands fa-linkedin", prefix: "" },
+  { id: "tiktok", label: "TikTok", icon: "fa-brands fa-tiktok", prefix: "@" },
+  { id: "youtube", label: "YouTube", icon: "fa-brands fa-youtube", prefix: "" },
+  { id: "pinterest", label: "Pinterest", icon: "fa-brands fa-pinterest", prefix: "" },
+  { id: "threads", label: "Threads", icon: "fa-brands fa-threads", prefix: "@" },
+] as const;
+
+export type SocialPlatformId = typeof SOCIAL_PLATFORMS[number]["id"];
+
+export interface SocialHandlesConfig {
+  /** Which platforms to show (defaults to all) */
+  platforms: SocialPlatformId[];
+}
+
 /** Condition to show/hide a field or step based on another field's value */
 export interface ShowCondition {
   /** ID of the field to evaluate (from any step) */
@@ -399,6 +447,12 @@ export interface FieldDef {
   paymentConfig?: PaymentConfig;
   /** For captcha fields — bot protection configuration */
   captchaConfig?: CaptchaConfig;
+  /** For rating fields — star count and half-star option */
+  ratingConfig?: RatingConfig;
+  /** For slider fields — min/max/step configuration */
+  sliderConfig?: SliderConfig;
+  /** For social_handles fields — which platforms to show */
+  socialHandlesConfig?: SocialHandlesConfig;
   /** Show this field only when the condition is met */
   showCondition?: ShowCondition;
   /** For file/files fields: optional cloud storage destination */
@@ -573,6 +627,24 @@ export function validateStepData(
     }
     if (f.type === "date" && typeof v === "string") {
       if (Number.isNaN(Date.parse(v))) errors[f.id] = "Invalid date";
+    }
+    if (f.type === "rating" && typeof v === "string") {
+      const n = Number(v);
+      const max = f.ratingConfig?.maxStars ?? 5;
+      if (Number.isNaN(n) || n < (f.ratingConfig?.allowHalf ? 0.5 : 1) || n > max) errors[f.id] = "Invalid rating";
+    }
+    if (f.type === "slider" && typeof v === "string") {
+      const n = Number(v);
+      const cfg = f.sliderConfig ?? { min: 0, max: 100, step: 1 };
+      if (Number.isNaN(n) || n < cfg.min || n > cfg.max) errors[f.id] = `Must be between ${cfg.min} and ${cfg.max}`;
+    }
+    if (f.type === "social_handles" && typeof v === "string") {
+      try {
+        const handles = JSON.parse(v);
+        if (f.required && (!Array.isArray(handles) || handles.every((h: { handle?: string }) => !h.handle?.trim()))) {
+          errors[f.id] = "At least one social handle is required";
+        }
+      } catch { if (f.required) errors[f.id] = "At least one social handle is required"; }
     }
   }
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true };

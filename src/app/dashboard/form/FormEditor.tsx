@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider, RatingConfig, SliderConfig, SocialHandlesConfig, SocialPlatformId } from "@/lib/forms";
+import { SOCIAL_PLATFORMS } from "@/lib/forms";
 import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
 import CloudDestinationButton from "@/components/CloudDestinationButton";
 import IconPicker from "@/components/IconPicker";
@@ -59,6 +60,11 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
   { type: "competitor_analyzer", label: "Competitor Analyzer", icon: "fa-magnifying-glass-chart", group: "advanced", category: "smart", description: "Enter competitors, auto-scrape & AI summarize" },
   { type: "timeline", label: "Timeline Selector", icon: "fa-calendar-days", group: "advanced", category: "smart", description: "Project dates, milestones & blackout dates" },
   { type: "budget_allocator", label: "Budget Allocator", icon: "fa-sliders", group: "advanced", category: "smart", description: "Visual budget sliders across channels" },
+  // Phase 3: General utility fields
+  { type: "rating", label: "Rating / Stars", icon: "fa-star", group: "standard", category: "general", description: "Star rating selector" },
+  { type: "toggle", label: "Yes / No Toggle", icon: "fa-toggle-on", group: "standard", category: "general", description: "Simple yes/no switch" },
+  { type: "slider", label: "Slider / Range", icon: "fa-gauge", group: "standard", category: "general", description: "Numeric slider with min/max" },
+  { type: "social_handles", label: "Social Media", icon: "fa-share-nodes", group: "advanced", category: "marketing", description: "Collect social media handles" },
   // Payments (coming soon -- renderer not yet implemented)
   { type: "payment", label: "Payment (Coming Soon)", icon: "fa-credit-card", group: "advanced", category: "smart", description: "Collect payments via Stripe, PayPal, or Square", disabled: true },
   // Layout & Logic
@@ -275,6 +281,16 @@ function makeField(type: FieldType, label: string): FieldDef {
       provider: "recaptcha",
       mode: "visible",
     };
+  }
+  if (type === "rating") {
+    base.ratingConfig = { maxStars: 5, allowHalf: false };
+  }
+  if (type === "slider") {
+    base.sliderConfig = { min: 0, max: 100, step: 1, unit: "", showValue: true };
+  }
+  if (type === "social_handles") {
+    base.label = "Social Media Handles";
+    base.socialHandlesConfig = { platforms: ["instagram", "facebook", "x", "linkedin", "tiktok", "youtube"] };
   }
   return base;
 }
@@ -1645,6 +1661,86 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI }: {
                 ))}
               </div>
               <button onClick={() => onUpdate({ budgetAllocatorConfig: { ...field.budgetAllocatorConfig!, channels: [...field.budgetAllocatorConfig!.channels, { id: uid(), label: "", icon: "fa-circle", defaultValue: 0 }] } })} className="w-full py-1.5 mt-1.5 border border-dashed border-outline-variant/30 rounded-lg text-[10px] text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-1"><i className="fa-solid fa-plus text-[8px]" /> Add Channel</button>
+            </div>
+          </section>
+        )}
+
+        {/* -- Rating Settings -- */}
+        {field.type === "rating" && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Rating Settings</div>
+            <label className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-on-surface-variant">Max Stars</span>
+              <input type="number" min={3} max={10} value={field.ratingConfig?.maxStars ?? 5} onChange={(e) => onUpdate({ ratingConfig: { ...field.ratingConfig!, maxStars: Number(e.target.value) || 5 } })} className="w-16 px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none" />
+            </label>
+            <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+              <span className="text-xs font-medium text-on-surface">Allow Half Stars</span>
+              <label className="relative cursor-pointer">
+                <input type="checkbox" checked={!!field.ratingConfig?.allowHalf} onChange={(e) => onUpdate({ ratingConfig: { ...field.ratingConfig!, allowHalf: e.target.checked } })} className="sr-only peer" />
+                <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+              </label>
+            </div>
+          </section>
+        )}
+
+        {/* -- Slider Settings -- */}
+        {field.type === "slider" && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Slider Settings</div>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Minimum</span>
+              <input type="number" value={field.sliderConfig?.min ?? 0} onChange={(e) => onUpdate({ sliderConfig: { ...field.sliderConfig!, min: Number(e.target.value) } })} className={INPUT_CLS} />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Maximum</span>
+              <input type="number" value={field.sliderConfig?.max ?? 100} onChange={(e) => onUpdate({ sliderConfig: { ...field.sliderConfig!, max: Number(e.target.value) } })} className={INPUT_CLS} />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Step</span>
+              <input type="number" min={0.01} step={0.01} value={field.sliderConfig?.step ?? 1} onChange={(e) => onUpdate({ sliderConfig: { ...field.sliderConfig!, step: Number(e.target.value) || 1 } })} className={INPUT_CLS} />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Unit Label</span>
+              <input value={field.sliderConfig?.unit ?? ""} onChange={(e) => onUpdate({ sliderConfig: { ...field.sliderConfig!, unit: e.target.value } })} placeholder='e.g. %, $, days' className={INPUT_CLS} />
+            </label>
+            <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+              <span className="text-xs font-medium text-on-surface">Show Current Value</span>
+              <label className="relative cursor-pointer">
+                <input type="checkbox" checked={field.sliderConfig?.showValue !== false} onChange={(e) => onUpdate({ sliderConfig: { ...field.sliderConfig!, showValue: e.target.checked } })} className="sr-only peer" />
+                <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+              </label>
+            </div>
+          </section>
+        )}
+
+        {/* -- Social Media Handles Settings -- */}
+        {field.type === "social_handles" && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Platforms</div>
+            <p className="text-[10px] text-on-surface-variant/50">Toggle which social platforms to show.</p>
+            <div className="space-y-1.5">
+              {SOCIAL_PLATFORMS.map((p) => {
+                const enabled = field.socialHandlesConfig?.platforms?.includes(p.id) ?? false;
+                return (
+                  <div key={p.id} className="flex items-center justify-between p-2.5 bg-surface-container rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <i className={`${p.icon} text-sm text-on-surface-variant`} />
+                      <span className="text-xs font-medium text-on-surface">{p.label}</span>
+                    </div>
+                    <label className="relative cursor-pointer">
+                      <input type="checkbox" checked={enabled} onChange={(e) => {
+                        const current = field.socialHandlesConfig?.platforms ?? [];
+                        const next = e.target.checked ? [...current, p.id] : current.filter((id) => id !== p.id);
+                        onUpdate({ socialHandlesConfig: { ...field.socialHandlesConfig!, platforms: next as SocialPlatformId[] } });
+                      }} className="sr-only peer" />
+                      <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+                      <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+                    </label>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
