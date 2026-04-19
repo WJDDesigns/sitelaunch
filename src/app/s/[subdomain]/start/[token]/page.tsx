@@ -83,31 +83,53 @@ export default async function SubmissionPage({ params }: Props) {
   let googleMapsApiKey: string | null = null;
   let geocodingProvider: "google" | "openstreetmap" | null = null;
   if (hasAutocompleteAddress) {
-    // Check which autocomplete provider the partner has configured
+    // Read the workspace default geocoding provider
+    const { data: partnerRow } = await admin
+      .from("partners")
+      .select("default_geocoding_provider")
+      .eq("id", partner.id)
+      .maybeSingle();
+    const workspaceDefault = (partnerRow?.default_geocoding_provider as "google" | "openstreetmap") ?? "openstreetmap";
+
+    // Check which autocomplete providers the partner has connected
     try {
       const { data: geoRows } = await admin
         .from("geocoding_integrations")
         .select("provider, api_key_encrypted")
         .eq("partner_id", partner.id);
-      if (geoRows && geoRows.length > 0) {
-        // Prefer Google if connected, otherwise use OpenStreetMap
-        const googleRow = geoRows.find((r) => r.provider === "google");
-        const osmRow = geoRows.find((r) => r.provider === "openstreetmap");
-        if (googleRow) {
-          geocodingProvider = "google";
-          if (googleRow.api_key_encrypted) {
-            const { decryptToken } = await import("@/lib/cloud/encryption");
-            googleMapsApiKey = decryptToken(googleRow.api_key_encrypted);
-          }
-        } else if (osmRow) {
-          geocodingProvider = "openstreetmap";
+
+      const googleRow = geoRows?.find((r) => r.provider === "google") ?? null;
+      const osmRow = geoRows?.find((r) => r.provider === "openstreetmap") ?? null;
+
+      // Use the workspace default if that provider is connected, otherwise fall back
+      if (workspaceDefault === "google" && googleRow) {
+        geocodingProvider = "google";
+        if (googleRow.api_key_encrypted) {
+          const { decryptToken } = await import("@/lib/cloud/encryption");
+          googleMapsApiKey = decryptToken(googleRow.api_key_encrypted);
         }
+      } else if (workspaceDefault === "openstreetmap") {
+        geocodingProvider = "openstreetmap";
+      } else if (googleRow) {
+        // workspace default was google but not connected -- try google anyway with key
+        geocodingProvider = "google";
+        if (googleRow.api_key_encrypted) {
+          const { decryptToken } = await import("@/lib/cloud/encryption");
+          googleMapsApiKey = decryptToken(googleRow.api_key_encrypted);
+        }
+      } else if (osmRow) {
+        geocodingProvider = "openstreetmap";
       }
     } catch { /* table may not exist yet */ }
-    // Fall back to platform env var for Google
-    if (!geocodingProvider && process.env.GOOGLE_MAPS_API_KEY) {
-      geocodingProvider = "google";
-      googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+    // Fall back to OSM (works with zero config) or platform env var for Google
+    if (!geocodingProvider) {
+      if (process.env.GOOGLE_MAPS_API_KEY) {
+        geocodingProvider = "google";
+        googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+      } else {
+        geocodingProvider = "openstreetmap";
+      }
     }
   }
 

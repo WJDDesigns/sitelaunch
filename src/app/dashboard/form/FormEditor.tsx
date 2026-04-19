@@ -356,7 +356,7 @@ function makeField(type: FieldType, label: string): FieldDef {
   }
   if (type === "address") {
     base.label = "Address";
-    base.addressConfig = { mode: "manual", region: "us", fields: ["street", "street2", "city", "state", "zip", "country"] };
+    base.addressConfig = { mode: "autocomplete", autocompleteProvider: "openstreetmap", region: "us", fields: ["street", "street2", "city", "state", "zip", "country"] };
   }
   if (type === "matrix") {
     base.label = "Rate Each Area";
@@ -2167,25 +2167,37 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
               </div>
               {field.addressConfig?.mode === "autocomplete" && (
                 <div className="mt-3">
-                  <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Provider</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["google", "openstreetmap"] as const).map((p) => {
-                      const active = (field.addressConfig?.autocompleteProvider ?? "google") === p;
-                      const meta = { google: { icon: "fa-brands fa-google", label: "Google Places" }, openstreetmap: { icon: "fa-solid fa-map", label: "OpenStreetMap" } };
+                  <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Provider Override</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([undefined, "openstreetmap", "google"] as const).map((p) => {
+                      const current = field.addressConfig?.autocompleteProvider;
+                      const active = p === undefined ? !current : current === p;
+                      const meta = {
+                        undefined: { icon: "fa-solid fa-globe", label: "Global" },
+                        openstreetmap: { icon: "fa-solid fa-map", label: "OSM" },
+                        google: { icon: "fa-brands fa-google", label: "Google" },
+                      };
+                      const key = String(p ?? "undefined");
                       return (
-                        <button key={p} type="button" onClick={() => onUpdate({ addressConfig: { ...field.addressConfig, autocompleteProvider: p } })}
-                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
-                          <i className={`${meta[p].icon} mr-1.5`} />
-                          {meta[p].label}
+                        <button key={key} type="button" onClick={() => {
+                          const next = { ...field.addressConfig };
+                          if (p === undefined) { delete next.autocompleteProvider; } else { next.autocompleteProvider = p; }
+                          onUpdate({ addressConfig: next });
+                        }}
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
+                          <i className={`${meta[key as keyof typeof meta]?.icon} mr-1`} />
+                          {meta[key as keyof typeof meta]?.label}
                         </button>
                       );
                     })}
                   </div>
                   <p className="text-[10px] text-on-surface-variant/50 mt-2">
                     <i className="fa-solid fa-circle-info mr-1" />
-                    {(field.addressConfig?.autocompleteProvider ?? "google") === "google"
-                      ? "Requires a Google Maps API key in Settings > Integrations."
-                      : "OpenStreetMap is free. Connect it in Settings > Integrations for best results."}
+                    {!field.addressConfig?.autocompleteProvider
+                      ? "Uses the workspace default provider set in Settings > Integrations."
+                      : field.addressConfig.autocompleteProvider === "google"
+                        ? "Overrides to Google Places for this field. Requires API key in Settings."
+                        : "Overrides to OpenStreetMap for this field. Free, no API key needed."}
                   </p>
                 </div>
               )}

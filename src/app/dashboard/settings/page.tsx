@@ -172,7 +172,7 @@ export default async function SettingsPage() {
   // Payment integrations
   const { data: paymentIntegrationRows } = await admin
     .from("payment_integrations")
-    .select("id, provider, connected_at")
+    .select("id, provider, connected_at, account_email, stripe_account_id")
     .eq("partner_id", account.id);
 
   // Captcha integrations
@@ -197,7 +197,7 @@ export default async function SettingsPage() {
       <AIIntegrationsSection aiIntegrations={aiIntegrationRows ?? []} />
       <PaymentIntegrationsSection integrations={paymentIntegrationRows ?? []} />
       <CaptchaIntegrationsSection integrations={captchaIntegrationRows ?? []} />
-      <GeocodingIntegrationsSection integrations={geocodingIntegrationRows} />
+      <GeocodingIntegrationsSection integrations={geocodingIntegrationRows} defaultProvider={partner?.default_geocoding_provider as "google" | "openstreetmap" | undefined} />
     </>
   );
 

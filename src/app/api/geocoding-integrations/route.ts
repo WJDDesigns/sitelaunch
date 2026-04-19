@@ -51,6 +51,40 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * PATCH -- update workspace default geocoding provider
+ */
+export async function PATCH(request: Request) {
+  try {
+    const session = await requireSession();
+    const account = await getCurrentAccount(session.userId);
+    if (!account) return NextResponse.json({ error: "No account" }, { status: 403 });
+
+    const body = (await request.json()) as { defaultProvider?: string };
+    const { defaultProvider } = body;
+
+    if (!defaultProvider || !isValidProvider(defaultProvider)) {
+      return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("partners")
+      .update({ default_geocoding_provider: defaultProvider })
+      .eq("id", account.id);
+
+    if (error) {
+      console.error("[geocoding-integrations] PATCH error:", error);
+      return NextResponse.json({ error: "Failed to update default provider" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[geocoding-integrations] PATCH error:", err);
+    return NextResponse.json({ error: "Failed to update default provider" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const session = await requireSession();

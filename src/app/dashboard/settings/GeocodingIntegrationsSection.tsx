@@ -36,8 +36,10 @@ interface GeocodingIntegration {
 
 export default function GeocodingIntegrationsSection({
   integrations,
+  defaultProvider,
 }: {
   integrations: GeocodingIntegration[];
+  defaultProvider?: "google" | "openstreetmap";
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -100,9 +102,42 @@ export default function GeocodingIntegrationsSection({
       <h2 className="text-lg font-bold font-headline text-on-surface mb-1">
         Address Autocomplete
       </h2>
-      <p className="text-sm text-on-surface-variant/60 mb-6">
-        Connect a geocoding provider to enable address autocomplete on your forms. Google Places offers the highest accuracy; OpenStreetMap is free and open-source.
+      <p className="text-sm text-on-surface-variant/60 mb-5">
+        Connect a geocoding provider to enable address autocomplete on your forms. OpenStreetMap works out of the box for free. Google Places offers higher accuracy with an API key.
       </p>
+
+      {/* Global default provider selector */}
+      <div className="mb-5 p-4 rounded-xl border border-outline-variant/10 bg-surface-container-lowest/30">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-on-surface">Default Provider</h3>
+            <p className="text-[10px] text-on-surface-variant/50 mt-0.5">
+              Used for all address fields unless overridden per field in the form editor.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {(["openstreetmap", "google"] as const).map((p) => {
+              const active = (defaultProvider ?? "openstreetmap") === p;
+              const meta = { openstreetmap: { icon: "fa-solid fa-map", label: "OpenStreetMap", color: "text-[#7ebc6f]" }, google: { icon: "fa-brands fa-google", label: "Google Places", color: "text-[#4285f4]" } };
+              return (
+                <button key={p} onClick={async () => {
+                  try {
+                    const res = await fetch("/api/geocoding-integrations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ defaultProvider: p }) });
+                    if (res.ok) { startTransition(() => { router.refresh(); setMsg(`Default provider set to ${meta[p].label}.`); }); }
+                  } catch { /* */ }
+                }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
+                    active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/15 text-on-surface-variant hover:bg-surface-container"
+                  }`}>
+                  <i className={`${meta[p].icon} text-sm ${active ? meta[p].color : ""}`} />
+                  {meta[p].label}
+                  {active && <i className="fa-solid fa-check text-[9px] ml-1" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {GEOCODING_PROVIDERS.map((provider) => {

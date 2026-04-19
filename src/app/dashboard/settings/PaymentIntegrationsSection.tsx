@@ -11,7 +11,10 @@ const PAYMENT_PROVIDERS = [
     color: "text-[#635bff]",
     description: "Accept credit cards, Apple Pay, Google Pay & more",
     url: "https://dashboard.stripe.com/apikeys",
-    urlLabel: "Get API keys",
+    urlLabel: "Dashboard",
+    /** Stripe supports OAuth Connect -- no manual key needed */
+    oauth: true,
+    oauthUrl: "/api/stripe/connect",
   },
   {
     id: "paypal",
@@ -21,6 +24,7 @@ const PAYMENT_PROVIDERS = [
     description: "Accept PayPal balance, credit & debit cards",
     url: "https://developer.paypal.com/dashboard/applications/live",
     urlLabel: "Get Client ID",
+    oauth: false,
   },
   {
     id: "square",
@@ -30,6 +34,7 @@ const PAYMENT_PROVIDERS = [
     description: "In-person and online payments, invoicing",
     url: "https://developer.squareup.com/apps",
     urlLabel: "Get Application ID",
+    oauth: false,
   },
 ] as const;
 
@@ -37,6 +42,8 @@ interface PaymentIntegration {
   id: string;
   provider: string;
   connected_at: string;
+  account_email?: string;
+  stripe_account_id?: string;
 }
 
 export default function PaymentIntegrationsSection({
@@ -136,12 +143,57 @@ export default function PaymentIntegrationsSection({
                     <p className="text-[10px] text-tertiary font-semibold uppercase tracking-widest mt-1">
                       <i className="fa-solid fa-circle-check text-[8px] mr-1" />
                       Connected
+                      {integration?.account_email && (
+                        <span className="normal-case tracking-normal font-normal text-on-surface-variant/50 ml-1">
+                          ({integration.account_email})
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>
               </div>
 
-              {isEditing ? (
+              {/* OAuth providers (Stripe Connect) */}
+              {provider.oauth && !isConnected && (
+                <div className="space-y-2">
+                  <a
+                    href={provider.oauthUrl}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white rounded-lg transition-all hover:opacity-90"
+                    style={{ backgroundColor: "#635bff" }}
+                  >
+                    <i className="fa-brands fa-stripe text-base" />
+                    Connect with Stripe
+                  </a>
+                  <p className="text-[10px] text-on-surface-variant/40 text-center">
+                    Secure OAuth connection. No API keys needed.
+                  </p>
+                </div>
+              )}
+
+              {/* OAuth providers -- connected state */}
+              {provider.oauth && isConnected && (
+                <div className="space-y-2">
+                  <a
+                    href={provider.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square text-[9px]" />
+                    {provider.urlLabel}
+                  </a>
+                  <button
+                    onClick={() => handleDisconnect(provider.id)}
+                    disabled={pending || saving}
+                    className="w-full px-4 py-2 text-xs font-bold text-error/70 border border-error/15 rounded-lg hover:bg-error/5 hover:text-error transition-all disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
+
+              {/* Non-OAuth providers -- API key flow */}
+              {!provider.oauth && isEditing && (
                 <div className="space-y-2">
                   <input
                     type="password"
@@ -167,7 +219,9 @@ export default function PaymentIntegrationsSection({
                     </button>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {!provider.oauth && !isEditing && (
                 <div className="space-y-2">
                   <a
                     href={provider.url}
