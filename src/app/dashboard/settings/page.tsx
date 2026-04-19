@@ -17,6 +17,7 @@ import IntegrationsSection from "./IntegrationsSection";
 import AIIntegrationsSection from "./AIIntegrationsSection";
 import PaymentIntegrationsSection from "./PaymentIntegrationsSection";
 import CaptchaIntegrationsSection from "./CaptchaIntegrationsSection";
+import GeocodingIntegrationsSection from "./GeocodingIntegrationsSection";
 import DashboardPaletteSection from "./DashboardPaletteSection";
 import SupportForm from "../../support/SupportForm";
 import {
@@ -180,12 +181,23 @@ export default async function SettingsPage() {
     .select("id, provider, connected_at")
     .eq("partner_id", account.id);
 
+  // Geocoding / address autocomplete integrations
+  let geocodingIntegrationRows: { id: string; provider: string; connected_at: string }[] = [];
+  try {
+    const { data } = await admin
+      .from("geocoding_integrations")
+      .select("id, provider, connected_at")
+      .eq("partner_id", account.id);
+    geocodingIntegrationRows = data ?? [];
+  } catch { /* table may not exist yet */ }
+
   const integrationsContent = (
     <>
       <IntegrationsSection integrations={cloudIntegrations ?? []} />
       <AIIntegrationsSection aiIntegrations={aiIntegrationRows ?? []} />
       <PaymentIntegrationsSection integrations={paymentIntegrationRows ?? []} />
       <CaptchaIntegrationsSection integrations={captchaIntegrationRows ?? []} />
+      <GeocodingIntegrationsSection integrations={geocodingIntegrationRows} />
     </>
   );
 

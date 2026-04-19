@@ -2166,10 +2166,28 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                 })}
               </div>
               {field.addressConfig?.mode === "autocomplete" && (
-                <p className="text-[10px] text-on-surface-variant/50 mt-2">
-                  <i className="fa-solid fa-circle-info mr-1" />
-                  Requires a Google Maps API key in Settings &gt; Integrations.
-                </p>
+                <div className="mt-3">
+                  <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Provider</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["google", "openstreetmap"] as const).map((p) => {
+                      const active = (field.addressConfig?.autocompleteProvider ?? "google") === p;
+                      const meta = { google: { icon: "fa-brands fa-google", label: "Google Places" }, openstreetmap: { icon: "fa-solid fa-map", label: "OpenStreetMap" } };
+                      return (
+                        <button key={p} type="button" onClick={() => onUpdate({ addressConfig: { ...field.addressConfig, autocompleteProvider: p } })}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${active ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/20 text-on-surface-variant hover:bg-surface-container"}`}>
+                          <i className={`${meta[p].icon} mr-1.5`} />
+                          {meta[p].label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant/50 mt-2">
+                    <i className="fa-solid fa-circle-info mr-1" />
+                    {(field.addressConfig?.autocompleteProvider ?? "google") === "google"
+                      ? "Requires a Google Maps API key in Settings > Integrations."
+                      : "OpenStreetMap is free. Connect it in Settings > Integrations for best results."}
+                  </p>
+                </div>
               )}
             </div>
             <div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const TABS = [
   { id: "general", label: "General", icon: "fa-gear" },
@@ -20,8 +21,34 @@ interface Props {
 }
 
 export default function SettingsTabs({ generalContent, brandingContent, integrationsContent, advancedContent, defaultTab }: Props) {
-  const initial = TABS.find((t) => t.id === defaultTab) ? (defaultTab as TabId) : "general";
-  const [active, setActive] = useState<TabId>(initial);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Resolve initial tab: URL ?tab= param takes priority, then defaultTab prop, then "general"
+  const urlTab = searchParams.get("tab");
+  const resolvedDefault = TABS.find((t) => t.id === urlTab) ? (urlTab as TabId) : TABS.find((t) => t.id === defaultTab) ? (defaultTab as TabId) : "general";
+  const [active, setActive] = useState<TabId>(resolvedDefault);
+
+  // Sync tab state when URL changes externally (e.g. back/forward nav)
+  useEffect(() => {
+    const param = searchParams.get("tab");
+    if (param && TABS.find((t) => t.id === param) && param !== active) {
+      setActive(param as TabId);
+    }
+  }, [searchParams, active]);
+
+  const switchTab = useCallback((tabId: TabId) => {
+    setActive(tabId);
+    // Update URL without full page reload
+    const params = new URLSearchParams(searchParams.toString());
+    if (tabId === "general") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tabId);
+    }
+    const qs = params.toString();
+    router.replace(`/dashboard/settings${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [router, searchParams]);
 
   const panels: Record<TabId, React.ReactNode> = {
     general: generalContent,
@@ -39,7 +66,7 @@ export default function SettingsTabs({ generalContent, brandingContent, integrat
           return (
             <button
               key={tab.id}
-              onClick={() => setActive(tab.id)}
+              onClick={() => switchTab(tab.id)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                 isActive
                   ? "bg-primary text-on-primary shadow-md"

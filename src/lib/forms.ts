@@ -441,8 +441,10 @@ export interface TextConfig {
 /* -- Address types -------------------------------------------------------- */
 
 export interface AddressConfig {
-  /** Input mode: manual fields or Google Places autocomplete */
+  /** Input mode: manual fields or autocomplete */
   mode?: "manual" | "autocomplete";
+  /** Autocomplete provider: google (Google Places API) or openstreetmap (Nominatim) */
+  autocompleteProvider?: "google" | "openstreetmap";
   /** Region scope for autocomplete: "us" restricts to US, "international" allows worldwide */
   region?: "us" | "international";
   /** Which address sub-fields to collect */

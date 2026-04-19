@@ -78,21 +78,36 @@ export default async function SubmissionPage({ params }: Props) {
     }
   }
 
-  // Fetch Google Maps API key for address autocomplete
+  // Fetch geocoding provider + API key for address autocomplete
   const hasAutocompleteAddress = schema.steps.some((s) => s.fields.some((f) => f.type === "address" && f.addressConfig?.mode === "autocomplete"));
   let googleMapsApiKey: string | null = null;
+  let geocodingProvider: "google" | "openstreetmap" | null = null;
   if (hasAutocompleteAddress) {
-    // Try partner-level Google integration first, fall back to platform env var
+    // Check which autocomplete provider the partner has configured
     try {
-      const { data: googleInt } = await admin
-        .from("google_integrations")
-        .select("api_key")
-        .eq("partner_id", partner.id)
-        .maybeSingle();
-      if (googleInt) googleMapsApiKey = googleInt.api_key;
+      const { data: geoRows } = await admin
+        .from("geocoding_integrations")
+        .select("provider, api_key_encrypted")
+        .eq("partner_id", partner.id);
+      if (geoRows && geoRows.length > 0) {
+        // Prefer Google if connected, otherwise use OpenStreetMap
+        const googleRow = geoRows.find((r) => r.provider === "google");
+        const osmRow = geoRows.find((r) => r.provider === "openstreetmap");
+        if (googleRow) {
+          geocodingProvider = "google";
+          if (googleRow.api_key_encrypted) {
+            const { decryptToken } = await import("@/lib/cloud/encryption");
+            googleMapsApiKey = decryptToken(googleRow.api_key_encrypted);
+          }
+        } else if (osmRow) {
+          geocodingProvider = "openstreetmap";
+        }
+      }
     } catch { /* table may not exist yet */ }
-    if (!googleMapsApiKey) {
-      googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY ?? null;
+    // Fall back to platform env var for Google
+    if (!geocodingProvider && process.env.GOOGLE_MAPS_API_KEY) {
+      geocodingProvider = "google";
+      googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
     }
   }
 
@@ -137,6 +152,7 @@ export default async function SubmissionPage({ params }: Props) {
         captchaSiteKey={captchaSiteKey}
         captchaProvider={captchaProvider}
         googleMapsApiKey={googleMapsApiKey}
+        geocodingProvider={geocodingProvider}
       />
 
       {/* Footer — only visible on desktop (mobile footer is less useful with sidebar layout) */}

@@ -28,6 +28,7 @@ interface Props {
   captchaSiteKey?: string | null;
   captchaProvider?: "recaptcha" | "turnstile" | null;
   googleMapsApiKey?: string | null;
+  geocodingProvider?: "google" | "openstreetmap" | null;
 }
 
 /* ── animation styles ──────────────────────────────────────── */
@@ -89,6 +90,7 @@ export default function SubmissionForm({
   captchaSiteKey,
   captchaProvider,
   googleMapsApiKey,
+  geocodingProvider,
 }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -282,7 +284,7 @@ export default function SubmissionForm({
     }
     return (
       <div key={f.id} className={`${colCls} ${animClass} sl-d${Math.min(i + 2, 5)}`}>
-        <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} captchaSiteKey={captchaSiteKey} captchaProvider={captchaProvider} captchaTokenRef={captchaTokenRef} hasPaymentGateway={hasPaymentGateway} />
+        <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} captchaSiteKey={captchaSiteKey} captchaProvider={captchaProvider} captchaTokenRef={captchaTokenRef} hasPaymentGateway={hasPaymentGateway} geocodingProvider={geocodingProvider} />
       </div>
     );
   };
@@ -2199,10 +2201,11 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
 
 function CelestialField({
   field, value, error, onChange, primaryColor, allData, partnerId,
-  captchaSiteKey, captchaProvider, captchaTokenRef, hasPaymentGateway,
+  captchaSiteKey, captchaProvider, captchaTokenRef, hasPaymentGateway, geocodingProvider,
 }: {
   field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>; partnerId?: string;
   captchaSiteKey?: string | null; captchaProvider?: "recaptcha" | "turnstile" | null; captchaTokenRef?: React.MutableRefObject<string | null>; hasPaymentGateway?: boolean;
+  geocodingProvider?: "google" | "openstreetmap" | null;
 }) {
   const str = (value as string) ?? "";
   const focusRing = { "--tw-ring-color": primaryColor + "66" } as React.CSSProperties;
@@ -3209,7 +3212,7 @@ function CelestialField({
     );
   }
 
-  /* ── Address (Google Places autocomplete) ── */
+  /* ── Address (autocomplete -- Google Places or OpenStreetMap Nominatim) ── */
   if (field.type === "address" && field.addressConfig?.mode === "autocomplete") {
     const addrFields = field.addressConfig.fields ?? ["street", "street2", "city", "state", "zip", "country"];
     let addr: Record<string, string> = {};
@@ -3221,12 +3224,24 @@ function CelestialField({
     const labels: Record<string, string> = { street: "Street Address", street2: "Address Line 2", city: "City", state: "State / Province", zip: "ZIP / Postal Code", country: "Country" };
     const placeholders: Record<string, string> = { street: "Start typing an address...", street2: "Apt, Suite, Unit (optional)", city: "City", state: "State", zip: "ZIP Code", country: "Country" };
     const usStates = field.addressConfig.region === "us" ? (COUNTRIES_DATA.find((c) => c.code === "US")?.states ?? []) : [];
+
+    // Determine which provider to use: field-level override > workspace-level prop
+    const resolvedProvider = field.addressConfig.autocompleteProvider ?? geocodingProvider ?? "google";
+
     // Google Places autocomplete ref
     const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
+
+    // OpenStreetMap Nominatim state
+    const [osmSuggestions, setOsmSuggestions] = useState<Array<{ display_name: string; address: Record<string, string> }>>([]);
+    const [osmOpen, setOsmOpen] = useState(false);
+    const osmTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+    // Google Places init
     useEffect(() => {
+      if (resolvedProvider !== "google") return;
       if (!inputRef.current || typeof google === "undefined" || !google.maps?.places) return;
-      if (autocompleteRef.current) return; // already initialized
+      if (autocompleteRef.current) return;
       const options: google.maps.places.AutocompleteOptions = {
         types: ["address"],
         fields: ["address_components", "formatted_address"],
@@ -3248,7 +3263,40 @@ function CelestialField({
         };
         onChange(JSON.stringify(next));
       });
-    }, [field.addressConfig?.region, onChange]);
+    }, [resolvedProvider, field.addressConfig?.region, onChange]);
+
+    // OpenStreetMap Nominatim debounced search
+    const osmSearch = useCallback((query: string) => {
+      if (osmTimerRef.current) clearTimeout(osmTimerRef.current);
+      if (!query || query.length < 3) { setOsmSuggestions([]); setOsmOpen(false); return; }
+      osmTimerRef.current = setTimeout(async () => {
+        try {
+          const countryParam = field.addressConfig?.region === "us" ? "&countrycodes=us" : "";
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}${countryParam}`, {
+            headers: { "Accept-Language": "en" },
+          });
+          if (!res.ok) return;
+          const results = await res.json();
+          setOsmSuggestions(results);
+          setOsmOpen(results.length > 0);
+        } catch { /* network error -- fail silently */ }
+      }, 350);
+    }, [field.addressConfig?.region]);
+
+    const selectOsmResult = (result: { display_name: string; address: Record<string, string> }) => {
+      const a = result.address;
+      const next: Record<string, string> = {
+        street: [a.house_number, a.road].filter(Boolean).join(" "),
+        city: a.city ?? a.town ?? a.village ?? a.hamlet ?? "",
+        state: a.state ?? "",
+        zip: a.postcode ?? "",
+        country: a.country_code?.toUpperCase() ?? "",
+      };
+      onChange(JSON.stringify(next));
+      setOsmOpen(false);
+      setOsmSuggestions([]);
+    };
+
     return (
       <div className="group">
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
@@ -3259,10 +3307,40 @@ function CelestialField({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Street field with autocomplete */}
           {addrFields.includes("street") && (
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 relative">
               <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 ml-0.5">{labels.street}</label>
-              <input ref={inputRef} type="text" placeholder={placeholders.street} value={addr.street ?? ""} onChange={(e) => updateAddr("street", e.target.value)}
-                className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} autoComplete="off" />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder={placeholders.street}
+                value={addr.street ?? ""}
+                onChange={(e) => {
+                  updateAddr("street", e.target.value);
+                  if (resolvedProvider === "openstreetmap") osmSearch(e.target.value);
+                }}
+                onFocus={() => { if (osmSuggestions.length > 0) setOsmOpen(true); }}
+                onBlur={() => { setTimeout(() => setOsmOpen(false), 200); }}
+                className={INPUT_CLS}
+                style={{ ...focusRing, borderColor: errBorder }}
+                autoComplete="off"
+              />
+              {/* OpenStreetMap suggestions dropdown */}
+              {resolvedProvider === "openstreetmap" && osmOpen && osmSuggestions.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                  {osmSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectOsmResult(s)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high/50 transition-colors border-b border-outline-variant/10 last:border-0"
+                    >
+                      <i className="fa-solid fa-location-dot text-[10px] text-primary/60 mr-2" />
+                      {s.display_name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {addrFields.includes("street2") && (
@@ -3313,10 +3391,16 @@ function CelestialField({
             </div>
           )}
         </div>
-        {typeof google === "undefined" && (
+        {resolvedProvider === "google" && typeof google === "undefined" && (
           <p className="text-[10px] text-on-surface-variant/50 mt-2 ml-1">
             <i className="fa-solid fa-circle-info mr-1" />
             Google Places autocomplete is not loaded. Address can still be entered manually.
+          </p>
+        )}
+        {resolvedProvider === "openstreetmap" && (
+          <p className="text-[10px] text-on-surface-variant/40 mt-2 ml-1">
+            <i className="fa-solid fa-map mr-1" />
+            Powered by OpenStreetMap
           </p>
         )}
         {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
