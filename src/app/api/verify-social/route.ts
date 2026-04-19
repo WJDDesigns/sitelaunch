@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimiter } from "@/lib/rate-limit";
 
 /**
  * GET /api/verify-social?platform=instagram&handle=username
@@ -23,6 +24,15 @@ const PLATFORM_URLS: Record<string, (handle: string) => string> = {
 };
 
 export async function GET(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`verify-social:${ip}`, 30, 60);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   const platform = req.nextUrl.searchParams.get("platform");
   const handle = req.nextUrl.searchParams.get("handle");
 

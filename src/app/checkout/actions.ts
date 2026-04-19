@@ -144,7 +144,8 @@ export async function createCheckoutSessionAction(
     .update({ stripe_customer_id: customerId })
     .eq("id", account.id);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is not set");
 
   const checkoutParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     customer: customerId,

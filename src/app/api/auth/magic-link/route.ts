@@ -21,10 +21,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate callbackUrl against our own origin to prevent open redirect
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
+  let safeCallback: string | undefined;
+  if (callbackUrl && typeof callbackUrl === "string" && appUrl) {
+    try {
+      const callbackOrigin = new URL(callbackUrl).origin;
+      const appOrigin = new URL(appUrl).origin;
+      if (callbackOrigin === appOrigin) {
+        safeCallback = callbackUrl;
+      }
+    } catch {
+      // Invalid URL, ignore
+    }
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: callbackUrl },
+    options: { emailRedirectTo: safeCallback },
   });
 
   if (error) {

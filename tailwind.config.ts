@@ -65,9 +65,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        headline: ['"Plus Jakarta Sans"', "sans-serif"],
-        body: ['"Inter"', "sans-serif"],
-        label: ['"Inter"', "sans-serif"],
+        headline: ["var(--font-jakarta)", '"Plus Jakarta Sans"', "sans-serif"],
+        body: ["var(--font-inter)", '"Inter"', "sans-serif"],
+        label: ["var(--font-inter)", '"Inter"', "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "0.125rem",

@@ -102,7 +102,7 @@ export default function SubmissionForm({
   const [showDone, setShowDone] = useState(false);
   const [devMode, setDevMode] = useState(false);
   const logoClickRef = useRef(0);
-  const logoTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const logoTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
   const captchaTokenRef = useRef<string | null>(null);
 
@@ -1619,6 +1619,10 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor, 
                           <div className="text-[11px] text-on-surface leading-relaxed whitespace-pre-line [&>p]:mb-1.5"
                             dangerouslySetInnerHTML={{
                               __html: entry.analysis.aiSnapshot
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")
+                                .replace(/"/g, "&quot;")
                                 .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-on-surface font-semibold">$1</strong>')
                             }}
                           />
@@ -3235,7 +3239,7 @@ function CelestialField({
     // OpenStreetMap Nominatim state
     const [osmSuggestions, setOsmSuggestions] = useState<Array<{ display_name: string; address: Record<string, string> }>>([]);
     const [osmOpen, setOsmOpen] = useState(false);
-    const osmTimerRef = useRef<ReturnType<typeof setTimeout>>();
+    const osmTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     // Google Places init
     useEffect(() => {

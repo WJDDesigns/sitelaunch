@@ -86,6 +86,13 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   );
 }
 
+/* Recharts renders SVG inline attrs where CSS var() doesn't resolve.
+   Use hardcoded colors that match the dark theme design tokens. */
+const PRIMARY = "#696cf8";
+const TERTIARY = "#3ec9a8";
+const TICK_COLOR = "rgb(199 198 203 / 0.5)";
+const GRID_COLOR = "rgb(228 226 230 / 0.06)";
+
 export default function AnalyticsCharts({ chartData, funnelData, topPages, stats }: Props) {
   return (
     <div className="space-y-8">
@@ -98,31 +105,31 @@ export default function AnalyticsCharts({ chartData, funnelData, topPages, stats
       </div>
 
       {/* Views chart */}
-      <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6">
+      <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6 overflow-hidden">
         <h2 className="text-sm font-bold text-on-surface mb-4">Page views (last 30 days)</h2>
         {stats.totalViews > 0 ? (
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
                 <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(var(--color-primary))" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="rgb(var(--color-primary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="uniqueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(var(--color-tertiary))" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="rgb(var(--color-tertiary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor={TERTIARY} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={TERTIARY} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--color-on-surface) / 0.06)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: "rgb(var(--color-on-surface-variant) / 0.5)" }}
+                tick={{ fontSize: 10, fill: TICK_COLOR }}
                 tickLine={false}
                 axisLine={false}
                 interval={Math.max(Math.floor(chartData.length / 7) - 1, 0)}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: "rgb(var(--color-on-surface-variant) / 0.5)" }}
+                tick={{ fontSize: 10, fill: TICK_COLOR }}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
@@ -132,7 +139,7 @@ export default function AnalyticsCharts({ chartData, funnelData, topPages, stats
                 type="monotone"
                 dataKey="views"
                 name="Total views"
-                stroke="rgb(var(--color-primary))"
+                stroke={PRIMARY}
                 strokeWidth={2}
                 fill="url(#viewsGrad)"
               />
@@ -140,7 +147,7 @@ export default function AnalyticsCharts({ chartData, funnelData, topPages, stats
                 type="monotone"
                 dataKey="unique"
                 name="Unique"
-                stroke="rgb(var(--color-tertiary))"
+                stroke={TERTIARY}
                 strokeWidth={2}
                 fill="url(#uniqueGrad)"
               />
@@ -158,7 +165,7 @@ export default function AnalyticsCharts({ chartData, funnelData, topPages, stats
       {/* Form funnel + top pages side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form funnel */}
-        <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6">
+        <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6 overflow-hidden">
           <h2 className="text-sm font-bold text-on-surface mb-4">Form conversion funnel</h2>
           {funnelData.length > 0 ? (
             <div className="space-y-4">
@@ -201,7 +208,7 @@ export default function AnalyticsCharts({ chartData, funnelData, topPages, stats
         </div>
 
         {/* Top pages */}
-        <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6">
+        <div className="bg-surface-container/60 backdrop-blur-md rounded-2xl border border-outline-variant/15 p-6 overflow-hidden">
           <h2 className="text-sm font-bold text-on-surface mb-4">Top pages</h2>
           {topPages.length > 0 ? (
             <div className="space-y-2">

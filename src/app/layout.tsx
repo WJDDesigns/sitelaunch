@@ -1,10 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
 import CookieConsent from "@/components/CookieConsent";
 import type { ThemeMode } from "@/components/ThemeProvider";
 import "./globals.css";
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { default: "linqme | Forms, Entries & Insights for Agencies", template: "%s · linqme" },
@@ -63,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isDark = savedTheme === "dark" || savedTheme === "auto";
 
   return (
-    <html lang="en" className={isDark ? "dark" : ""} suppressHydrationWarning>
+    <html lang="en" className={`${isDark ? "dark" : ""} ${jakarta.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         {/* Inline script to prevent flash of wrong theme */}
         <script
@@ -71,10 +86,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: `(function(){try{var t=document.cookie.match(/theme=([^;]+)/);var m=t?t[1]:"dark";var d=m==="dark"||(m==="auto"&&window.matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`,
           }}
         />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
+        {/* Google Fonts loaded via next/font (see imports above) */}
         <link
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
           rel="stylesheet"

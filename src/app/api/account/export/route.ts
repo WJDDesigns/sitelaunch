@@ -39,7 +39,8 @@ export async function GET() {
           "id, client_name, client_email, status, data, submitted_at, created_at"
         )
         .eq("partner_id", account.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(5000);
       submissions = data ?? [];
     }
 
@@ -94,8 +95,9 @@ export async function GET() {
       },
     });
   } catch (e) {
+    console.error("[account/export] Export failed:", (e as Error).message);
     return NextResponse.json(
-      { error: (e as Error).message },
+      { error: "Failed to generate data export. Please try again." },
       { status: 500 }
     );
   }

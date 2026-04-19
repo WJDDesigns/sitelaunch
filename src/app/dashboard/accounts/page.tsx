@@ -19,14 +19,15 @@ export default async function AccountsPage() {
 
   const { data: accounts } = await query.limit(500);
 
-  // Get submission counts per email
+  // Get submission counts per email using a targeted query (only matching emails)
   const emails = (accounts ?? []).map((a) => a.email).filter(Boolean);
   let submissionCounts: Record<string, number> = {};
 
   if (emails.length > 0) {
     let subQuery = admin
       .from("submissions")
-      .select("client_email");
+      .select("client_email")
+      .in("client_email", emails);
 
     if (session.role !== "superadmin" && account) {
       subQuery = subQuery.eq("partner_id", account.id);

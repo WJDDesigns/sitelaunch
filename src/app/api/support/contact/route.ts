@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/email";
 import { emailTemplate, escapeHtml, getRenderedEmail } from "@/lib/email-templates";
+import { rateLimiter } from "@/lib/rate-limit";
 
 const VALID_SUBJECTS = [
   "Bug Report",
@@ -11,6 +12,15 @@ const VALID_SUBJECTS = [
 ];
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`support-contact:${ip}`, 5, 60);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   try {
     const body = await request.json();
     const { name, email, subject, message } = body;

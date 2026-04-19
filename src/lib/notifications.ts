@@ -191,6 +191,29 @@ export async function createNotification(
   }
 }
 
+/** Batch-insert notifications for multiple users in a single query. */
+export async function createNotificationBatch(
+  userIds: string[],
+  type: string,
+  title: string,
+  message: string,
+  link?: string
+): Promise<void> {
+  if (userIds.length === 0) return;
+  const admin = createAdminClient();
+  const rows = userIds.map((uid) => ({
+    user_id: uid,
+    type,
+    title,
+    message,
+    link: link ?? null,
+  }));
+  const { error } = await admin.from("notifications").insert(rows);
+  if (error) {
+    console.error("[notifications] createNotificationBatch failed:", error.message);
+  }
+}
+
 /**
  * Higher-level notification helpers that compose data + email templates.
  *
@@ -307,15 +330,13 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
       .eq("partner_id", sub.partner_id);
 
     if (members && members.length > 0) {
-      for (const member of members) {
-        await createNotification(
-          member.user_id,
-          "submission",
-          `New submission from ${clientName}`,
-          `${clientName} submitted their onboarding form.`,
-          `/dashboard/submissions/${sub.id}`,
-        );
-      }
+      await createNotificationBatch(
+        members.map((m) => m.user_id),
+        "submission",
+        `New submission from ${clientName}`,
+        `${clientName} submitted their onboarding form.`,
+        `/dashboard/submissions/${sub.id}`,
+      );
     }
   }
 
@@ -377,15 +398,13 @@ export async function notifyPartnerOfSubmission(submissionId: string): Promise<v
           .eq("role", "partner_owner");
 
         if (agencyOwners && agencyOwners.length > 0) {
-          for (const owner of agencyOwners) {
-            await createNotification(
-              owner.user_id,
-              "submission",
-              `New submission from ${clientName} via ${partner.name}`,
-              `${clientName} submitted their onboarding form via ${partner.name}.`,
-              `/dashboard/submissions/${sub.id}`,
-            );
-          }
+          await createNotificationBatch(
+            agencyOwners.map((o) => o.user_id),
+            "submission",
+            `New submission from ${clientName} via ${partner.name}`,
+            `${clientName} submitted their onboarding form via ${partner.name}.`,
+            `/dashboard/submissions/${sub.id}`,
+          );
         }
       }
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPartnerAI, aiComplete } from "@/lib/ai";
+import { rateLimiter } from "@/lib/rate-limit";
 
 /**
  * POST /api/competitor-analyze
@@ -8,10 +9,35 @@ import { getPartnerAI, aiComplete } from "@/lib/ai";
  * Fetches a competitor website, extracts key information, and generates
  * an AI-powered competitive snapshot when the partner has an AI provider connected.
  *
- * This endpoint is intentionally public (no auth) because it is called from
- * the public-facing submission form on client subdomains.
+ * Rate-limited to prevent abuse (called from public submission forms).
  */
+
+/** Block private/reserved IP ranges to prevent SSRF */
+function isPrivateHost(hostname: string): boolean {
+  // Block localhost variants
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") return true;
+  // Block private IP ranges
+  if (/^10\./.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+  if (/^192\.168\./.test(hostname)) return true;
+  // Block link-local and metadata endpoints
+  if (/^169\.254\./.test(hostname)) return true;
+  if (hostname === "metadata.google.internal") return true;
+  // Block 0.0.0.0
+  if (hostname === "0.0.0.0") return true;
+  return false;
+}
+
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`competitor-analyze:${ip}`, 10, 60);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   let body: { url: string; partnerId?: string };
   try {
     body = await req.json();
@@ -33,6 +59,11 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
+
+  // Block private/internal hosts to prevent SSRF
+  if (isPrivateHost(parsed.hostname)) {
+    return NextResponse.json({ error: "URL not allowed" }, { status: 400 });
   }
 
   try {

@@ -21,9 +21,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate redirectTo against our own origin to prevent open redirect
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
+  let safeRedirect: string | undefined;
+  if (redirectTo && typeof redirectTo === "string" && appUrl) {
+    try {
+      const redirectOrigin = new URL(redirectTo).origin;
+      const appOrigin = new URL(appUrl).origin;
+      if (redirectOrigin === appOrigin) {
+        safeRedirect = redirectTo;
+      }
+    } catch {
+      // Invalid URL, ignore
+    }
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo,
+    redirectTo: safeRedirect,
   });
 
   if (error) {

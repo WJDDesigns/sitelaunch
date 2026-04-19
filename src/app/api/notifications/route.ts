@@ -22,7 +22,8 @@ export async function GET() {
     .limit(50);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[notifications] GET failed:", error.message);
+    return NextResponse.json({ error: "Failed to load notifications." }, { status: 500 });
   }
 
   return NextResponse.json({ notifications: data });
@@ -57,7 +58,8 @@ export async function PATCH(req: NextRequest) {
       .eq("read", false);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[notifications] PATCH mark-all failed:", error.message);
+      return NextResponse.json({ error: "Failed to update notifications." }, { status: 500 });
     }
   } else if (Array.isArray(body.ids) && body.ids.length > 0) {
     const { error } = await supabase
@@ -67,7 +69,8 @@ export async function PATCH(req: NextRequest) {
       .in("id", body.ids);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[notifications] PATCH mark-ids failed:", error.message);
+      return NextResponse.json({ error: "Failed to update notifications." }, { status: 500 });
     }
   } else {
     return NextResponse.json(

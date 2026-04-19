@@ -7,9 +7,19 @@ import { logRequest } from "@/lib/request-logger";
 const hits = new Map<string, { count: number; resetAt: number }>();
 const RATE_WINDOW_MS = 60_000; // 1 minute
 const RATE_LIMIT = 100; // max requests per IP per window
+let lastPrune = Date.now();
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+
+  // Prune stale entries on-demand every 5 minutes (serverless-safe, no setInterval)
+  if (now - lastPrune > 300_000) {
+    lastPrune = now;
+    for (const [k, entry] of hits) {
+      if (now > entry.resetAt) hits.delete(k);
+    }
+  }
+
   const entry = hits.get(ip);
   if (!entry || now > entry.resetAt) {
     hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
@@ -18,14 +28,6 @@ function isRateLimited(ip: string): boolean {
   entry.count++;
   return entry.count > RATE_LIMIT;
 }
-
-// Periodically prune stale entries (every 5 minutes)
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of hits) {
-    if (now > entry.resetAt) hits.delete(ip);
-  }
-}, 300_000);
 
 /**
  * POST /api/analytics

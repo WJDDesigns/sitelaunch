@@ -132,7 +132,7 @@ export async function getRegistrationOptions(userId: string, userEmail: string) 
   const existingPasskeys = await getUserPasskeys(userId);
   const rpId = getRpId();
 
-  console.log("[passkey] getRegistrationOptions — rpId:", rpId, "user:", userEmail);
+  if (process.env.NODE_ENV === "development") console.log("[passkey] getRegistrationOptions -- rpId:", rpId);
 
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
@@ -167,7 +167,7 @@ export async function verifyAndStoreRegistration(
   const rpId = getRpId();
   const origins = getExpectedOrigins(requestOrigin);
 
-  console.log("[passkey] verify registration — rpId:", rpId, "origins:", origins, "requestOrigin:", requestOrigin);
+  if (process.env.NODE_ENV === "development") console.log("[passkey] verify registration -- rpId:", rpId);
 
   // Step 1: Verify the WebAuthn response
   let verification;
@@ -190,7 +190,7 @@ export async function verifyAndStoreRegistration(
     throw new Error("Passkey verification returned unverified");
   }
 
-  console.log("[passkey] verification succeeded, storing credential...");
+  if (process.env.NODE_ENV === "development") console.log("[passkey] verification succeeded, storing credential...");
 
   // Step 2: Store the credential in the database
   const { credential } = verification.registrationInfo;
@@ -217,7 +217,7 @@ export async function verifyAndStoreRegistration(
     throw new Error(`Failed to store passkey: ${insertError.message}`);
   }
 
-  console.log("[passkey] credential stored, updating profile...");
+  if (process.env.NODE_ENV === "development") console.log("[passkey] credential stored, updating profile...");
 
   // Step 3: Mark MFA as enabled on the profile
   const { error: profileError } = await admin
@@ -230,7 +230,7 @@ export async function verifyAndStoreRegistration(
     // Non-fatal — passkey is stored, just the flag wasn't set
   }
 
-  console.log("[passkey] registration complete for user:", userId);
+  if (process.env.NODE_ENV === "development") console.log("[passkey] registration complete");
   return verification;
 }
 

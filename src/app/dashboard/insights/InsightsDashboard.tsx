@@ -15,12 +15,17 @@ import type { Widget, WidgetType, ChartType, WidgetSize, WidgetOrientation, Aggr
    ================================================================ */
 
 const CHART_COLORS = [
-  "var(--color-primary-rgb, 105 108 248)",
+  "105 108 248",
   "34 197 94", "251 146 60", "168 85 247",
   "236 72 153", "14 165 233", "234 179 8", "239 68 68",
 ];
 
 function rgb(c: string) { return `rgb(${c})`; }
+
+/* Recharts sets SVG fill/stroke via inline attributes, so CSS var() doesn't
+   work reliably. Use hardcoded theme-appropriate colors for axis ticks. */
+const TICK_LIGHT = "rgb(199 198 203 / 0.6)";
+const TICK_DIM   = "rgb(199 198 203 / 0.4)";
 
 const SIZE_CLASSES: Record<WidgetSize, string> = {
   sm: "col-span-1 row-span-1",
@@ -932,8 +937,9 @@ function ChartWidget({ data, widget }: { data: { name: string; value: number }[]
   }
 
   const tooltipStyle = {
-    contentStyle: { background: "rgb(var(--color-surface-container))", border: "1px solid rgba(var(--color-outline-variant), 0.15)", borderRadius: 12 },
-    labelStyle: { color: "rgb(var(--color-on-surface))" },
+    contentStyle: { background: "#1a1c2e", border: "1px solid rgb(199 198 203 / 0.15)", borderRadius: 12 },
+    labelStyle: { color: "#e4e2e6" },
+    itemStyle: { color: "#c7c6cb" },
   };
 
   if (chartType === "pie" || chartType === "donut") {
@@ -941,7 +947,11 @@ function ChartWidget({ data, widget }: { data: { name: string; value: number }[]
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" innerRadius={chartType === "donut" ? "55%" : 0} outerRadius="80%" dataKey="value" nameKey="name" paddingAngle={2}
-            label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
+            label={({ name, percent, x, y, textAnchor }) => (
+              <text x={x} y={y} textAnchor={textAnchor} fill="#c7c6cb" fontSize={10} fontWeight={600}>
+                {name} {((percent ?? 0) * 100).toFixed(0)}%
+              </text>
+            )} labelLine={false}>
             {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
           </Pie>
           <Tooltip {...tooltipStyle} />
@@ -954,9 +964,9 @@ function ChartWidget({ data, widget }: { data: { name: string; value: number }[]
     return (
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data}>
-          <PolarGrid stroke="rgba(var(--color-outline-variant), 0.15)" />
-          <PolarAngleAxis dataKey="name" tick={{ fill: "rgba(var(--color-on-surface-variant), 0.6)", fontSize: 10 }} />
-          <PolarRadiusAxis tick={{ fill: "rgba(var(--color-on-surface-variant), 0.4)", fontSize: 9 }} />
+          <PolarGrid stroke="rgb(199 198 203 / 0.15)" />
+          <PolarAngleAxis dataKey="name" tick={{ fill: TICK_LIGHT, fontSize: 10 }} />
+          <PolarRadiusAxis tick={{ fill: TICK_DIM, fontSize: 9 }} />
           <Radar dataKey="value" fill={colors[0]} fillOpacity={0.3} stroke={colors[0]} />
         </RadarChart>
       </ResponsiveContainer>
@@ -968,9 +978,9 @@ function ChartWidget({ data, widget }: { data: { name: string; value: number }[]
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ChartComp data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--color-outline-variant), 0.1)" />
-        <XAxis dataKey="name" tick={{ fill: "rgba(var(--color-on-surface-variant), 0.5)", fontSize: 10 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fill: "rgba(var(--color-on-surface-variant), 0.4)", fontSize: 10 }} axisLine={false} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgb(199 198 203 / 0.1)" />
+        <XAxis dataKey="name" tick={{ fill: TICK_LIGHT, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: TICK_DIM, fontSize: 10 }} axisLine={false} tickLine={false} />
         <Tooltip {...tooltipStyle} />
         {chartType === "bar" && <Bar dataKey="value" fill={colors[0]} radius={[4, 4, 0, 0]} />}
         {chartType === "line" && <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={2} dot={{ fill: colors[0], r: 3 }} />}

@@ -83,7 +83,8 @@ export async function createCheckoutAction(planSlug: string, couponCode?: string
     .update({ stripe_customer_id: customerId })
     .eq("id", account.id);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is not set");
 
   const checkoutParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     customer: customerId,
@@ -279,7 +280,8 @@ export async function openCustomerPortalAction() {
     throw new Error("No Stripe customer found. Please subscribe to a plan first.");
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is not set");
 
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: partner.stripe_customer_id,
