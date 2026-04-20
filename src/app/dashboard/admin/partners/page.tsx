@@ -39,7 +39,7 @@ export default async function AdminPartnersPage({ searchParams }: PageProps) {
     query = query.eq("plan_tier", tier);
   }
 
-  const { data: partners, count } = await query.range(offset, offset + PAGE_SIZE - 1);
+  const { data: partners, count } = await query.limit(500).range(offset, offset + PAGE_SIZE - 1);
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
 
   // Get submission counts per partner this month

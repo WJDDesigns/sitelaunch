@@ -63,7 +63,7 @@ export async function getDashboard(): Promise<InsightDashboard | null> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("insight_dashboards")
-    .select("*")
+    .select("id, partner_id, name, widgets, created_at, updated_at")
     .eq("partner_id", account.id)
     .eq("name", "My Dashboard")
     .maybeSingle();

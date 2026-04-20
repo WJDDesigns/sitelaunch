@@ -22,7 +22,8 @@ export default async function InsightsPage() {
   const { data: dashboards } = await admin
     .from("insight_dashboards")
     .select("*")
-    .eq("partner_id", account.id);
+    .eq("partner_id", account.id)
+    .limit(50);
 
   // Build a map: tabKey → widgets
   const dashboardMap: Record<string, InsightDashboard> = {};

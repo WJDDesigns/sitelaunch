@@ -34,23 +34,24 @@ export default async function BillingPage() {
   // Find the current plan from DB
   const currentPlan = plans.find((p) => p.slug === currentTier) ?? plans[0];
 
-  // Fetch active subscription and recent invoices
+  // Fetch active subscription and recent invoices in parallel
   const admin = createAdminClient();
-  const { data: activeSub } = await admin
-    .from("subscriptions")
-    .select("id, plan_tier, status, current_period_end, cancel_at_period_end")
-    .eq("partner_id", account.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: recentInvoices } = await admin
-    .from("invoices")
-    .select("id, status, amount_paid, currency, invoice_url, invoice_pdf, paid_at, period_start, period_end")
-    .eq("partner_id", account.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data: activeSub }, { data: recentInvoices }] = await Promise.all([
+    admin
+      .from("subscriptions")
+      .select("id, plan_tier, status, current_period_end, cancel_at_period_end")
+      .eq("partner_id", account.id)
+      .in("status", ["active", "trialing", "past_due"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("invoices")
+      .select("id, status, amount_paid, currency, invoice_url, invoice_pdf, paid_at, period_start, period_end")
+      .eq("partner_id", account.id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
   const hasSubscription = !!activeSub;
   const isPastDue = activeSub?.status === "past_due";

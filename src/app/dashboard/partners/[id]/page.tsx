@@ -117,7 +117,7 @@ export default async function PartnerDetailPage({ params }: PageProps) {
               <ImpersonateButton partnerId={id} size="md" />
             )}
             <a
-              href={`http://${storefrontHost}`}
+              href={`https://${storefrontHost}`}
               target="_blank"
               rel="noreferrer"
               className="text-xs font-bold text-primary hover:underline"

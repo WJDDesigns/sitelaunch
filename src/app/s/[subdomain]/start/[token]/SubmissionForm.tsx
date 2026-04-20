@@ -1623,6 +1623,8 @@ function CompetitorAnalyzerField({ field, value, error, onChange, primaryColor, 
                                 .replace(/</g, "&lt;")
                                 .replace(/>/g, "&gt;")
                                 .replace(/"/g, "&quot;")
+                                .replace(/'/g, "&#39;")
+                                .replace(/`/g, "&#96;")
                                 .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-on-surface font-semibold">$1</strong>')
                             }}
                           />

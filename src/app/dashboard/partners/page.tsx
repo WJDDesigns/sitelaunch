@@ -168,7 +168,7 @@ export default async function PartnersPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       {isSuperadmin && <ImpersonateButton partnerId={p.id} />}
                       <a
-                        href={`http://${storefrontHost}`}
+                        href={`https://${storefrontHost}`}
                         target="_blank"
                         rel="noreferrer"
                         className="px-3 py-2 text-xs font-bold text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"

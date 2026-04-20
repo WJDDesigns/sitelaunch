@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireSession } from "@/lib/auth";
 
 /**
  * GET /api/notifications — returns the current user's last 50 notifications.
  */
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const session = await requireSession();
+    const supabase = await createClient();
 
-  if (!user) {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id, type, title, message, link, read, created_at")
+      .eq("user_id", session.userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("[notifications] GET failed:", error.message);
+      return NextResponse.json({ error: "Failed to load notifications." }, { status: 500 });
+    }
+
+    return NextResponse.json({ notifications: data });
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("id, type, title, message, link, read, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error) {
-    console.error("[notifications] GET failed:", error.message);
-    return NextResponse.json({ error: "Failed to load notifications." }, { status: 500 });
-  }
-
-  return NextResponse.json({ notifications: data });
 }
 
 /**
@@ -34,15 +33,12 @@ export async function GET() {
  * Body: { ids: string[] } or { all: true }
  */
 export async function PATCH(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  let session: Awaited<ReturnType<typeof requireSession>>;
+  try {
+    session = await requireSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -50,11 +46,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const supabase = await createClient();
+
   if (body.all === true) {
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })
-      .eq("user_id", user.id)
+      .eq("user_id", session.userId)
       .eq("read", false);
 
     if (error) {
@@ -65,7 +63,7 @@ export async function PATCH(req: NextRequest) {
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })
-      .eq("user_id", user.id)
+      .eq("user_id", session.userId)
       .in("id", body.ids);
 
     if (error) {

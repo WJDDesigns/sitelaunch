@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptToken } from "@/lib/cloud/encryption";
+import { rateLimiter } from "@/lib/rate-limit";
 
 const VALID_PROVIDERS = ["openai", "anthropic", "google_ai"] as const;
 type AIProvider = (typeof VALID_PROVIDERS)[number];
@@ -29,7 +30,13 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`ai-int:${ip}`, 20, 60);
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "60" } });
+  }
+
   try {
     const session = await requireSession();
     const account = await getCurrentAccount(session.userId);
@@ -74,7 +81,13 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`ai-int:${ip}`, 20, 60);
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "60" } });
+  }
+
   try {
     const session = await requireSession();
     const account = await getCurrentAccount(session.userId);

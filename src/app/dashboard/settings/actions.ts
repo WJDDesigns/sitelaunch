@@ -142,7 +142,8 @@ export async function updateWorkspaceWhiteLabelAction(formData: FormData) {
   const hide_branding = formData.get("hide_branding") === "true";
   const custom_footer_text = String(formData.get("custom_footer_text") ?? "").trim() || null;
   const logo_size = String(formData.get("logo_size") ?? "default");
-  const theme_mode = String(formData.get("theme_mode") ?? "dark");
+  const rawThemeMode = String(formData.get("theme_mode") ?? "dark");
+  const theme_mode = ["dark", "light", "auto"].includes(rawThemeMode) ? rawThemeMode : "dark";
 
   const admin = createAdminClient();
   const { error } = await admin

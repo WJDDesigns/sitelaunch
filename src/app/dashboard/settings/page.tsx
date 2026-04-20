@@ -50,20 +50,20 @@ export default async function SettingsPage() {
   const userAgent = headersList.get("user-agent") ?? null;
   const currentSessionId = await trackSession(session.userId, ip, userAgent);
 
-  // Fetch user profile for the profile section
+  // Fetch user profile and partner record in parallel
   const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("full_name, avatar_url")
-    .eq("id", session.userId)
-    .maybeSingle();
-
-  // Fetch full partner record for all branding sections
-  const { data: partner } = await admin
-    .from("partners")
-    .select("*")
-    .eq("id", account.id)
-    .maybeSingle();
+  const [{ data: profile }, { data: partner }] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", session.userId)
+      .maybeSingle(),
+    admin
+      .from("partners")
+      .select("*")
+      .eq("id", account.id)
+      .maybeSingle(),
+  ]);
 
   const rootHost = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "linqme.io").replace(/:\d+$/, "");
 
@@ -160,37 +160,42 @@ export default async function SettingsPage() {
   /* ─────────────────────────────────────────────
      Tab: Integrations - Cloud storage connections
      ───────────────────────────────────────────── */
-  const { data: cloudIntegrations } = await admin
-    .from("cloud_integrations")
-    .select("id, provider, account_email, connected_at")
-    .eq("partner_id", account.id);
-
-  const { data: aiIntegrationRows } = await admin
-    .from("ai_integrations")
-    .select("id, provider, model_preference, connected_at")
-    .eq("partner_id", account.id);
-
-  // Payment integrations
-  const { data: paymentIntegrationRows } = await admin
-    .from("payment_integrations")
-    .select("id, provider, connected_at, account_email, stripe_account_id")
-    .eq("partner_id", account.id);
-
-  // Captcha integrations
-  const { data: captchaIntegrationRows } = await admin
-    .from("captcha_integrations")
-    .select("id, provider, connected_at")
-    .eq("partner_id", account.id);
-
-  // Geocoding / address autocomplete integrations
-  let geocodingIntegrationRows: { id: string; provider: string; connected_at: string }[] = [];
-  try {
-    const { data } = await admin
-      .from("geocoding_integrations")
+  const [
+    { data: cloudIntegrations },
+    { data: aiIntegrationRows },
+    { data: paymentIntegrationRows },
+    { data: captchaIntegrationRows },
+    geocodingResult,
+  ] = await Promise.all([
+    admin
+      .from("cloud_integrations")
+      .select("id, provider, account_email, connected_at")
+      .eq("partner_id", account.id),
+    admin
+      .from("ai_integrations")
+      .select("id, provider, model_preference, connected_at")
+      .eq("partner_id", account.id),
+    // Payment integrations
+    admin
+      .from("payment_integrations")
+      .select("id, provider, connected_at, account_email, stripe_account_id")
+      .eq("partner_id", account.id),
+    // Captcha integrations
+    admin
+      .from("captcha_integrations")
       .select("id, provider, connected_at")
-      .eq("partner_id", account.id);
-    geocodingIntegrationRows = data ?? [];
-  } catch { /* table may not exist yet */ }
+      .eq("partner_id", account.id),
+    // Geocoding / address autocomplete integrations (table may not exist yet)
+    Promise.resolve(
+      admin
+        .from("geocoding_integrations")
+        .select("id, provider, connected_at")
+        .eq("partner_id", account.id),
+    ).catch(() => ({ data: null, error: null, count: null, status: 200, statusText: "OK" })),
+  ]);
+
+  const geocodingIntegrationRows: { id: string; provider: string; connected_at: string }[] =
+    (geocodingResult?.data ?? []) as { id: string; provider: string; connected_at: string }[];
 
   /* ─────────────────────────────────────────────
      Tab: Changelog -- Release notes

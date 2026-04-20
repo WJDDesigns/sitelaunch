@@ -15,7 +15,7 @@ export async function GET() {
 
     if (error) {
       return NextResponse.json(
-        { status: "degraded", error: "Database query failed", ms: Math.round(performance.now() - start) },
+        { status: "degraded", ms: Math.round(performance.now() - start) },
         { status: 503 },
       );
     }

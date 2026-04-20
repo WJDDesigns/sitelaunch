@@ -20,7 +20,7 @@ const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/gif",
   "image/webp",
-  "image/svg+xml",
+  // SVG excluded: browsers execute embedded scripts when opened directly
   // Video/audio
   "video/mp4",
   "video/quicktime",
@@ -34,7 +34,7 @@ const ALLOWED_TYPES = new Set([
 /** Also allow by extension for cases where MIME type is unreliable */
 const ALLOWED_EXTENSIONS = new Set([
   ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".pptx", ".txt", ".csv",
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp",
   ".mp4", ".mov", ".mp3", ".wav",
   ".zip",
 ]);

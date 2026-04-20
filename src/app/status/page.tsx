@@ -56,7 +56,8 @@ export default async function StatusPage() {
     .from("status_updates")
     .select("id, title, message, severity, component, is_resolved, resolved_at, created_at")
     .gte("created_at", thirtyDaysAgo.toISOString())
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   const statusUpdates = (updates ?? []) as StatusUpdate[];
   const overallStatus = getOverallStatus(statusUpdates);

@@ -10,7 +10,8 @@ export default async function EmailTemplatesPage() {
   const { data: templates } = await admin
     .from("email_templates")
     .select("*")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(100);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-10 py-8 space-y-8">

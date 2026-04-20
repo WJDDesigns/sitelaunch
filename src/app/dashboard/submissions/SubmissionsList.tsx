@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -67,6 +67,13 @@ export default function SubmissionsList({ submissions, isSuperadmin, partners, f
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [sortCol, setSortCol] = useState<"client" | "partner" | "status" | "date">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const actionMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (actionMsgTimerRef.current !== null) clearTimeout(actionMsgTimerRef.current);
+    };
+  }, []);
 
   function handleSort(col: "client" | "partner" | "status" | "date") {
     if (sortCol === col) {
@@ -147,7 +154,8 @@ export default function SubmissionsList({ submissions, isSuperadmin, partners, f
         setConfirmDelete(null);
         setConfirmBulkDelete(false);
         router.refresh();
-        setTimeout(() => setActionMsg(null), 3000);
+        if (actionMsgTimerRef.current !== null) clearTimeout(actionMsgTimerRef.current);
+        actionMsgTimerRef.current = setTimeout(() => setActionMsg(null), 3000);
       } catch (e) {
         setActionMsg((e as Error).message);
       }

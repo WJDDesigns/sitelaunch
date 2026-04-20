@@ -55,6 +55,7 @@ export default async function MyCustomersPage() {
         .eq("partner_id", account.id)
         .eq("is_active", true)
         .order("name")
+        .limit(200)
     : { data: [] };
 
   const formOptions = (forms ?? []).map((f) => ({

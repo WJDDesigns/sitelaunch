@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateSubmissionStatusAction,
@@ -27,6 +27,13 @@ export default function SubmissionActions({ submissionId, currentStatus }: Props
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (msgTimerRef.current !== null) clearTimeout(msgTimerRef.current);
+    };
+  }, []);
 
   function handleStatusChange(status: string) {
     setMsg(null);
@@ -38,7 +45,8 @@ export default function SubmissionActions({ submissionId, currentStatus }: Props
         );
         setMsg("Status updated.");
         router.refresh();
-        setTimeout(() => setMsg(null), 3000);
+        if (msgTimerRef.current !== null) clearTimeout(msgTimerRef.current);
+        msgTimerRef.current = setTimeout(() => setMsg(null), 3000);
       } catch (e) {
         setMsg((e as Error).message);
       }

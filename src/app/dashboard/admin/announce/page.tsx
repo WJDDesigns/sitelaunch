@@ -14,7 +14,8 @@ export default async function AnnouncePage() {
   const { data: announcements } = await admin
     .from("announcements")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   const statusUpdates = await getStatusUpdates();
 

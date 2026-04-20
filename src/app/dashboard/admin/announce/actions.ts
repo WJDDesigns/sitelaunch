@@ -154,7 +154,7 @@ export async function getActiveAnnouncements(
   // Fetch all active announcements within their schedule window
   const { data: announcements } = await admin
     .from("announcements")
-    .select("*")
+    .select("id, title, message, icon, type, audience, is_active, scheduled_at, expires_at, created_by, created_at")
     .eq("is_active", true)
     .or(`scheduled_at.is.null,scheduled_at.lte.${now}`)
     .or(`expires_at.is.null,expires_at.gte.${now}`)

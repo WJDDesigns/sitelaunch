@@ -86,7 +86,7 @@ export async function getStatusUpdates(): Promise<StatusUpdateRow[]> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("status_updates")
-    .select("*")
+    .select("id, title, message, severity, component, is_resolved, resolved_at, created_by, created_at, updated_at")
     .order("created_at", { ascending: false })
     .limit(50);
   return (data ?? []) as StatusUpdateRow[];

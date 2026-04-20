@@ -58,22 +58,34 @@ export default async function SubmissionDetailPage({ params }: Props) {
   type FileRow = NonNullable<typeof fileRows>[number] & { url: string | null };
   const filesByField: Record<string, FileRow[]> = {};
   const allFiles: (FileRow & { fieldLabel: string })[] = [];
-  for (const f of fileRows ?? []) {
-    const { data: signed } = await supabase.storage
-      .from("submissions")
-      .createSignedUrl(f.storage_path, 60 * 60);
-    const enriched: FileRow = { ...f, url: signed?.signedUrl ?? null };
-    (filesByField[f.field_key] ||= []).push(enriched);
 
-    // Find field label from schema
-    let fieldLabel = f.field_key;
-    if (schema) {
-      for (const step of schema.steps) {
-        const field = step.fields.find((fd) => fd.id === f.field_key);
-        if (field) { fieldLabel = field.label; break; }
-      }
+  if ((fileRows ?? []).length > 0) {
+    const { data: signedResults } = await supabase.storage
+      .from("submissions")
+      .createSignedUrls(
+        fileRows!.map((f) => f.storage_path),
+        60 * 60,
+      );
+
+    const urlByPath: Record<string, string | null> = {};
+    for (const r of signedResults ?? []) {
+      if (r.path) urlByPath[r.path] = r.signedUrl ?? null;
     }
-    allFiles.push({ ...enriched, fieldLabel });
+
+    for (const f of fileRows!) {
+      const enriched: FileRow = { ...f, url: urlByPath[f.storage_path] ?? null };
+      (filesByField[f.field_key] ||= []).push(enriched);
+
+      // Find field label from schema
+      let fieldLabel = f.field_key;
+      if (schema) {
+        for (const step of schema.steps) {
+          const field = step.fields.find((fd) => fd.id === f.field_key);
+          if (field) { fieldLabel = field.label; break; }
+        }
+      }
+      allFiles.push({ ...enriched, fieldLabel });
+    }
   }
 
   function prettySize(bytes: number | null): string {
@@ -222,8 +234,12 @@ export default async function SubmissionDetailPage({ params }: Props) {
                                 <div className="text-sm text-on-surface leading-relaxed whitespace-pre-line"
                                   dangerouslySetInnerHTML={{
                                     __html: comp.analysis.aiSnapshot
+                                      .replace(/&/g, "&amp;")
                                       .replace(/</g, "&lt;")
                                       .replace(/>/g, "&gt;")
+                                      .replace(/"/g, "&quot;")
+                                      .replace(/'/g, "&#39;")
+                                      .replace(/`/g, "&#96;")
                                       .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold">$1</strong>')
                                   }}
                                 />
