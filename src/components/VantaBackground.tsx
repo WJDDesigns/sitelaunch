@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
+declare global {
+  interface Window {
+    VANTA?: { FOG: (opts: Record<string, unknown>) => { destroy: () => void } };
+    THREE?: unknown;
+  }
+}
+
 /**
  * Vanta.js FOG animated background for auth pages.
  * Loads three.js + vanta.fog.min.js from CDN.
@@ -9,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
  */
 export default function VantaBackground() {
   const vantaRef = useRef<HTMLDivElement>(null);
-  const effectRef = useRef<unknown>(null);
+  const effectRef = useRef<{ destroy: () => void } | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -40,13 +47,12 @@ export default function VantaBackground() {
 
         if (cancelled || !vantaRef.current) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const VANTA = (window as any).VANTA;
+        const VANTA = window.VANTA;
         if (!VANTA?.FOG) return;
 
         effectRef.current = VANTA.FOG({
           el: vantaRef.current,
-          THREE: (window as any).THREE,
+          THREE: window.THREE,
           mouseControls: true,
           touchControls: true,
           gyroControls: false,
@@ -69,11 +75,8 @@ export default function VantaBackground() {
 
     return () => {
       cancelled = true;
-      if (
-        effectRef.current &&
-        typeof (effectRef.current as any).destroy === "function"
-      ) {
-        (effectRef.current as any).destroy();
+      if (effectRef.current) {
+        effectRef.current.destroy();
       }
     };
   }, []);

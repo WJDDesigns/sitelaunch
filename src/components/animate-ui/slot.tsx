@@ -29,8 +29,7 @@ function mergeRefs<T>(
       if (typeof ref === "function") {
         ref(node);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (ref as any).current = node;
+        (ref as React.MutableRefObject<typeof node>).current = node;
       }
     });
   };
