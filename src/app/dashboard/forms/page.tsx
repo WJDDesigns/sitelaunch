@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSession, getPartnerMemberContext } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FormSchema } from "@/lib/forms";
+import EmbedButton from "@/app/dashboard/form/EmbedButton";
 
 export default async function PartnerFormsReadOnlyPage() {
   const session = await requireSession();
@@ -130,6 +131,7 @@ export default async function PartnerFormsReadOnlyPage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <EmbedButton formUrl={formUrl} formName={form.name} />
                       <a
                         href={formUrl}
                         target="_blank"

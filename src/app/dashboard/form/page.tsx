@@ -7,6 +7,7 @@ import type { FormSchema } from "@/lib/forms";
 import CreateFormButton from "./CreateFormButton";
 import LandingModeToggle from "./LandingModeToggle";
 import FormSettingsPanel from "./[formId]/FormSettingsPanel";
+import EmbedButton from "./EmbedButton";
 
 export default async function FormsListPage() {
   const session = await requireSession();
@@ -187,6 +188,9 @@ export default async function FormsListPage() {
                         themeMode={(partner?.theme_mode as "dark" | "light" | "auto") ?? "dark"}
                         layoutStyle={(form.layout_style as "default" | "top-nav" | "no-nav" | "conversation") ?? "default"}
                       />
+                      {(account.planType === "agency" || account.planType === "agency_plus_partners") && (
+                        <EmbedButton formUrl={formUrl} formName={form.name} />
+                      )}
                       <a
                         href={formUrl}
                         target="_blank"

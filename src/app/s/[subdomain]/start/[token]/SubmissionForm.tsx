@@ -30,6 +30,7 @@ interface Props {
   captchaProvider?: "recaptcha" | "turnstile" | null;
   googleMapsApiKey?: string | null;
   geocodingProvider?: "google" | "openstreetmap" | null;
+  embedMode?: "branded" | "chromeless";
 }
 
 /* ── animation styles ──────────────────────────────────────── */
@@ -92,6 +93,7 @@ export default function SubmissionForm({
   captchaProvider,
   googleMapsApiKey,
   geocodingProvider,
+  embedMode,
 }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -102,6 +104,7 @@ export default function SubmissionForm({
   const [transitioning, setTransitioning] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [devMode, setDevMode] = useState(false);
+  const isChromeless = embedMode === "chromeless";
   const logoClickRef = useRef(0);
   const logoTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -383,6 +386,7 @@ export default function SubmissionForm({
         {/* Slim top bar with branding + progress */}
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-outline-variant/10">
           <div className="max-w-2xl mx-auto flex items-center justify-between px-6 py-3">
+            {!isChromeless && (
             <div className="flex items-center gap-2.5 cursor-default select-none" onClick={handleLogoClick}>
               {partnerLogoUrl ? (
                 <Image src={partnerLogoUrl} alt={partnerName} width={120} height={32} className="h-6 w-auto object-contain" draggable={false} />
@@ -396,6 +400,7 @@ export default function SubmissionForm({
                 <span className="text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">dev</span>
               )}
             </div>
+            )}
             <span className="text-xs font-bold" style={{ color: primaryColor }}>
               {convoIdx + 1} / {allConvoFields.length}
             </span>
@@ -465,6 +470,7 @@ export default function SubmissionForm({
         {/* Top navigation bar */}
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-outline-variant/15">
           {/* Branding row */}
+          {!isChromeless && (
           <div className="flex items-center justify-between px-6 pt-4 pb-2">
             <div className="flex items-center gap-2.5 cursor-default select-none" onClick={handleLogoClick}>
               {partnerLogoUrl ? (
@@ -483,6 +489,7 @@ export default function SubmissionForm({
               {Math.round(((completedSteps.size) / visibleSteps.length) * 100)}%
             </span>
           </div>
+          )}
 
           {/* Horizontal step tabs */}
           <div className="flex items-center gap-1 px-4 pb-3 overflow-x-auto scrollbar-hide">
@@ -561,6 +568,7 @@ export default function SubmissionForm({
     return (
       <div className="flex flex-col min-h-screen" ref={containerRef}>
         {/* Minimal branding header */}
+        {!isChromeless && (
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl">
           <div className="max-w-3xl mx-auto flex items-center justify-between px-6 py-3">
             <div className="flex items-center gap-2.5 cursor-default select-none" onClick={handleLogoClick}>
@@ -583,6 +591,7 @@ export default function SubmissionForm({
           </div>
           <div className="h-px w-full bg-outline-variant/10" />
         </div>
+        )}
 
         {/* Main Content */}
         <main className="flex-1 min-w-0">
@@ -621,6 +630,7 @@ export default function SubmissionForm({
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex flex-col w-[300px] lg:w-[340px] shrink-0 border-r border-outline-variant/15 bg-surface-container/50 sticky top-0 h-screen overflow-y-auto">
         {/* Partner branding */}
+        {!isChromeless && (
         <div className="px-6 pt-8 pb-6 border-b border-outline-variant/10">
           <div className="flex items-center gap-3 cursor-default select-none" onClick={handleLogoClick}>
             {partnerLogoUrl ? (
@@ -645,6 +655,7 @@ export default function SubmissionForm({
             )}
           </div>
         </div>
+        )}
 
         {/* Progress bar */}
         <div className="px-6 pt-5">
@@ -746,6 +757,7 @@ export default function SubmissionForm({
       {/* ── Mobile Top Bar ── */}
       <div className="md:hidden sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-outline-variant/15">
         {/* Partner row */}
+        {!isChromeless && (
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2.5 min-w-0 cursor-default select-none" onClick={handleLogoClick}>
             {partnerLogoUrl ? (
@@ -773,6 +785,7 @@ export default function SubmissionForm({
             {stepIdx + 1}/{visibleSteps.length}
           </span>
         </div>
+        )}
 
         {/* Step dots */}
         <div className="flex items-center gap-1.5 px-4 pb-3">

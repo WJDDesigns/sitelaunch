@@ -8,10 +8,14 @@ import { uploadFileAction, deleteFileAction } from "./files-actions";
 
 interface Props {
   params: Promise<{ subdomain: string; token: string }>;
+  searchParams: Promise<{ embed?: string; chromeless?: string }>;
 }
 
-export default async function SubmissionPage({ params }: Props) {
+export default async function SubmissionPage({ params, searchParams }: Props) {
   const { token } = await params;
+  const sp = await searchParams;
+  const isEmbed = sp.embed === "1";
+  const isChromeless = sp.chromeless === "1";
   const admin = createAdminClient();
   const { data: sub, error } = await admin
     .from("submissions")
@@ -175,10 +179,11 @@ export default async function SubmissionPage({ params }: Props) {
         captchaProvider={captchaProvider}
         googleMapsApiKey={googleMapsApiKey}
         geocodingProvider={geocodingProvider}
+        embedMode={isEmbed ? (isChromeless ? "chromeless" : "branded") : undefined}
       />
 
-      {/* Footer — only visible on desktop (mobile footer is less useful with sidebar layout) */}
-      <footer className="w-full py-8 px-8 flex flex-col items-center gap-3 border-t border-on-surface/10 md:hidden">
+      {/* Footer — hidden in chromeless embed mode */}
+      <footer className={`w-full py-8 px-8 flex flex-col items-center gap-3 border-t border-on-surface/10 md:hidden${isEmbed && isChromeless ? " hidden" : ""}`}>
         {hideBranding ? (
           footerText ? (
             <p className="text-xs text-on-surface/40">{footerText}</p>
