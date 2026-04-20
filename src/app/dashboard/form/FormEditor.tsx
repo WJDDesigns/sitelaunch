@@ -1548,22 +1548,7 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
 
         {(field.type === "select" || field.type === "radio" || field.type === "checkbox") && (
           <section className="space-y-3">
-            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-              {field.type === "checkbox" ? "Checkbox Options" : "Choices"}
-            </div>
-            <textarea value={(field.options ?? []).join("\n")} onChange={(e) => onUpdate({ options: e.target.value.split("\n").filter((l) => l.trim()) })} rows={5} placeholder="One option per line" className={`${INPUT_CLS} font-mono`} />
-            {field.type === "checkbox" && (
-              <label className="flex items-center gap-2">
-                <span className="text-[11px] font-medium text-on-surface-variant">Max selections</span>
-                <input type="number" min={0} max={50} value={field.maxSelections ?? 0} onChange={(e) => onUpdate({ maxSelections: Number(e.target.value) || 0 })} placeholder="0 = unlimited" className="w-20 px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none" />
-              </label>
-            )}
-          </section>
-        )}
-
-        {/* Icon Card display mode settings */}
-        {(field.type === "select" || field.type === "radio" || field.type === "checkbox") && (field.options ?? []).length > 0 && (
-          <section className="space-y-3">
+            {/* Display Mode toggle -- always visible */}
             <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Display Mode</div>
             <div className="flex gap-2">
               <button
@@ -1582,99 +1567,146 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
               </button>
             </div>
 
+            {/* Grid columns -- only in icon_cards mode */}
             {field.displayMode === "icon_cards" && (
-              <>
-                {/* Grid columns */}
-                <label className="flex items-center gap-2">
-                  <span className="text-[11px] font-medium text-on-surface-variant">Columns</span>
-                  <select
-                    value={field.iconCardColumns ?? 3}
-                    onChange={(e) => onUpdate({ iconCardColumns: Number(e.target.value) as 2 | 3 | 4 | 5 | 6 })}
-                    className="px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none"
-                  >
-                    <option value={2}>2</option>
-                    <option value={3}>3</option>
-                    <option value={4}>4</option>
-                    <option value={5}>5</option>
-                    <option value={6}>6</option>
-                  </select>
-                </label>
-
-                {/* Per-option icon assignment */}
-                <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Option Icons</div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {(field.options ?? []).map((opt) => (
-                    <div key={opt} className="flex items-center gap-2 bg-surface-container-highest/30 rounded-xl px-3 py-2">
-                      <IconPicker
-                        value={field.optionIcons?.[opt] ?? ""}
-                        onChange={(icon) => {
-                          const icons = { ...(field.optionIcons ?? {}) };
-                          if (icon) {
-                            icons[opt] = icon;
-                          } else {
-                            delete icons[opt];
-                          }
-                          onUpdate({ optionIcons: Object.keys(icons).length > 0 ? icons : undefined });
-                        }}
-                      />
-                      <span className="text-xs text-on-surface truncate flex-1">{opt}</span>
-                      {field.optionIcons?.[opt] && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const icons = { ...(field.optionIcons ?? {}) };
-                            delete icons[opt];
-                            onUpdate({ optionIcons: Object.keys(icons).length > 0 ? icons : undefined });
-                          }}
-                          className="text-on-surface-variant/40 hover:text-error text-xs"
-                          title="Remove icon"
-                        >
-                          <i className="fa-solid fa-xmark" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Quick-fill for social networks */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const socialMap: Record<string, string> = {
-                      "Instagram": "fa-brands fa-instagram",
-                      "Facebook": "fa-brands fa-facebook",
-                      "X": "fa-brands fa-x-twitter",
-                      "Twitter": "fa-brands fa-x-twitter",
-                      "X / Twitter": "fa-brands fa-x-twitter",
-                      "LinkedIn": "fa-brands fa-linkedin",
-                      "TikTok": "fa-brands fa-tiktok",
-                      "YouTube": "fa-brands fa-youtube",
-                      "Pinterest": "fa-brands fa-pinterest",
-                      "Threads": "fa-brands fa-threads",
-                      "Snapchat": "fa-brands fa-snapchat",
-                      "Reddit": "fa-brands fa-reddit",
-                      "WhatsApp": "fa-brands fa-whatsapp",
-                      "Telegram": "fa-brands fa-telegram",
-                      "Discord": "fa-brands fa-discord",
-                      "Twitch": "fa-brands fa-twitch",
-                      "GitHub": "fa-brands fa-github",
-                      "Dribbble": "fa-brands fa-dribbble",
-                      "Behance": "fa-brands fa-behance",
-                      "Mastodon": "fa-brands fa-mastodon",
-                      "Bluesky": "fa-brands fa-bluesky",
-                    };
-                    const icons: Record<string, string> = { ...(field.optionIcons ?? {}) };
-                    for (const opt of (field.options ?? [])) {
-                      const match = socialMap[opt] || socialMap[opt.split(" ")[0]];
-                      if (match && !icons[opt]) icons[opt] = match;
-                    }
-                    if (Object.keys(icons).length > 0) onUpdate({ optionIcons: icons });
-                  }}
-                  className="text-[11px] text-primary hover:text-primary/80 font-medium transition-colors"
+              <label className="flex items-center gap-2">
+                <span className="text-[11px] font-medium text-on-surface-variant">Columns</span>
+                <select
+                  value={field.iconCardColumns ?? 3}
+                  onChange={(e) => onUpdate({ iconCardColumns: Number(e.target.value) as 2 | 3 | 4 | 5 | 6 })}
+                  className="px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none"
                 >
-                  <i className="fa-solid fa-wand-magic-sparkles mr-1" />Auto-detect social icons
-                </button>
-              </>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                  <option value={4}>4</option>
+                  <option value={5}>5</option>
+                  <option value={6}>6</option>
+                </select>
+              </label>
+            )}
+
+            {/* Options heading */}
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+              {field.type === "checkbox" ? "Checkbox Options" : "Choices"}
+            </div>
+
+            {/* Individual option rows */}
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {(field.options ?? []).map((opt, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-surface-container-highest/30 rounded-xl px-3 py-2 group">
+                  {/* Icon picker -- only in icon_cards mode */}
+                  {field.displayMode === "icon_cards" && (
+                    <IconPicker
+                      value={field.optionIcons?.[opt] ?? ""}
+                      onChange={(icon) => {
+                        const icons = { ...(field.optionIcons ?? {}) };
+                        if (icon) {
+                          icons[opt] = icon;
+                        } else {
+                          delete icons[opt];
+                        }
+                        onUpdate({ optionIcons: Object.keys(icons).length > 0 ? icons : undefined });
+                      }}
+                    />
+                  )}
+                  {/* Editable option label */}
+                  <input
+                    type="text"
+                    value={opt}
+                    onChange={(e) => {
+                      const newLabel = e.target.value;
+                      const opts = [...(field.options ?? [])];
+                      const oldLabel = opts[idx];
+                      opts[idx] = newLabel;
+                      // Move icon mapping to new label
+                      const icons = { ...(field.optionIcons ?? {}) };
+                      if (oldLabel !== newLabel && icons[oldLabel]) {
+                        icons[newLabel] = icons[oldLabel];
+                        delete icons[oldLabel];
+                      }
+                      onUpdate({ options: opts, ...(Object.keys(icons).length > 0 ? { optionIcons: icons } : { optionIcons: undefined }) });
+                    }}
+                    placeholder="Option label"
+                    className="flex-1 min-w-0 px-2 py-1 text-xs bg-transparent border-0 text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:ring-1 focus:ring-primary/30 rounded-lg"
+                  />
+                  {/* Delete option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const opts = [...(field.options ?? [])];
+                      const removed = opts.splice(idx, 1)[0];
+                      const icons = { ...(field.optionIcons ?? {}) };
+                      delete icons[removed];
+                      onUpdate({ options: opts, optionIcons: Object.keys(icons).length > 0 ? icons : undefined });
+                    }}
+                    className="text-on-surface-variant/30 hover:text-error text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    title="Remove option"
+                  >
+                    <i className="fa-solid fa-trash-can" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new option */}
+            <button
+              type="button"
+              onClick={() => {
+                const opts = [...(field.options ?? []), `Option ${(field.options ?? []).length + 1}`];
+                onUpdate({ options: opts });
+              }}
+              className="flex items-center gap-1.5 text-[11px] text-primary hover:text-primary/80 font-medium transition-colors"
+            >
+              <i className="fa-solid fa-plus text-[10px]" />Add option
+            </button>
+
+            {/* Auto-detect social icons -- only in icon_cards mode with options */}
+            {field.displayMode === "icon_cards" && (field.options ?? []).length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const socialMap: Record<string, string> = {
+                    "Instagram": "fa-brands fa-instagram",
+                    "Facebook": "fa-brands fa-facebook",
+                    "X": "fa-brands fa-x-twitter",
+                    "Twitter": "fa-brands fa-x-twitter",
+                    "X / Twitter": "fa-brands fa-x-twitter",
+                    "LinkedIn": "fa-brands fa-linkedin",
+                    "TikTok": "fa-brands fa-tiktok",
+                    "YouTube": "fa-brands fa-youtube",
+                    "Pinterest": "fa-brands fa-pinterest",
+                    "Threads": "fa-brands fa-threads",
+                    "Snapchat": "fa-brands fa-snapchat",
+                    "Reddit": "fa-brands fa-reddit",
+                    "WhatsApp": "fa-brands fa-whatsapp",
+                    "Telegram": "fa-brands fa-telegram",
+                    "Discord": "fa-brands fa-discord",
+                    "Twitch": "fa-brands fa-twitch",
+                    "GitHub": "fa-brands fa-github",
+                    "Dribbble": "fa-brands fa-dribbble",
+                    "Behance": "fa-brands fa-behance",
+                    "Mastodon": "fa-brands fa-mastodon",
+                    "Bluesky": "fa-brands fa-bluesky",
+                  };
+                  const icons: Record<string, string> = { ...(field.optionIcons ?? {}) };
+                  for (const opt of (field.options ?? [])) {
+                    const match = socialMap[opt] || socialMap[opt.split(" ")[0]];
+                    if (match && !icons[opt]) icons[opt] = match;
+                  }
+                  if (Object.keys(icons).length > 0) onUpdate({ optionIcons: icons });
+                }}
+                className="text-[11px] text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                <i className="fa-solid fa-wand-magic-sparkles mr-1" />Auto-detect social icons
+              </button>
+            )}
+
+            {/* Max selections -- checkbox only */}
+            {field.type === "checkbox" && (
+              <label className="flex items-center gap-2">
+                <span className="text-[11px] font-medium text-on-surface-variant">Max selections</span>
+                <input type="number" min={0} max={50} value={field.maxSelections ?? 0} onChange={(e) => onUpdate({ maxSelections: Number(e.target.value) || 0 })} placeholder="0 = unlimited" className="w-20 px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none" />
+              </label>
             )}
           </section>
         )}
