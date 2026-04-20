@@ -30,7 +30,9 @@ export function captureError(error: unknown, context: ErrorContext = {}) {
         user_id: context.userId ?? null,
         metadata: context.metadata ?? {},
       })
-      .then(() => {}, () => {});
+      .then(() => {}, (dbErr) => {
+        console.error("[error-tracking] DB insert failed:", dbErr);
+      });
 
     // Always log to stdout for deployment platform logs (Vercel, etc.)
     console.error(`[error-tracking] ${err.message}`, {

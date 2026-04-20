@@ -52,7 +52,7 @@ export async function createCouponAction(input: CouponInput) {
     });
     stripeCouponId = stripeCoupon.id;
   } catch (err) {
-    console.error("Failed to create Stripe coupon:", err);
+    console.error("[billing] Failed to create Stripe coupon:", err);
     // Continue without Stripe — coupon will work locally only
   }
 

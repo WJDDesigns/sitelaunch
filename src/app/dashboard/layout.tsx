@@ -67,7 +67,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const ua = headersList.get("user-agent") ?? null;
-  trackSession(session.userId, ip, ua).catch(() => {});
+  trackSession(session.userId, ip, ua).catch((err) => {
+    console.error("[dashboard] trackSession failed:", err);
+  });
 
   const isAdmin = session.role === "superadmin";
   const account = await getCurrentAccount(session.userId);

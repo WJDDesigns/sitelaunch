@@ -18,25 +18,29 @@ export default async function AdminAnalyticsPage() {
     .from("page_views")
     .select("created_at, partner_id, is_unique")
     .gte("created_at", thirtyDaysAgo)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(10000);
 
   // Platform-wide submissions
   const { data: submissions } = await admin
     .from("submissions")
     .select("id, status, created_at, partner_id")
-    .gte("created_at", thirtyDaysAgo);
+    .gte("created_at", thirtyDaysAgo)
+    .limit(10000);
 
   // All partners (for growth chart)
   const { data: partners } = await admin
     .from("partners")
     .select("id, name, plan_tier, created_at")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(10000);
 
   // Form events
   const { data: formEvents } = await admin
     .from("form_events")
     .select("event_type, created_at")
-    .gte("created_at", thirtyDaysAgo);
+    .gte("created_at", thirtyDaysAgo)
+    .limit(10000);
 
   // Build daily views chart
   const dailyViews: Record<string, { total: number; unique: number }> = {};

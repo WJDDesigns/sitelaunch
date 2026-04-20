@@ -1,9 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimiter } from "@/lib/rate-limit";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = rateLimiter.check(`account-export:${ip}`, 3, 60);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,7 +50,7 @@ export async function GET() {
         )
         .eq("partner_id", account.id)
         .order("created_at", { ascending: false })
-        .limit(5000);
+        .limit(1000);
       submissions = data ?? [];
     }
 
@@ -60,7 +70,8 @@ export async function GET() {
           "id, status, amount_paid, currency, paid_at, period_start, period_end, created_at"
         )
         .eq("partner_id", account.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(1000);
       invoices = data ?? [];
     }
 

@@ -65,7 +65,7 @@ export async function adminChangePlanAction(partnerId: string, newTier: BillingT
         },
       });
     } catch (err) {
-      console.error("Failed to create Stripe subscription:", err);
+      console.error("[billing] Failed to create Stripe subscription:", err);
       // DB is already updated, Stripe will sync via webhook
     }
   }

@@ -91,13 +91,14 @@ export default async function DashboardOverview() {
         .from("partner_forms")
         .select("id, name, slug, schema")
         .eq("partner_id", account.id)
-        .order("name"),
+        .order("name")
+        .limit(100),
       admin
         .from("submissions")
         .select("id, status, client_name, client_email, created_at, submitted_at, form_slug, partner_form_id, data")
         .eq("partner_id", account.id)
         .order("created_at", { ascending: false })
-        .limit(2000),
+        .limit(500),
     ]);
 
     for (const d of (dashboards ?? []) as InsightDashboard[]) {

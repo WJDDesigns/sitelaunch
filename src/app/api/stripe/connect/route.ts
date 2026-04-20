@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createHmac, randomBytes } from "crypto";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
+import { rateLimiter } from "@/lib/rate-limit";
 
 /**
  * Stripe Connect OAuth -- initiates the authorization flow.
@@ -13,8 +14,16 @@ function signState(payload: string): string {
   return createHmac("sha256", secret).update(payload).digest("hex");
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = rateLimiter.check(`stripe-connect:${ip}`, 5, 60);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
     const session = await requireSession();
     const account = await getCurrentAccount(session.userId);
     if (!account) return NextResponse.json({ error: "No account" }, { status: 403 });

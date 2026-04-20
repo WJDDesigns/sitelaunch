@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { resolveTenant } from "@/lib/tenant";
+import { validateEnv } from "@/lib/env";
+
+// Validate required server-side env vars on first request.
+validateEnv();
 
 export async function middleware(request: NextRequest) {
   const { response, user, aal, hasMfaFactors } = await updateSession(request);

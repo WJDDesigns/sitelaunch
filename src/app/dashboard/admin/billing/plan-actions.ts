@@ -97,7 +97,7 @@ export async function savePlanAction(formData: FormData) {
         stripePriceId = price.id;
       }
     } catch (err) {
-      console.error("Stripe sync failed:", err);
+      console.error("[billing] Stripe sync failed:", err);
       // Continue saving to DB even if Stripe fails
     }
   }

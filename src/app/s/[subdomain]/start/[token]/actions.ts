@@ -107,7 +107,9 @@ export async function submitSubmissionAction(token: string) {
     form_slug: sub.form_slug ?? undefined,
     submission_id: sub.id,
     event_type: "complete",
-  }).then(() => {}, () => {});
+  }).then(() => {}, (err) => {
+    console.error("[submission] form_events complete insert failed:", err);
+  });
 
   // Fire-and-log notifications. We never throw from here -- a failed email
   // shouldn't block the client's happy-path.

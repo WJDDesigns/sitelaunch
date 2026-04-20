@@ -116,7 +116,7 @@ export async function syncFilesToCloud(submissionId: string): Promise<void> {
         synced_at: new Date().toISOString(),
       });
 
-      console.log(`[cloud-sync] synced ${files.length} files to ${provider} for submission ${submissionId}`);
+      // Sync succeeded — no production logging needed
     } catch (err) {
       console.error(`[cloud-sync] failed for field ${field.id}:`, err);
       // Log failure

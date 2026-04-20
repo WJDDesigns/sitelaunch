@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { getUserSessions, revokeAllOtherSessions } from "@/lib/session-tracker";
+import { rateLimiter } from "@/lib/rate-limit";
 
 /**
  * GET /api/sessions — returns all sessions for the current user.
@@ -21,6 +22,15 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = rateLimiter.check(`sessions-revoke:${ip}`, 5, 60);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
     const session = await requireSession();
     const body = await request.json();
     const currentSessionId = body.currentSessionId;
@@ -45,6 +55,15 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = rateLimiter.check(`sessions-revoke:${ip}`, 5, 60);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
     const session = await requireSession();
     const sessionId = request.nextUrl.searchParams.get("id");
 

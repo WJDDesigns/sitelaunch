@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createHmac, randomBytes } from "crypto";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { getProviderClient, ALL_PROVIDERS, type CloudProvider } from "@/lib/cloud/providers";
+import { rateLimiter } from "@/lib/rate-limit";
 
 function signState(payload: string): string {
   const secret = process.env.CLOUD_TOKEN_ENCRYPTION_KEY ?? "";
@@ -10,10 +11,18 @@ function signState(payload: string): string {
 }
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = rateLimiter.check(`cloud-connect:${ip}`, 10, 60);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
     const { provider: providerParam } = await params;
     const session = await requireSession();
     const account = await getCurrentAccount(session.userId);

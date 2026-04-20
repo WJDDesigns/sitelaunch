@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createHmac } from "crypto";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptToken } from "@/lib/cloud/encryption";
 import { stripe } from "@/lib/stripe";
+import { rateLimiter } from "@/lib/rate-limit";
 
 /**
  * Stripe Connect OAuth callback -- exchanges code for connected account ID.
@@ -22,7 +23,16 @@ function verifyState(stateB64: string): { partnerId: string; provider: string; n
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`stripe-connect-cb:${ip}`, 5, 60);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const stateParam = url.searchParams.get("state");

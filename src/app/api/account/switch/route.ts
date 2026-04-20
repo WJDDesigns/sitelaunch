@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession, CONTEXT_COOKIE } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = rateLimiter.check(`account-switch:${ip}`, 10, 60);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

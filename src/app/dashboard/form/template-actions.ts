@@ -42,7 +42,7 @@ export async function listTemplatesAction(): Promise<TemplateInfo[]> {
     .order("name");
 
   if (error) {
-    console.error("listTemplatesAction error:", error.message);
+    console.error("[templates] listTemplatesAction error:", error.message);
     return [];
   }
 

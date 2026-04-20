@@ -51,7 +51,8 @@ export default async function AdminPartnersPage({ searchParams }: PageProps) {
       .from("submissions")
       .select("partner_id")
       .in("partner_id", partnerIds)
-      .gte("submitted_at", monthStart);
+      .gte("submitted_at", monthStart)
+      .limit(10000);
     for (const s of subs ?? []) {
       subCounts[s.partner_id] = (subCounts[s.partner_id] ?? 0) + 1;
     }

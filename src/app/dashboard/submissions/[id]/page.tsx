@@ -231,18 +231,9 @@ export default async function SubmissionDetailPage({ params }: Props) {
                                   <i className="fa-solid fa-wand-magic-sparkles text-[9px] text-primary" />
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">AI Analysis</span>
                                 </div>
-                                <div className="text-sm text-on-surface leading-relaxed whitespace-pre-line"
-                                  dangerouslySetInnerHTML={{
-                                    __html: comp.analysis.aiSnapshot
-                                      .replace(/&/g, "&amp;")
-                                      .replace(/</g, "&lt;")
-                                      .replace(/>/g, "&gt;")
-                                      .replace(/"/g, "&quot;")
-                                      .replace(/'/g, "&#39;")
-                                      .replace(/`/g, "&#96;")
-                                      .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold">$1</strong>')
-                                  }}
-                                />
+                                <p className="text-sm text-on-surface leading-relaxed whitespace-pre-line">
+                                  {comp.analysis.aiSnapshot}
+                                </p>
                               </div>
                             )}
                             {!comp.analysis?.aiSnapshot && comp.analysis?.navLinks && comp.analysis.navLinks.length > 0 && (

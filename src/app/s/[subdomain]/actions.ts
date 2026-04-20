@@ -95,7 +95,9 @@ export async function startSubmissionAction(formData: FormData) {
     form_slug: pf.slug,
     submission_id: sub.id,
     event_type: "start",
-  }).then(() => {}, () => {}); // fire-and-forget, don't block on analytics
+  }).then(() => {}, (err) => {
+    console.error("[submission] form_events start insert failed:", err);
+  }); // fire-and-forget, don't block on analytics
 
   redirect(await absoluteUrl(`/start/${sub.access_token}`));
 }
