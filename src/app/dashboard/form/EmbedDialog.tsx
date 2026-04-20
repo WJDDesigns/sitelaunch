@@ -123,7 +123,8 @@ export default function EmbedDialog({ formUrl, formName, onClose }: Props) {
               }`}
             >
               <i className="fa-solid fa-building text-xs" />
-              <span>Full (with branding)</span>
+              <span>Full</span>
+              <span className="text-[10px] opacity-60 -mt-0.5">With branding</span>
             </button>
             <button
               onClick={() => setEmbedStyle("chromeless")}
