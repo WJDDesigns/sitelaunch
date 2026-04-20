@@ -37,7 +37,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -51,7 +51,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
                 <tr>
                   <td style="padding:0 0 24px;">
                     <p style="margin:0;color:#94a3b8;font-size:15px;line-height:1.7;">Hi {{name}},</p>
-                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">Thanks for signing up for LinqMe! Please verify your email address by clicking the button below.</p>
+                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">Thanks for signing up for linqme! Please verify your email address by clicking the button below.</p>
                   </td>
                 </tr>
                 <tr>
@@ -70,7 +70,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>
@@ -101,7 +101,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -134,7 +134,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>
@@ -146,8 +146,8 @@ insert into public.email_templates (slug, name, subject, description, variables,
 ),
 (
   'welcome',
-  'Welcome to LinqMe',
-  'Welcome to LinqMe, {{company_name}}!',
+  'Welcome to linqme',
+  'Welcome to linqme, {{company_name}}!',
   'Sent after a partner account is created and verified.',
   ARRAY['company_name', 'plan_line', 'storefront_url', 'dashboard_url'],
   '<!DOCTYPE html>
@@ -156,7 +156,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>Welcome to LinqMe</title>
+  <title>Welcome to linqme</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0b1326;font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',Roboto,sans-serif;-webkit-font-smoothing:antialiased;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b1326;">
@@ -165,7 +165,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -179,7 +179,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
                 <tr>
                   <td style="padding:0 0 24px;">
                     <p style="margin:0;color:#94a3b8;font-size:15px;line-height:1.7;">Hi {{company_name}},</p>
-                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">Your LinqMe account is all set up and ready to go. {{plan_line}}</p>
+                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">Your linqme account is all set up and ready to go. {{plan_line}}</p>
                   </td>
                 </tr>
                 <tr>
@@ -209,7 +209,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>
@@ -240,7 +240,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -287,7 +287,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>
@@ -318,7 +318,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -362,7 +362,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>
@@ -375,7 +375,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
 (
   'partner_invite',
   'Partner Invitation',
-  'You''ve been invited to join LinqMe',
+  'You''ve been invited to join linqme',
   'Sent when a partner is invited to join the platform.',
   ARRAY['inviter_name', 'partner_name', 'invite_url', 'role'],
   '<!DOCTYPE html>
@@ -393,7 +393,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -407,7 +407,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
                 <tr>
                   <td style="padding:0 0 24px;">
                     <p style="margin:0;color:#94a3b8;font-size:15px;line-height:1.7;">Hi {{partner_name}},</p>
-                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">{{inviter_name}} has invited you to join LinqMe as a <strong style="color:#e2e8f0;">{{role}}</strong>. Click below to accept the invitation and set up your account.</p>
+                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">{{inviter_name}} has invited you to join linqme as a <strong style="color:#e2e8f0;">{{role}}</strong>. Click below to accept the invitation and set up your account.</p>
                   </td>
                 </tr>
                 <tr>
@@ -426,7 +426,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>
@@ -457,7 +457,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -508,7 +508,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>

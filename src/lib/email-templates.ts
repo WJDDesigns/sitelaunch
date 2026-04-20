@@ -145,7 +145,7 @@ export function emailTemplate(opts: TemplateOptions): string {
           <!-- Logo -->
           <tr>
             <td style="padding: 0 0 24px; text-align: center;">
-              <img src="https://linqme.io/email-logo.png" alt="linqme" width="60" height="77" style="display: block; margin: 0 auto 8px; border: 0;" />
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display: block; margin: 0 auto 8px; border: 0;" />
               <span style="font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">linqme</span>
             </td>
           </tr>

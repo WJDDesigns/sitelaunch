@@ -207,64 +207,6 @@ export default async function DashboardOverview() {
           />
         </section>
       )}
-
-      {/* Recent partners */}
-      <section className="animate-fade-up delay-3 rounded-2xl overflow-hidden border border-outline-variant/[0.08] bg-surface-container/50 shadow-xl shadow-black/10">
-        <div className="flex items-center justify-between px-6 md:px-8 py-5 border-b border-outline-variant/[0.06]">
-          <h2 className="text-lg font-bold font-headline text-on-surface tracking-tight">Partners</h2>
-          {session.role === "superadmin" && (
-            <Link
-              href="/dashboard/partners/new"
-              className="px-4 py-2 bg-primary text-on-primary font-semibold rounded-xl text-xs hover:shadow-[0_0_24px_rgba(var(--color-primary),0.3)] transition-all duration-300"
-            >
-              <i className="fa-solid fa-plus text-[10px] mr-1.5" />
-              New partner
-            </Link>
-          )}
-        </div>
-
-        {partners.length === 0 ? (
-          <div className="px-8 py-12 text-sm text-on-surface-variant text-center">
-            <i className="fa-solid fa-users text-2xl text-on-surface-variant/20 mb-3 block" />
-            No partners yet. {session.role === "superadmin" && "Create one to get started."}
-          </div>
-        ) : (
-          <div className="divide-y divide-outline-variant/[0.05]">
-            {partners.slice(0, 5).map((p) => (
-              <div key={p.id} className="grid grid-cols-12 px-6 md:px-8 py-4 items-center hover:bg-primary/[0.02] transition-colors duration-300 group">
-                <div className="col-span-6 flex items-center gap-4">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ring-1 ring-outline-variant/10"
-                    style={{
-                      backgroundColor: p.primary_color ? `${p.primary_color}15` : undefined,
-                      color: p.primary_color || undefined,
-                    }}
-                  >
-                    {p.name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-on-surface group-hover:text-primary transition-colors duration-300 truncate">{p.name}</p>
-                    <p className="text-xs text-on-surface-variant/50 truncate">
-                      {p.custom_domain || `${p.slug}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="col-span-3 hidden md:block">
-                  <span className="text-xs text-on-surface-variant/50 font-mono bg-surface-container-high/40 px-2 py-0.5 rounded">{p.slug}</span>
-                </div>
-                <div className="col-span-6 md:col-span-3 text-right">
-                  <Link
-                    href={`/dashboard/partners/${p.id}`}
-                    className="text-xs font-bold text-primary hover:underline transition-all group-hover:translate-x-0.5 inline-block"
-                  >
-                    Manage <i className="fa-solid fa-arrow-right text-[10px] ml-1" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

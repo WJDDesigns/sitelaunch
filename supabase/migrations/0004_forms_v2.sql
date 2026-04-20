@@ -1,5 +1,5 @@
 -- ============================================================================
--- LinqMe — form schema v2: brand assets step with file uploads
+-- linqme — form schema v2: brand assets step with file uploads
 -- Migration 0004
 -- ============================================================================
 

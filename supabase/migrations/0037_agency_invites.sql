@@ -24,8 +24,8 @@ insert into public.email_templates (slug, name, subject, description, variables,
 (
   'agency_invite',
   'Agency Invitation',
-  'You''re invited to try LinqMe -- exclusive access',
-  'Sent by an admin to invite agency owners to sign up for LinqMe with a unique coupon code.',
+  'You''re invited to try linqme -- exclusive access',
+  'Sent by an admin to invite agency owners to sign up for linqme with a unique coupon code.',
   ARRAY['email', 'coupon_code', 'signup_url', 'expires_date'],
   '<!DOCTYPE html>
 <html lang="en">
@@ -42,7 +42,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
         <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;">
           <tr>
             <td style="padding:0 0 24px;text-align:center;">
-              <img src="https://linqme.io/email-logo.png" alt="LinqMe" width="60" height="77" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">LinqMe</span>
+              <img src="https://linqme.io/email-logo.png" alt="linqme" width="120" height="34" style="display:block;margin:0 auto 8px;border:0;" /><span style="font-size:18px;font-weight:800;color:#e2e8f0;letter-spacing:-0.02em;">linqme</span>
             </td>
           </tr>
           <tr>
@@ -50,13 +50,13 @@ insert into public.email_templates (slug, name, subject, description, variables,
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="padding:0 0 8px;">
-                    <h1 style="margin:0;font-size:24px;font-weight:800;color:#e2e8f0;line-height:1.3;">You''re invited to LinqMe</h1>
+                    <h1 style="margin:0;font-size:24px;font-weight:800;color:#e2e8f0;line-height:1.3;">You''re invited to linqme</h1>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding:0 0 20px;">
                     <p style="margin:0;color:#94a3b8;font-size:15px;line-height:1.7;">Hi there,</p>
-                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">You''ve been hand-picked to get early access to <strong style="color:#e2e8f0;">LinqMe</strong> -- the all-in-one client onboarding platform built for agencies. We''d love for you to take it for a spin.</p>
+                    <p style="margin:12px 0 0;color:#94a3b8;font-size:15px;line-height:1.7;">You''ve been hand-picked to get early access to <strong style="color:#e2e8f0;">linqme</strong> -- the all-in-one client onboarding platform built for agencies. We''d love for you to take it for a spin.</p>
                   </td>
                 </tr>
                 <tr>
@@ -64,7 +64,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b1326;border-radius:12px;">
                       <tr>
                         <td style="padding:20px;">
-                          <p style="margin:0 0 12px;color:#e2e8f0;font-size:14px;font-weight:700;">What you get with LinqMe:</p>
+                          <p style="margin:0 0 12px;color:#e2e8f0;font-size:14px;font-weight:700;">What you get with linqme:</p>
                           <table role="presentation" cellspacing="0" cellpadding="0">
                             <tr><td style="padding:4px 0;color:#2dd4a8;font-size:13px;">&#10003;</td><td style="padding:4px 0 4px 10px;color:#94a3b8;font-size:13px;">Drag-and-drop form builder with 30+ field types</td></tr>
                             <tr><td style="padding:4px 0;color:#2dd4a8;font-size:13px;">&#10003;</td><td style="padding:4px 0 4px 10px;color:#94a3b8;font-size:13px;">White-label branding -- your logo, colors, and domain</td></tr>
@@ -105,7 +105,7 @@ insert into public.email_templates (slug, name, subject, description, variables,
           </tr>
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from LinqMe</p>
+              <p style="margin:0;color:#475569;font-size:12px;line-height:1.5;">Sent from linqme</p>
             </td>
           </tr>
         </table>

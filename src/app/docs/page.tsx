@@ -2,8 +2,8 @@ import { getSession } from "@/lib/auth";
 import DocsClient from "./DocsClient";
 
 export const metadata = {
-  title: "Documentation | LinqMe",
-  description: "Everything you need to know about building forms, managing clients, and growing your agency with LinqMe.",
+  title: "Documentation | linqme",
+  description: "Everything you need to know about building forms, managing clients, and growing your agency with linqme.",
 };
 
 export default async function DocsPage() {

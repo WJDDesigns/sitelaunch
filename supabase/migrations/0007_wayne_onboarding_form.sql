@@ -1,5 +1,5 @@
 -- ============================================================================
--- LinqMe — Apply Website Design Onboarding template to Wayne's account
+-- linqme — Apply Website Design Onboarding template to Wayne's account
 -- Migration 0007
 -- ============================================================================
 

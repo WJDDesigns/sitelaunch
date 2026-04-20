@@ -349,14 +349,14 @@ export default function DocsSection() {
           {/* GETTING STARTED */}
           <DocSection id="docs-getting-started" title="Getting Started" icon="fa-rocket">
             <p>
-              LinqMe is a form-building and client onboarding platform designed for agencies. Create beautiful multi-step forms,
+              linqme is a form-building and client onboarding platform designed for agencies. Create beautiful multi-step forms,
               collect client information, manage submissions, and white-label the entire experience under your brand.
             </p>
 
             <DocSub id="docs-creating-account" title="Creating Your Account">
               <p>
                 Head to the signup page and create your account using email and password, or sign in with Google or GitHub.
-                Once signed up, LinqMe automatically creates a workspace for you with your name and a unique subdomain.
+                Once signed up, linqme automatically creates a workspace for you with your name and a unique subdomain.
               </p>
               <Callout type="tip">
                 Your subdomain determines your public storefront URL. You can change it later in Settings under Branding.
@@ -391,7 +391,7 @@ export default function DocsSection() {
           {/* FORMS */}
           <DocSection id="docs-forms" title="Forms" icon="fa-pen-ruler">
             <p>
-              Forms are the core of LinqMe. Each form is a multi-step questionnaire that your clients fill out through a
+              Forms are the core of linqme. Each form is a multi-step questionnaire that your clients fill out through a
               branded, hosted page.
             </p>
 
@@ -407,7 +407,7 @@ export default function DocsSection() {
 
             <DocSub id="docs-field-types" title="Field Types">
               <p>
-                LinqMe supports over 25 field types, from simple text inputs to advanced components like budget allocators
+                linqme supports over 25 field types, from simple text inputs to advanced components like budget allocators
                 and competitor analyzers. See the Field Reference section below for a complete breakdown.
               </p>
             </DocSub>
@@ -440,7 +440,7 @@ export default function DocsSection() {
 
             <DocSub id="docs-layout-styles" title="Layout Styles">
               <p>
-                LinqMe offers four layout styles: Sidebar (default), Top Navigation, No Navigation (full-screen), and
+                linqme offers four layout styles: Sidebar (default), Top Navigation, No Navigation (full-screen), and
                 Conversation (one question at a time). Change the layout per form from the form settings panel.
               </p>
             </DocSub>
@@ -568,7 +568,7 @@ export default function DocsSection() {
             <DocSub id="docs-custom-domains" title="Custom Domains">
               <p>
                 Connect your own domain (like forms.youragency.com) so clients see your URL. Add the CNAME record
-                shown in Settings and LinqMe will verify and activate it automatically.
+                shown in Settings and linqme will verify and activate it automatically.
               </p>
               <Callout type="info">
                 Custom domains are available on Starter and Agency plans.
@@ -584,7 +584,7 @@ export default function DocsSection() {
 
             <DocSub id="docs-white-label" title="White-Label Settings">
               <p>
-                On Starter and Agency plans, hide all LinqMe branding, add custom footer text, and upload a custom
+                On Starter and Agency plans, hide all linqme branding, add custom footer text, and upload a custom
                 favicon for a fully white-labeled experience.
               </p>
             </DocSub>
@@ -636,7 +636,7 @@ export default function DocsSection() {
             <DocSub id="docs-custom-insights" title="Custom Insights">
               <p>
                 Build custom dashboards with widgets. Each widget displays a specific metric or visualization.
-                LinqMe can also auto-generate insights based on your form data.
+                linqme can also auto-generate insights based on your form data.
               </p>
             </DocSub>
           </DocSection>

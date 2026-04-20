@@ -34,7 +34,7 @@ export default async function AdminInvitesPage() {
           Agency Invitations
         </h1>
         <p className="text-sm text-on-surface-variant mt-1">
-          Invite agency owners to try LinqMe with an exclusive coupon code.
+          Invite agency owners to try linqme with an exclusive coupon code.
         </p>
       </header>
 

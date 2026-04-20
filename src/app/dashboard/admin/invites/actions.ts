@@ -139,9 +139,9 @@ export async function sendAgencyInviteAction(
   });
 
   const fallbackHtml = emailTemplate({
-    heading: "You're invited to LinqMe",
+    heading: "You're invited to linqme",
     body: `
-      <p>You've been hand-picked to get early access to <strong>LinqMe</strong> -- the all-in-one client onboarding platform built for agencies.</p>
+      <p>You've been hand-picked to get early access to <strong>linqme</strong> -- the all-in-one client onboarding platform built for agencies.</p>
       <p>Your exclusive coupon code: <strong style="color:#696cf8;font-size:18px;font-family:monospace;">${couponCode}</strong></p>
       <p>This invitation expires on ${formatDate(expiresAt)}.</p>
     `,
@@ -150,7 +150,7 @@ export async function sendAgencyInviteAction(
 
   const result = await sendMail({
     to: trimmedEmail,
-    subject: dbEmail?.subject ?? "You're invited to try LinqMe -- exclusive access",
+    subject: dbEmail?.subject ?? "You're invited to try linqme -- exclusive access",
     html: dbEmail?.html ?? fallbackHtml,
   });
 
@@ -203,9 +203,9 @@ export async function resendInviteAction(
   });
 
   const fallbackHtml = emailTemplate({
-    heading: "You're invited to LinqMe",
+    heading: "You're invited to linqme",
     body: `
-      <p>Just a reminder -- you've been invited to try <strong>LinqMe</strong>!</p>
+      <p>Just a reminder -- you've been invited to try <strong>linqme</strong>!</p>
       <p>Your exclusive coupon code: <strong style="color:#696cf8;font-size:18px;font-family:monospace;">${invite.coupon_code}</strong></p>
       <p>This invitation expires on ${formatDate(newExpiry)}.</p>
     `,
@@ -214,7 +214,7 @@ export async function resendInviteAction(
 
   const result = await sendMail({
     to: invite.email,
-    subject: dbEmail?.subject ?? "Reminder: You're invited to try LinqMe",
+    subject: dbEmail?.subject ?? "Reminder: You're invited to try linqme",
     html: dbEmail?.html ?? fallbackHtml,
   });
 

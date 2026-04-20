@@ -1,5 +1,5 @@
 -- ============================================================================
--- LinqMe — form engine + anonymous submission tokens
+-- linqme — form engine + anonymous submission tokens
 -- Migration 0003
 -- ============================================================================
 

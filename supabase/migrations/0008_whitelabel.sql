@@ -10,7 +10,7 @@ ALTER TABLE partners
 -- logo_size: 'default' | 'large' | 'full-width'
 -- theme_mode: 'dark' | 'light' | 'auto' (for the client-facing form)
 
-COMMENT ON COLUMN partners.hide_branding     IS 'Hide the LinqMe footer on client-facing pages (paid+ only)';
-COMMENT ON COLUMN partners.custom_footer_text IS 'Custom footer text replacing "LinqMe. The Cosmic Curator."';
+COMMENT ON COLUMN partners.hide_branding     IS 'Hide the linqme footer on client-facing pages (paid+ only)';
+COMMENT ON COLUMN partners.custom_footer_text IS 'Custom footer text replacing "linqme. The Cosmic Curator."';
 COMMENT ON COLUMN partners.logo_size         IS 'Logo display size on onboarding pages: default, large, full-width';
 COMMENT ON COLUMN partners.theme_mode        IS 'Theme for client-facing forms: dark, light, auto';

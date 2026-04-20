@@ -1,4 +1,4 @@
--- LinqMe — Extended signup profile fields
+-- linqme — Extended signup profile fields
 -- Adds columns to partners and profiles for richer onboarding data.
 
 -- ── Partner-level business details ──────────────────────────────────────────

@@ -371,10 +371,10 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               Documentation
             </div>
             <h1 className="text-4xl md:text-5xl font-black font-headline text-on-surface mb-4 tracking-tight">
-              LinqMe Docs
+              linqme Docs
             </h1>
             <p className="text-lg text-on-surface-variant/70 max-w-2xl leading-relaxed">
-              Everything you need to know about building forms, managing clients, and growing your agency with LinqMe.
+              Everything you need to know about building forms, managing clients, and growing your agency with linqme.
             </p>
           </div>
 
@@ -383,14 +383,14 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
              ═══════════════════════════════════════════════ */}
           <DocSection id="getting-started" title="Getting Started" icon="fa-rocket">
             <p>
-              LinqMe is a form-building and client onboarding platform designed for agencies. Create beautiful multi-step forms,
+              linqme is a form-building and client onboarding platform designed for agencies. Create beautiful multi-step forms,
               collect client information, manage submissions, and white-label the entire experience under your brand.
             </p>
 
             <DocSub id="creating-account" title="Creating Your Account">
               <p>
                 Head to the signup page and create your account using email and password, or sign in with Google or GitHub.
-                Once signed up, LinqMe automatically creates a workspace for you with your name and a unique subdomain.
+                Once signed up, linqme automatically creates a workspace for you with your name and a unique subdomain.
               </p>
               <Callout type="tip">
                 Your subdomain determines your public storefront URL. You can change it later in Settings under Branding.
@@ -442,7 +442,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
              ═══════════════════════════════════════════════ */}
           <DocSection id="forms" title="Forms" icon="fa-pen-ruler">
             <p>
-              Forms are the core of LinqMe. Each form is a multi-step questionnaire that your clients fill out through a
+              Forms are the core of linqme. Each form is a multi-step questionnaire that your clients fill out through a
               branded, hosted page. You can build anything from simple contact forms to complex onboarding workflows.
             </p>
 
@@ -462,7 +462,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
             <DocSub id="field-types" title="Field Types">
               <p>
-                LinqMe supports over 25 field types, from simple text inputs to advanced components like budget allocators
+                linqme supports over 25 field types, from simple text inputs to advanced components like budget allocators
                 and competitor analyzers. See the <button onClick={() => scrollTo("field-reference")} className="text-primary hover:underline font-medium">Field Reference</button> section
                 for a complete breakdown of every available field type.
               </p>
@@ -510,7 +510,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
             <DocSub id="layout-styles" title="Layout Styles">
               <p>
-                LinqMe offers four different layout styles for how your form appears to clients:
+                linqme offers four different layout styles for how your form appears to clients:
               </p>
               <FeatureList items={[
                 { icon: "fa-sidebar", label: "Sidebar (default)", desc: "Traditional layout with step navigation on the left side." },
@@ -673,7 +673,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
              ═══════════════════════════════════════════════ */}
           <DocSection id="branding" title="Branding and White-Label" icon="fa-palette">
             <p>
-              Make LinqMe look like your own platform. Customize colors, logos, domains, and more so your clients see
+              Make linqme look like your own platform. Customize colors, logos, domains, and more so your clients see
               your brand, not ours.
             </p>
 
@@ -691,7 +691,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
             <DocSub id="custom-domains" title="Custom Domains">
               <p>
-                Connect your own domain (like forms.youragency.com) so clients see your URL instead of a LinqMe subdomain.
+                Connect your own domain (like forms.youragency.com) so clients see your URL instead of a linqme subdomain.
                 Go to Settings, then the Branding tab, and follow the DNS setup instructions.
               </p>
               <Steps items={[
@@ -699,7 +699,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                 "Under Custom Domain, enter your desired domain.",
                 "Add the CNAME record shown to your DNS provider.",
                 "Wait for DNS propagation (usually a few minutes to a few hours).",
-                "LinqMe will verify and activate your domain automatically.",
+                "linqme will verify and activate your domain automatically.",
               ]} />
               <Callout type="info">
                 Custom domains are available on the Starter plan and above.
@@ -719,7 +719,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                 On Starter and Agency plans, you can fully white-label the experience:
               </p>
               <FeatureList items={[
-                { icon: "fa-eye-slash", label: "Hide LinqMe Branding", desc: "Remove all LinqMe logos and \"Powered by\" text from your forms and storefront." },
+                { icon: "fa-eye-slash", label: "Hide linqme Branding", desc: "Remove all linqme logos and \"Powered by\" text from your forms and storefront." },
                 { icon: "fa-paragraph", label: "Custom Footer", desc: "Add your own footer text to the storefront." },
                 { icon: "fa-icons", label: "Custom Favicon", desc: "Upload your own favicon for the browser tab." },
               ]} />
@@ -731,7 +731,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
              ═══════════════════════════════════════════════ */}
           <DocSection id="integrations" title="Integrations" icon="fa-plug">
             <p>
-              Connect LinqMe to your favorite tools. All integrations are managed from Settings under the Integrations tab.
+              Connect linqme to your favorite tools. All integrations are managed from Settings under the Integrations tab.
             </p>
 
             <DocSub id="cloud-storage" title="Cloud Storage">
@@ -760,7 +760,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                 { icon: "fa-square", label: "Square", desc: "Connect Square for in-form payment processing." },
               ]} />
               <Callout type="info">
-                You must have an active account with the payment provider before connecting. LinqMe does not handle funds
+                You must have an active account with the payment provider before connecting. linqme does not handle funds
                 directly. All payments go straight to your connected account.
               </Callout>
             </DocSub>
@@ -815,7 +815,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                 or visualization, like most common field values, submission trends, or completion rates.
               </p>
               <p>
-                Create multiple insight dashboards for different purposes. LinqMe can also auto-generate an insights
+                Create multiple insight dashboards for different purposes. linqme can also auto-generate an insights
                 dashboard based on your form's field types and data.
               </p>
             </DocSub>
@@ -838,7 +838,7 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
             <DocSub id="roles-permissions" title="Roles and Permissions">
               <p>
-                LinqMe supports three team roles:
+                linqme supports three team roles:
               </p>
               <FeatureList items={[
                 { icon: "fa-crown", label: "Owner", desc: "Full access to everything including billing, team management, and account deletion." },
@@ -881,10 +881,10 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
           <DocSection id="billing" title="Billing and Plans" icon="fa-credit-card">
             <DocSub id="plans" title="Plans and Pricing">
               <p>
-                LinqMe offers three plans to fit your needs:
+                linqme offers three plans to fit your needs:
               </p>
               <div className="grid gap-4 sm:grid-cols-3 my-6">
-                <PlanCard name="Free" price="$0" features={["1 submission/month", "1 form", "1 GB storage", "LinqMe branding"]} />
+                <PlanCard name="Free" price="$0" features={["1 submission/month", "1 form", "1 GB storage", "linqme branding"]} />
                 <PlanCard name="Starter" price="$99/mo" features={["25 submissions/month", "Unlimited forms", "50 GB storage", "White-label", "Custom domain"]} highlight />
                 <PlanCard name="Agency" price="$249/mo" features={["Unlimited submissions", "Unlimited forms", "500 GB storage", "Priority support", "All features"]} />
               </div>
@@ -915,13 +915,13 @@ export default function DocsClient({ isLoggedIn }: { isLoggedIn: boolean }) {
              ═══════════════════════════════════════════════ */}
           <DocSection id="security" title="Security" icon="fa-shield-halved">
             <p>
-              LinqMe takes security seriously. Your data is stored on Supabase with row-level security policies,
+              linqme takes security seriously. Your data is stored on Supabase with row-level security policies,
               and all communication happens over HTTPS.
             </p>
 
             <DocSub id="authentication" title="Authentication Methods">
               <p>
-                LinqMe supports multiple ways to sign in:
+                linqme supports multiple ways to sign in:
               </p>
               <FeatureList items={[
                 { icon: "fa-envelope", label: "Email and Password", desc: "Traditional email/password authentication." },

@@ -1,5 +1,5 @@
 -- ============================================================================
--- LinqMe — Built-in analytics
+-- linqme — Built-in analytics
 -- Migration 0017
 -- Tracks page views, form funnel events, and provides the foundation
 -- for partner-level and platform-level dashboards.

@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     const response = await fetch(parsed.toString(), {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; LinqMe/1.0; +https://linqme.co)",
+        "User-Agent": "Mozilla/5.0 (compatible; linqme/1.0; +https://linqme.io)",
         Accept: "text/html,application/xhtml+xml",
       },
     });
