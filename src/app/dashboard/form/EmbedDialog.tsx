@@ -86,15 +86,15 @@ export default function EmbedDialog({ formUrl, formName, onClose }: Props) {
           <div className="flex gap-2">
             <button
               onClick={() => setEmbedType("iframe")}
-              className={`relative flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                 embedType === "iframe"
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-outline-variant/20 text-on-surface-variant hover:border-primary/30"
               }`}
             >
-              <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-primary text-on-primary">Recommended</span>
               <i className="fa-solid fa-code text-xs" />
               iFrame
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-primary/15 text-primary">Best</span>
             </button>
             <button
               onClick={() => setEmbedType("widget")}
@@ -127,15 +127,15 @@ export default function EmbedDialog({ formUrl, formName, onClose }: Props) {
             </button>
             <button
               onClick={() => setEmbedStyle("chromeless")}
-              className={`relative flex-1 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+              className={`flex-1 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                 embedStyle === "chromeless"
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-outline-variant/20 text-on-surface-variant hover:border-primary/30"
               }`}
             >
-              <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-primary text-on-primary">Recommended</span>
               <i className="fa-solid fa-minimize text-xs" />
-              <span>Chromeless (no header)</span>
+              <span className="flex items-center gap-1.5">Chromeless <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-primary/15 text-primary">Best</span></span>
+              <span className="text-[10px] opacity-60 -mt-0.5">No header</span>
             </button>
           </div>
         </div>
