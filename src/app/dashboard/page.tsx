@@ -4,6 +4,8 @@ import { requireSession, getVisiblePartners, getCurrentAccount } from "@/lib/aut
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import InsightsDashboard from "./insights/InsightsDashboardLazy";
+import type { InsightDashboard } from "./insights/actions";
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: "Admin",
@@ -16,7 +18,7 @@ export default async function DashboardOverview() {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
   const allPartners = await getVisiblePartners();
-  // Filter out the user's own root account — only show sub-partners (same as Partners page)
+  // Filter out the user's own root account -- only show sub-partners (same as Partners page)
   const partners = account
     ? allPartners.filter((p) => p.id !== account.id)
     : allPartners;
@@ -37,9 +39,9 @@ export default async function DashboardOverview() {
   let hasMfa = false;
   const hasSubmissions = (submissionCount ?? 0) > 0;
 
-  if (account && !checklistDismissed) {
-    const admin = createAdminClient();
+  const admin = createAdminClient();
 
+  if (account && !checklistDismissed) {
     // Partner branding checks
     const { data: partner } = await admin
       .from("partners")
@@ -50,7 +52,7 @@ export default async function DashboardOverview() {
     hasLogo = !!partner?.logo_url;
     hasBrandColors = !!partner?.primary_color;
 
-    // Form customization check — has at least one form
+    // Form customization check -- has at least one form
     const { count: formCount } = await admin
       .from("partner_forms")
       .select("id", { count: "exact", head: true })
@@ -58,7 +60,7 @@ export default async function DashboardOverview() {
 
     hasCustomForm = (formCount ?? 0) > 0;
 
-    // MFA check — profile.mfa_enabled
+    // MFA check -- profile.mfa_enabled
     const { data: profile } = await admin
       .from("profiles")
       .select("mfa_enabled")
@@ -66,6 +68,68 @@ export default async function DashboardOverview() {
       .maybeSingle();
 
     hasMfa = profile?.mfa_enabled === true;
+  }
+
+  // ── Insights data ──
+  let dashboardMap: Record<string, InsightDashboard> = {};
+  let formList: { id: string; name: string; slug: string }[] = [];
+  let fieldMap: Record<string, { key: string; label: string; type: string }[]> = {};
+  let submissions: Record<string, unknown>[] = [];
+
+  if (account) {
+    const [
+      { data: dashboards },
+      { data: forms },
+      { data: subs },
+    ] = await Promise.all([
+      admin
+        .from("insight_dashboards")
+        .select("*")
+        .eq("partner_id", account.id)
+        .limit(50),
+      admin
+        .from("partner_forms")
+        .select("id, name, slug, schema")
+        .eq("partner_id", account.id)
+        .order("name"),
+      admin
+        .from("submissions")
+        .select("id, status, client_name, client_email, created_at, submitted_at, form_slug, partner_form_id, data")
+        .eq("partner_id", account.id)
+        .order("created_at", { ascending: false })
+        .limit(2000),
+    ]);
+
+    for (const d of (dashboards ?? []) as InsightDashboard[]) {
+      if (d.name === "My Dashboard") {
+        dashboardMap["all"] = d;
+      } else if (d.name.startsWith("form:")) {
+        dashboardMap[d.name.replace("form:", "")] = d;
+      }
+    }
+
+    formList = (forms ?? []).map((f) => ({
+      id: f.id as string,
+      name: f.name as string,
+      slug: f.slug as string,
+    }));
+
+    for (const form of forms ?? []) {
+      const schema = form.schema as { steps?: { fields?: { key: string; label: string; type: string }[] }[] } | null;
+      const fields: { key: string; label: string; type: string }[] = [];
+      if (schema?.steps) {
+        for (const step of schema.steps) {
+          for (const field of step.fields ?? []) {
+            if (field.type !== "heading" && field.type !== "consent" && field.type !== "captcha") {
+              fields.push({ key: field.key, label: field.label, type: field.type });
+            }
+          }
+        }
+      }
+      fieldMap[form.id as string] = fields;
+    }
+
+    submissions = (subs ?? []) as Record<string, unknown>[];
   }
 
   return (
@@ -125,12 +189,24 @@ export default async function DashboardOverview() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-up delay-2">
         <QuickAction href="/dashboard/form" icon="fa-pen-ruler" label="Form Builder" />
-        <QuickAction href="/dashboard/submissions" icon="fa-inbox" label="Submissions" />
+        <QuickAction href="/dashboard/entries" icon="fa-inbox" label="Entries" />
         <QuickAction href="/dashboard/settings" icon="fa-gear" label="Settings" />
         {session.role === "superadmin" && (
           <QuickAction href="/dashboard/partners/new" icon="fa-plus" label="New Partner" />
         )}
       </div>
+
+      {/* Insights widgets */}
+      {account && (
+        <section className="animate-fade-up delay-3">
+          <InsightsDashboard
+            dashboardMap={dashboardMap}
+            forms={formList}
+            fieldMap={fieldMap}
+            submissions={submissions}
+          />
+        </section>
+      )}
 
       {/* Recent partners */}
       <section className="animate-fade-up delay-3 rounded-2xl overflow-hidden border border-outline-variant/[0.08] bg-surface-container/50 shadow-xl shadow-black/10">

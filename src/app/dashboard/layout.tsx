@@ -21,11 +21,10 @@ const WORKSPACE_NAV = [
   { href: "/dashboard/form", label: "Forms", icon: "fa-pen-ruler" },
   { href: "/dashboard/entries", label: "Entries", icon: "fa-inbox" },
   { href: "/dashboard/accounts", label: "Accounts", icon: "fa-users" },
-  { href: "/dashboard/insights", label: "Insights", icon: "fa-lightbulb" },
+  { href: "/dashboard/partners", label: "Partners", icon: "fa-handshake" },
   { href: "/dashboard/analytics", label: "Analytics", icon: "fa-chart-pie" },
-  { href: "/dashboard/billing", label: "Billing", icon: "fa-credit-card" },
-  { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
   { href: "/dashboard/docs", label: "Docs", icon: "fa-book" },
+  { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
 ];
 
 const ADMIN_NAV = [
@@ -50,11 +49,11 @@ function getPartnerMemberNav(partnerId: string, allowFormEditing: boolean) {
     { href: "/dashboard", label: "Dashboard", icon: "fa-table-cells" },
     formsLink,
     { href: "/dashboard/entries", label: "Entries", icon: "fa-inbox" },
-    { href: "/dashboard/insights", label: "Insights", icon: "fa-lightbulb" },
     { href: `/dashboard/partners/${partnerId}`, label: "Branding", icon: "fa-palette" },
     { href: "/dashboard/team", label: "Team", icon: "fa-user-group" },
-    { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
+    { href: "/dashboard/analytics", label: "Analytics", icon: "fa-chart-pie" },
     { href: "/dashboard/docs", label: "Docs", icon: "fa-book" },
+    { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
   ];
 }
 
