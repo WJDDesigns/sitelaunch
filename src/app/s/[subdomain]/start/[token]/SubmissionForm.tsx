@@ -7,6 +7,7 @@ import { evaluateCondition, getEffectiveColSpan } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
 import { COUNTRIES as COUNTRIES_DATA } from "@/data/countries";
 import FileField from "./FileField";
+import IconCardSelector from "@/components/IconCardSelector";
 
 interface Props {
   schema: FormSchema;
@@ -3691,6 +3692,23 @@ function CelestialField({
 
       {field.type === "textarea" ? (
         <textarea id={field.id} name={field.id} required={field.required} placeholder={field.placeholder} rows={field.rows ?? 3} value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS} style={{ ...focusRing, borderColor: errBorder }} />
+
+      ) : field.displayMode === "icon_cards" && (field.type === "select" || field.type === "radio" || isMultiCheckbox) ? (
+        <>
+          <IconCardSelector
+            options={field.options ?? []}
+            optionIcons={field.optionIcons}
+            value={isMultiCheckbox ? checkedValues.join("||") : str}
+            multi={isMultiCheckbox}
+            maxSelections={field.maxSelections ?? 0}
+            onChange={onChange}
+            primaryColor={primaryColor}
+            columns={field.iconCardColumns ?? 3}
+          />
+          {isMultiCheckbox && field.maxSelections && field.maxSelections > 0 && (
+            <p className="text-xs text-on-surface-variant/60 ml-1 mt-2">Select up to {field.maxSelections}</p>
+          )}
+        </>
 
       ) : field.type === "select" ? (
         <select id={field.id} name={field.id} required={field.required} value={str} onChange={(e) => onChange(e.target.value)} className={INPUT_CLS} style={focusRing}>

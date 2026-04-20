@@ -569,6 +569,12 @@ export interface FieldDef {
   };
   /** Column span in a 4-column grid layout (1-4). Default = 4 (full width). */
   colSpan?: 1 | 2 | 3 | 4;
+  /** Display mode for select/radio/checkbox fields. "icon_cards" renders options as a card grid with icons. */
+  displayMode?: "default" | "icon_cards";
+  /** Map of option value -> Font Awesome icon class (e.g. { "Instagram": "fa-brands fa-instagram" }). Used when displayMode is "icon_cards". */
+  optionIcons?: Record<string, string>;
+  /** Number of columns for icon card grid (2-6). Default 3. */
+  iconCardColumns?: 2 | 3 | 4 | 5 | 6;
 }
 
 export interface UploadedFile {

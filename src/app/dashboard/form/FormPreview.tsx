@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import type { FormSchema, FieldDef } from "@/lib/forms";
 import { evaluateCondition, getEffectiveColSpan } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
+import IconCardSelector from "@/components/IconCardSelector";
 
 type DeviceSize = "desktop" | "tablet" | "phone";
 
@@ -1340,6 +1341,34 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
           className={INPUT_CLS}
           style={focusRing}
         />
+      ) : field.displayMode === "icon_cards" && (field.type === "select" || field.type === "radio" || (field.type === "checkbox" && field.options && field.options.length > 0)) ? (
+        (() => {
+          const isMulti = field.type === "checkbox";
+          const currentVal = isMulti ? Array.from(checkedOptions).join("||") : value;
+          return (
+            <>
+              <IconCardSelector
+                options={field.options ?? []}
+                optionIcons={field.optionIcons}
+                value={currentVal}
+                multi={isMulti}
+                maxSelections={field.maxSelections ?? 0}
+                onChange={(v) => {
+                  if (isMulti) {
+                    setCheckedOptions(new Set(v ? v.split("||").filter(Boolean) : []));
+                  } else {
+                    setValue(v);
+                  }
+                }}
+                primaryColor={primaryColor}
+                columns={field.iconCardColumns ?? 3}
+              />
+              {isMulti && field.maxSelections && field.maxSelections > 0 && (
+                <p className="text-xs text-on-surface-variant/60 ml-1 mt-2">Select up to {field.maxSelections}</p>
+              )}
+            </>
+          );
+        })()
       ) : field.type === "select" ? (
         <select
           value={value}
