@@ -20,7 +20,6 @@ import CaptchaIntegrationsSection from "./CaptchaIntegrationsSection";
 import GeocodingIntegrationsSection from "./GeocodingIntegrationsSection";
 import DashboardPaletteSection from "./DashboardPaletteSection";
 import ChangelogSection from "./ChangelogSection";
-import DocsSection from "./DocsSection";
 import SupportForm from "../../support/SupportForm";
 import {
   uploadWorkspaceLogoAction,
@@ -205,10 +204,6 @@ export default async function SettingsPage() {
     <ChangelogSection />
   );
 
-  const docsContent = (
-    <DocsSection />
-  );
-
   const integrationsContent = (
     <>
       <IntegrationsSection integrations={cloudIntegrations ?? []} />
@@ -236,7 +231,6 @@ export default async function SettingsPage() {
           brandingContent={brandingContent}
           integrationsContent={integrationsContent}
           advancedContent={advancedContent}
-          docsContent={docsContent}
           changelogContent={changelogContent}
         />
       </div>

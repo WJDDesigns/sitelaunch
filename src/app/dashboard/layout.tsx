@@ -25,7 +25,7 @@ const WORKSPACE_NAV = [
   { href: "/dashboard/analytics", label: "Analytics", icon: "fa-chart-pie" },
   { href: "/dashboard/billing", label: "Billing", icon: "fa-credit-card" },
   { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
-  { href: "/dashboard/settings?tab=docs", label: "Docs", icon: "fa-book" },
+  { href: "/dashboard/docs", label: "Docs", icon: "fa-book" },
 ];
 
 const ADMIN_NAV = [
@@ -54,7 +54,7 @@ function getPartnerMemberNav(partnerId: string, allowFormEditing: boolean) {
     { href: `/dashboard/partners/${partnerId}`, label: "Branding", icon: "fa-palette" },
     { href: "/dashboard/team", label: "Team", icon: "fa-user-group" },
     { href: "/dashboard/settings", label: "Settings", icon: "fa-gear" },
-    { href: "/dashboard/settings?tab=docs", label: "Docs", icon: "fa-book" },
+    { href: "/dashboard/docs", label: "Docs", icon: "fa-book" },
   ];
 }
 

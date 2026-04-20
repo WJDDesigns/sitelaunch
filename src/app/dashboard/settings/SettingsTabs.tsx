@@ -8,7 +8,6 @@ const TABS = [
   { id: "branding", label: "Branding", icon: "fa-palette" },
   { id: "integrations", label: "Integrations", icon: "fa-plug" },
   { id: "advanced", label: "Advanced", icon: "fa-sliders" },
-  { id: "docs", label: "Docs", icon: "fa-book" },
   { id: "changelog", label: "Changelog", icon: "fa-clock-rotate-left" },
 ] as const;
 
@@ -19,12 +18,11 @@ interface Props {
   brandingContent: React.ReactNode;
   integrationsContent: React.ReactNode;
   advancedContent: React.ReactNode;
-  docsContent: React.ReactNode;
   changelogContent: React.ReactNode;
   defaultTab?: string;
 }
 
-export default function SettingsTabs({ generalContent, brandingContent, integrationsContent, advancedContent, docsContent, changelogContent, defaultTab }: Props) {
+export default function SettingsTabs({ generalContent, brandingContent, integrationsContent, advancedContent, changelogContent, defaultTab }: Props) {
   const searchParams = useSearchParams();
 
   // Resolve initial tab: URL ?tab= param takes priority, then defaultTab prop, then "general"
@@ -59,7 +57,6 @@ export default function SettingsTabs({ generalContent, brandingContent, integrat
     branding: brandingContent,
     integrations: integrationsContent,
     advanced: advancedContent,
-    docs: docsContent,
     changelog: changelogContent,
   };
 
