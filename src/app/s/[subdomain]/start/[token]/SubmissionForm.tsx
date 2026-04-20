@@ -3310,12 +3310,20 @@ function CelestialField({
 
     const selectOsmResult = (result: { display_name: string; address: Record<string, string> }) => {
       const a = result.address;
+      // OSM returns full state names (e.g. "Virginia") but the dropdown uses codes ("VA").
+      // Look up the code from COUNTRIES_DATA so the select value matches an option.
+      const rawState = a.state ?? "";
+      const countryCode = a.country_code?.toUpperCase() ?? "";
+      const countryEntry = COUNTRIES_DATA.find((c) => c.code === countryCode);
+      const stateCode = countryEntry?.states.find(
+        (s) => s.name.toLowerCase() === rawState.toLowerCase() || s.code.toLowerCase() === rawState.toLowerCase(),
+      )?.code ?? rawState;
       const next: Record<string, string> = {
         street: [a.house_number, a.road].filter(Boolean).join(" "),
         city: a.city ?? a.town ?? a.village ?? a.hamlet ?? "",
-        state: a.state ?? "",
+        state: stateCode,
         zip: a.postcode ?? "",
-        country: a.country_code?.toUpperCase() ?? "",
+        country: countryCode,
       };
       onChange(JSON.stringify(next));
       setOsmOpen(false);
