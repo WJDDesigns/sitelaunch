@@ -3,10 +3,10 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { resolveTenant } from "@/lib/tenant";
 import { validateEnv } from "@/lib/env";
 
-// Validate required server-side env vars on first request.
-validateEnv();
-
 export async function middleware(request: NextRequest) {
+  // Validate env vars on first request (warns, doesn't throw)
+  validateEnv();
+
   const { response, user, aal, hasMfaFactors } = await updateSession(request);
 
   const host = request.headers.get("host") || "";

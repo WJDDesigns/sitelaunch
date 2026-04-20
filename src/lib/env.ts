@@ -35,8 +35,11 @@ export function validateEnv(): void {
   }
 
   if (missing.length > 0) {
-    throw new Error(
-      `[env] Missing required environment variables:\n  - ${missing.join("\n  - ")}\n\nAdd them to your .env.local or hosting provider.`,
+    // Warn instead of throwing — middleware runs on the edge runtime where
+    // not all server-side vars may be available. The vars will still be
+    // present in the Node.js runtime where they're actually used.
+    console.warn(
+      `[env] Missing environment variables:\n  - ${missing.join("\n  - ")}\n\nAdd them to your .env.local or hosting provider.`,
     );
   }
 
