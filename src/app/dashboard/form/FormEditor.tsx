@@ -11,7 +11,7 @@ import { saveFormSchemaAction } from "./actions";
 
 /* ── Field type catalogue ──────────────────────────────────── */
 
-type FieldCategory = "general" | "smart" | "layout" | "advanced";
+type FieldCategory = "general" | "smart" | "advanced";
 type IndustryTag = "web_design" | "marketing" | "real_estate" | "healthcare" | "education" | "ecommerce" | "consulting" | "events" | "legal" | "finance" | "nonprofit" | "hospitality";
 
 interface FieldTypeInfo {
@@ -29,7 +29,6 @@ const FIELD_CATEGORIES: { id: FieldCategory; label: string; icon: string }[] = [
   { id: "general", label: "General", icon: "fa-grip" },
   { id: "smart", label: "Smart", icon: "fa-wand-magic-sparkles" },
   { id: "advanced", label: "Advanced", icon: "fa-rocket" },
-  { id: "layout", label: "Layout & Logic", icon: "fa-table-cells" },
 ];
 
 const INDUSTRY_TAGS: { id: IndustryTag; label: string; icon: string; color: string }[] = [
@@ -117,11 +116,12 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
     tags: ["legal", "consulting", "real_estate", "finance"] },
   { type: "payment", label: "Payment", icon: "fa-credit-card", group: "advanced", category: "advanced", description: "Collect payments via Stripe, PayPal, or Square",
     tags: ["ecommerce", "consulting", "events", "hospitality", "nonprofit", "education"] },
-  // ── Layout & Logic ──
-  { type: "heading", label: "Section Heading", icon: "fa-heading", group: "advanced", category: "layout", description: "Display-only section header" },
-  { type: "consent", label: "Consent / Terms", icon: "fa-file-contract", group: "advanced", category: "layout", description: "Agreement with checkbox",
+  // ── General ──
+  { type: "heading", label: "Section Heading", icon: "fa-heading", group: "advanced", category: "general", description: "Display-only section header" },
+  // ── Advanced ──
+  { type: "consent", label: "Consent / Terms", icon: "fa-file-contract", group: "advanced", category: "advanced", description: "Agreement with checkbox",
     tags: ["legal", "healthcare", "finance", "ecommerce"] },
-  { type: "captcha", label: "Bot Protection", icon: "fa-shield-halved", group: "advanced", category: "layout", description: "reCAPTCHA or Cloudflare Turnstile" },
+  { type: "captcha", label: "Bot Protection", icon: "fa-shield-halved", group: "advanced", category: "advanced", description: "reCAPTCHA or Cloudflare Turnstile" },
 ];
 
 function iconFor(type: FieldType) {
