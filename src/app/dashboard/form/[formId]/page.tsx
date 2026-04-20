@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { FormSchema } from "@/lib/forms";
 import FormEditorShell from "../FormEditorShell";
 import FormSettingsPanel from "./FormSettingsPanel";
-import FormWebhooksPanel from "../FormWebhooksPanel";
+import FormSendToPanel from "../FormSendToPanel";
 
 interface PageProps {
   params: Promise<{ formId: string }>;
@@ -117,12 +117,17 @@ export default async function FormEditorPage({ params }: PageProps) {
         isActive={pf.is_active ?? true}
         hasAI={hasAI}
         hasPaymentGateway={hasPaymentGateway}
-        webhooksSlot={
+        sendToSlot={
           schema ? (
-            <FormWebhooksPanel
+            <FormSendToPanel
               formId={formId}
               schema={schema}
               initialWebhooks={webhooks}
+              notificationEmails={(pf.notification_emails as string[]) ?? []}
+              notificationBcc={(pf.notification_bcc as string[]) ?? []}
+              confirmPageHeading={(pf.confirm_page_heading as string) ?? ""}
+              confirmPageBody={(pf.confirm_page_body as string) ?? ""}
+              redirectUrl={(pf.redirect_url as string) ?? ""}
             />
           ) : undefined
         }
@@ -135,11 +140,6 @@ export default async function FormEditorPage({ params }: PageProps) {
             partners={subPartners}
             assignedPartnerIds={assignedPartnerIds}
             storefrontHost={storefrontHost}
-            notificationEmails={(pf.notification_emails as string[]) ?? []}
-            notificationBcc={(pf.notification_bcc as string[]) ?? []}
-            confirmPageHeading={(pf.confirm_page_heading as string) ?? ""}
-            confirmPageBody={(pf.confirm_page_body as string) ?? ""}
-            redirectUrl={(pf.redirect_url as string) ?? ""}
             themeMode={(partner?.theme_mode as "dark" | "light" | "auto") ?? "dark"}
             layoutStyle={(pf.layout_style as "default" | "top-nav" | "no-nav" | "conversation") ?? "default"}
           />

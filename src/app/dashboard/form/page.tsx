@@ -180,11 +180,6 @@ export default async function FormsListPage() {
                         partners={subPartners}
                         assignedPartnerIds={assignmentMap[form.id] ?? []}
                         storefrontHost={storefrontHost}
-                        notificationEmails={(form.notification_emails as string[]) ?? []}
-                        notificationBcc={(form.notification_bcc as string[]) ?? []}
-                        confirmPageHeading={(form.confirm_page_heading as string) ?? ""}
-                        confirmPageBody={(form.confirm_page_body as string) ?? ""}
-                        redirectUrl={(form.redirect_url as string) ?? ""}
                         themeMode={(partner?.theme_mode as "dark" | "light" | "auto") ?? "dark"}
                         layoutStyle={(form.layout_style as "default" | "top-nav" | "no-nav" | "conversation") ?? "default"}
                       />

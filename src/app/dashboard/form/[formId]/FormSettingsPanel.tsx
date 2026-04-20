@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { renameFormAction, setDefaultFormAction, deleteFormAction, updateFormNotificationSettingsAction, updateThemeModeAction, updateLayoutStyleAction } from "../form-actions";
+import { renameFormAction, setDefaultFormAction, deleteFormAction, updateThemeModeAction, updateLayoutStyleAction } from "../form-actions";
 import type { LayoutStyle } from "../form-actions";
 import { updateFormPartnersAction } from "./assignment-actions";
 
@@ -19,11 +19,6 @@ interface Props {
   partners: Partner[];
   assignedPartnerIds: string[];
   storefrontHost: string;
-  notificationEmails: string[];
-  notificationBcc: string[];
-  confirmPageHeading: string;
-  confirmPageBody: string;
-  redirectUrl: string;
   themeMode: "dark" | "light" | "auto";
   layoutStyle: LayoutStyle;
 }
@@ -36,11 +31,6 @@ export default function FormSettingsPanel({
   partners,
   assignedPartnerIds,
   storefrontHost,
-  notificationEmails: initialNotifEmails,
-  notificationBcc: initialNotifBcc,
-  confirmPageHeading: initialConfirmHeading,
-  confirmPageBody: initialConfirmBody,
-  redirectUrl: initialRedirectUrl,
   themeMode: initialThemeMode,
   layoutStyle: initialLayoutStyle,
 }: Props) {
@@ -49,16 +39,7 @@ export default function FormSettingsPanel({
   const [name, setName] = useState(formName);
   const [msg, setMsg] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [selectedPartners, setSelectedPartners] = useState<Set<string>>(new Set(assignedPartnerIds));
-
-  // Notification state
-  const [notifEmails, setNotifEmails] = useState(initialNotifEmails.join(", "));
-  const [notifBcc, setNotifBcc] = useState(initialNotifBcc.join(", "));
-  const [confirmHeading, setConfirmHeading] = useState(initialConfirmHeading);
-  const [confirmBody, setConfirmBody] = useState(initialConfirmBody);
-  const [redirectUrl, setRedirectUrl] = useState(initialRedirectUrl);
-  const [notifMsg, setNotifMsg] = useState<string | null>(null);
 
   // Theme state
   const [themeMode, setThemeMode] = useState<"dark" | "light" | "auto">(initialThemeMode);
@@ -138,22 +119,6 @@ export default function FormSettingsPanel({
     });
   }
 
-  function handleSaveNotifications() {
-    setNotifMsg(null);
-    const emails = notifEmails.split(",").map((e) => e.trim()).filter(Boolean);
-    const bcc = notifBcc.split(",").map((e) => e.trim()).filter(Boolean);
-    startTransition(async () => {
-      const result = await updateFormNotificationSettingsAction(formId, {
-        notificationEmails: emails,
-        notificationBcc: bcc,
-        confirmPageHeading: confirmHeading || null,
-        confirmPageBody: confirmBody || null,
-        redirectUrl: redirectUrl || null,
-      });
-      setNotifMsg(result.ok ? "Notification settings saved!" : (result.error ?? "Failed."));
-      if (result.ok) router.refresh();
-    });
-  }
 
   const formUrl = isDefault
     ? `https://${storefrontHost}`
@@ -169,123 +134,12 @@ export default function FormSettingsPanel({
   return (
     <>
       <button
-        onClick={() => setShowNotifications(!showNotifications)}
-        className="w-8 h-8 flex items-center justify-center text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"
-        title="Notification settings"
-      >
-        <i className="fa-solid fa-bell text-sm" />
-      </button>
-
-      <button
         onClick={() => setShowSettings(!showSettings)}
         className="w-8 h-8 flex items-center justify-center text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"
         title="Form settings"
       >
         <i className="fa-solid fa-gear text-sm" />
       </button>
-
-      {/* Notifications modal */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm" onClick={() => setShowNotifications(false)}>
-          <div className="bg-surface-container rounded-2xl border border-outline-variant/15 p-6 w-full max-w-lg shadow-2xl space-y-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-on-surface">Notification settings</h2>
-              <button onClick={() => setShowNotifications(false)} className="text-on-surface-variant/60 hover:text-on-surface transition-colors" aria-label="Close">
-                <i className="fa-solid fa-xmark" aria-hidden="true" />
-              </button>
-            </div>
-
-            {/* Notification recipients */}
-            <label className="block">
-              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Notification recipients</span>
-              <p className="text-xs text-on-surface-variant/60 mt-0.5 mb-1.5">
-                Comma-separated emails. Leave empty to use your default partner owner email.
-              </p>
-              <input
-                value={notifEmails}
-                onChange={(e) => setNotifEmails(e.target.value)}
-                placeholder="e.g. team@agency.com, lead@agency.com"
-                className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none"
-              />
-            </label>
-
-            {/* BCC */}
-            <label className="block">
-              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">BCC</span>
-              <p className="text-xs text-on-surface-variant/60 mt-0.5 mb-1.5">
-                Comma-separated emails to receive a blind copy of each notification.
-              </p>
-              <input
-                value={notifBcc}
-                onChange={(e) => setNotifBcc(e.target.value)}
-                placeholder="e.g. records@agency.com"
-                className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none"
-              />
-            </label>
-
-            <div className="border-t border-outline-variant/10 pt-4">
-              <h3 className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-3">After submission</h3>
-
-              {/* Redirect URL */}
-              <label className="block mb-4">
-                <span className="text-xs font-medium text-on-surface">Redirect URL</span>
-                <p className="text-xs text-on-surface-variant/60 mt-0.5 mb-1.5">
-                  Redirect clients to a custom URL after submission instead of showing the confirm page.
-                </p>
-                <input
-                  value={redirectUrl}
-                  onChange={(e) => setRedirectUrl(e.target.value)}
-                  placeholder="https://youragency.com/thank-you"
-                  className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none"
-                />
-              </label>
-
-              {/* Confirm page heading */}
-              <label className="block mb-4">
-                <span className="text-xs font-medium text-on-surface">Confirmation page heading</span>
-                <p className="text-xs text-on-surface-variant/60 mt-0.5 mb-1.5">
-                  Custom heading shown after submission. Leave empty for the default.
-                </p>
-                <input
-                  value={confirmHeading}
-                  onChange={(e) => setConfirmHeading(e.target.value)}
-                  placeholder="Thank you for your submission!"
-                  className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none"
-                />
-              </label>
-
-              {/* Confirm page body */}
-              <label className="block">
-                <span className="text-xs font-medium text-on-surface">Confirmation page body</span>
-                <p className="text-xs text-on-surface-variant/60 mt-0.5 mb-1.5">
-                  Custom body text shown after submission. Leave empty for the default.
-                </p>
-                <textarea
-                  value={confirmBody}
-                  onChange={(e) => setConfirmBody(e.target.value)}
-                  placeholder="We'll review your information and get back to you shortly."
-                  rows={3}
-                  className="w-full px-4 py-2.5 text-sm bg-surface-container-lowest border-0 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary/40 outline-none resize-none"
-                />
-              </label>
-            </div>
-
-            {/* Save button */}
-            <button
-              onClick={handleSaveNotifications}
-              disabled={pending}
-              className="w-full px-4 py-2.5 bg-primary text-on-primary font-bold rounded-xl text-sm disabled:opacity-50 transition-all"
-            >
-              {pending ? "Saving..." : "Save notification settings"}
-            </button>
-
-            {/* Status message */}
-            {notifMsg && (
-              <p className={`text-xs font-medium ${notifMsg.includes("!") ? "text-tertiary" : "text-error"}`}>{notifMsg}</p>
-            )}
-          </div>
-        </div>
-      )}
 
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm" onClick={() => setShowSettings(false)}>

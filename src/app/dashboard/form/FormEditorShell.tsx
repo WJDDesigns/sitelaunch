@@ -9,7 +9,6 @@ import FormEditor from "./FormEditor";
 import FormPreview from "./FormPreview";
 import TemplatePicker from "./TemplatePicker";
 import ConditionalFlowCanvas from "./ConditionalFlowCanvas";
-import FormWebhooksPanel from "./FormWebhooksPanel";
 
 export default function FormEditorShell({
   initialSchema,
@@ -22,7 +21,7 @@ export default function FormEditorShell({
   hasAI,
   hasPaymentGateway,
   settingsSlot,
-  webhooksSlot,
+  sendToSlot,
 }: {
   initialSchema: FormSchema | null;
   hasForm: boolean;
@@ -34,11 +33,11 @@ export default function FormEditorShell({
   hasAI?: boolean;
   hasPaymentGateway?: boolean;
   settingsSlot?: React.ReactNode;
-  webhooksSlot?: React.ReactNode;
+  sendToSlot?: React.ReactNode;
 }) {
   const router = useRouter();
   const [showTemplates, setShowTemplates] = useState(!hasForm);
-  const [mode, setMode] = useState<"editor" | "preview" | "logic" | "integrations">("editor");
+  const [mode, setMode] = useState<"editor" | "preview" | "logic" | "send-to">("editor");
   const [liveSchema, setLiveSchema] = useState<FormSchema | null>(initialSchema);
   const [copied, setCopied] = useState(false);
   const [isActive, setIsActive] = useState(initialIsActive ?? true);
@@ -125,16 +124,16 @@ export default function FormEditorShell({
               <span className="hidden sm:inline">Logic</span>
             </button>
             <button
-              onClick={() => setMode("integrations")}
+              onClick={() => setMode("send-to")}
               className={`px-2 sm:px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${
-                mode === "integrations"
+                mode === "send-to"
                   ? "bg-primary text-on-primary"
                   : "text-on-surface-variant/60 hover:text-on-surface"
               }`}
-              title="Integrations"
+              title="Send To"
             >
-              <i className="fa-solid fa-bolt text-[10px] sm:mr-1.5" />
-              <span className="hidden sm:inline">Integrations</span>
+              <i className="fa-solid fa-paper-plane text-[10px] sm:mr-1.5" />
+              <span className="hidden sm:inline">Send To</span>
             </button>
             <button
               onClick={() => {
@@ -233,10 +232,10 @@ export default function FormEditorShell({
               }
             }}
           />
-        ) : mode === "integrations" ? (
-          webhooksSlot ?? (
+        ) : mode === "send-to" ? (
+          sendToSlot ?? (
             <div className="h-full flex items-center justify-center text-sm text-on-surface-variant/60">
-              Save your form first to configure integrations.
+              Save your form first to configure send-to options.
             </div>
           )
         ) : (
