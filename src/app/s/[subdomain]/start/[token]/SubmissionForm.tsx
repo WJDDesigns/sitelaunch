@@ -1269,7 +1269,11 @@ function SignaturePadCanvas({ value, onChange, primaryColor }: {
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault(); drawing.current = true; last.current = getPos(e);
     const ctx = ctxRef.current;
-    if (ctx) { ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(last.current.x, last.current.y); }
+    if (ctx) {
+      const isDark = document.documentElement.classList.contains("dark");
+      ctx.strokeStyle = isDark ? "#e4e2e6" : "#1e293b";
+      ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(last.current.x, last.current.y);
+    }
   };
   const onDraw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!drawing.current) return; e.preventDefault();
@@ -1298,17 +1302,17 @@ function SignaturePadCanvas({ value, onChange, primaryColor }: {
           Clear
         </button>
       </div>
-      <div className="relative rounded-xl border-2 overflow-hidden" style={{ borderColor: primaryColor + "30", backgroundColor: "rgba(255,255,255,0.97)" }}>
+      <div className="relative rounded-xl border-2 overflow-hidden bg-surface-container/50" style={{ borderColor: primaryColor + "30" }}>
         <canvas ref={canvasRef} className="w-full touch-none" style={{ height: 150, cursor: "crosshair" }}
           onMouseDown={startDraw} onMouseMove={onDraw} onMouseUp={endDraw} onMouseLeave={endDraw}
           onTouchStart={startDraw} onTouchMove={onDraw} onTouchEnd={endDraw} />
         {!value && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-            <i className="fa-solid fa-signature text-2xl mb-1" style={{ color: "#d1d5db" }} />
-            <span className="text-xs" style={{ color: "#9ca3af" }}>Sign here with mouse or finger</span>
+            <i className="fa-solid fa-signature text-2xl mb-1 text-on-surface-variant/30" />
+            <span className="text-xs text-on-surface-variant/40">Sign here with mouse or finger</span>
           </div>
         )}
-        <div className="absolute bottom-4 left-6 right-6 border-b" style={{ borderColor: "rgba(0,0,0,0.1)" }} />
+        <div className="absolute bottom-4 left-6 right-6 border-b border-on-surface/10" />
       </div>
     </div>
   );
