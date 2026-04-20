@@ -4143,6 +4143,228 @@ function CelestialField({
     );
   }
 
+  /* ── Donation Tiers (Nonprofit) ── */
+  if (field.type === "donation_tier" && field.donationTierConfig) {
+    const cfg = field.donationTierConfig;
+    const data: Record<string, string> = typeof value === "string" && value ? (() => { try { return JSON.parse(value); } catch { return {}; } })() : (typeof value === "object" && value ? value as Record<string, string> : {});
+    const update = (key: string, val: string) => onChange(JSON.stringify({ ...data, [key]: val }));
+    const currency = cfg.currency || "$";
+    const selectedTier = data.tier_id;
+    const frequency = data.frequency || "one_time";
+    const freqLabels: Record<string, string> = { one_time: "One-Time", monthly: "Monthly", quarterly: "Quarterly", annually: "Annually" };
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="space-y-4">
+          {/* Recurring toggle */}
+          {cfg.showRecurring && cfg.recurringOptions && cfg.recurringOptions.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {cfg.recurringOptions.map((opt) => (
+                <button key={opt} type="button" onClick={() => update("frequency", opt)}
+                  className="px-4 py-2 rounded-xl border-2 text-xs font-medium transition-all"
+                  style={frequency === opt ? { borderColor: primaryColor, backgroundColor: primaryColor + "10", color: primaryColor } : { borderColor: "var(--color-outline-variant)" }}>
+                  {freqLabels[opt] || opt}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Tier cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {cfg.tiers.map((tier) => {
+              const isSelected = selectedTier === tier.id;
+              return (
+                <button key={tier.id} type="button" onClick={() => update("tier_id", isSelected ? "" : tier.id)}
+                  className={`relative flex flex-col items-center text-center p-5 rounded-2xl border-2 transition-all duration-200 ${tier.featured && !isSelected ? "ring-1 ring-primary/20" : ""}`}
+                  style={isSelected ? { borderColor: primaryColor, backgroundColor: primaryColor + "10", boxShadow: `0 0 0 1px ${primaryColor}40` } : { borderColor: "var(--color-outline-variant)" }}>
+                  {tier.featured && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: primaryColor }}>Popular</span>}
+                  {isSelected && <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}><i className="fa-solid fa-check text-white text-[10px]" /></div>}
+                  {tier.icon && <i className={`fa-solid ${tier.icon} text-2xl mb-2`} style={{ color: isSelected ? primaryColor : "var(--color-on-surface-variant)" }} />}
+                  <span className="text-xs font-medium text-on-surface-variant mb-1">{tier.label}</span>
+                  <span className="text-2xl font-bold mb-2" style={{ color: isSelected ? primaryColor : "var(--color-on-surface)" }}>{currency}{tier.amount}</span>
+                  {tier.impact && <p className="text-[10px] text-on-surface-variant/60 leading-tight">{tier.impact}</p>}
+                </button>
+              );
+            })}
+          </div>
+          {/* Custom amount */}
+          {cfg.allowCustom && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-1 block">Or enter a custom amount</label>
+              <div className="relative w-48">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-sm font-medium">{currency}</span>
+                <input type="number" min={1} value={data.custom_amount || ""} onChange={(e) => { update("custom_amount", e.target.value); update("tier_id", "custom"); }} placeholder="0" className={`${INPUT_CLS} pl-7`} style={focusRing} />
+              </div>
+            </div>
+          )}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Volunteer Signup (Nonprofit) ── */
+  if (field.type === "volunteer_signup" && field.volunteerSignupConfig) {
+    const cfg = field.volunteerSignupConfig;
+    const data: Record<string, string> = typeof value === "string" && value ? (() => { try { return JSON.parse(value); } catch { return {}; } })() : (typeof value === "object" && value ? value as Record<string, string> : {});
+    const update = (key: string, val: string) => onChange(JSON.stringify({ ...data, [key]: val }));
+    const selectedSlots = data.slots ? data.slots.split("||").filter(Boolean) : [];
+    const selectedSkills = data.skills ? data.skills.split("||").filter(Boolean) : [];
+    const toggleSlot = (slot: string) => {
+      const next = selectedSlots.includes(slot) ? selectedSlots.filter((s) => s !== slot) : [...selectedSlots, slot];
+      if (cfg.maxSlots && cfg.maxSlots > 0 && next.length > cfg.maxSlots && !selectedSlots.includes(slot)) return;
+      update("slots", next.join("||"));
+    };
+    const toggleSkill = (skill: string) => {
+      const next = selectedSkills.includes(skill) ? selectedSkills.filter((s) => s !== skill) : [...selectedSkills, skill];
+      update("skills", next.join("||"));
+    };
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="space-y-4">
+          {/* Frequency toggle */}
+          {cfg.showFrequency && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-2 block">How often can you volunteer?</label>
+              <div className="flex gap-3">
+                {[{ v: "one_time", label: "One-Time", icon: "fa-calendar-day" }, { v: "recurring", label: "Recurring", icon: "fa-rotate" }].map(({ v, label, icon }) => (
+                  <button key={v} type="button" onClick={() => update("frequency", v)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all"
+                    style={(data.frequency || "one_time") === v ? { borderColor: primaryColor, backgroundColor: primaryColor + "10", color: primaryColor } : { borderColor: "var(--color-outline-variant)" }}>
+                    <i className={`fa-solid ${icon}`} />{label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Availability grid */}
+          {cfg.days && cfg.timeSlots && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-2 block">Available Times</label>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-2 pr-3 text-on-surface-variant/50 font-medium" />
+                      {cfg.timeSlots.map((slot) => <th key={slot} className="py-2 px-1 text-center text-on-surface-variant/50 font-medium text-[10px]">{slot.split("(")[0].trim()}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cfg.days.map((day) => (
+                      <tr key={day}>
+                        <td className="py-1.5 pr-3 text-on-surface font-medium whitespace-nowrap">{day.slice(0, 3)}</td>
+                        {cfg.timeSlots!.map((slot) => {
+                          const key = `${day}:${slot}`;
+                          const active = selectedSlots.includes(key);
+                          return (
+                            <td key={slot} className="py-1.5 px-1 text-center">
+                              <button type="button" onClick={() => toggleSlot(key)}
+                                className="w-8 h-8 rounded-lg border transition-all"
+                                style={active ? { borderColor: primaryColor, backgroundColor: primaryColor, color: "white" } : { borderColor: "var(--color-outline-variant)" }}>
+                                {active && <i className="fa-solid fa-check text-[10px]" />}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {cfg.maxSlots && cfg.maxSlots > 0 && <p className="text-[10px] text-on-surface-variant/50 mt-1">Select up to {cfg.maxSlots} time slots</p>}
+            </div>
+          )}
+          {/* Skills */}
+          {cfg.skills && cfg.skills.length > 0 && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-2 block">Skills & Interests</label>
+              <div className="flex flex-wrap gap-2">
+                {cfg.skills.map((skill) => {
+                  const active = selectedSkills.includes(skill);
+                  return (
+                    <button key={skill} type="button" onClick={() => toggleSkill(skill)}
+                      className="px-3 py-1.5 rounded-full border text-xs font-medium transition-all"
+                      style={active ? { borderColor: primaryColor, backgroundColor: primaryColor + "15", color: primaryColor } : { borderColor: "var(--color-outline-variant)" }}>
+                      {active && <i className="fa-solid fa-check mr-1 text-[10px]" />}{skill}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* Notes */}
+          {cfg.showNotes && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-1 block">Additional Info / Special Skills</label>
+              <textarea value={data.notes || ""} onChange={(e) => update("notes", e.target.value)} rows={2} placeholder="Tell us about any special skills, certifications, or accommodations needed..." className={INPUT_CLS} style={focusRing} />
+            </div>
+          )}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  /* ── Cause Selector (Nonprofit) ── */
+  if (field.type === "cause_selector" && field.causeSelectorConfig) {
+    const cfg = field.causeSelectorConfig;
+    const selectedIds: string[] = cfg.multiSelect
+      ? (typeof value === "string" && value ? value.split("||") : [])
+      : (typeof value === "string" && value ? [value] : []);
+    const cols = cfg.columns ?? 2;
+    const gridCls = cols === 3 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : cols === 4 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2";
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className={`grid ${gridCls} gap-4`}>
+          {cfg.causes.map((cause) => {
+            const isSelected = selectedIds.includes(cause.id);
+            const atMax = cfg.multiSelect && cfg.maxSelections && cfg.maxSelections > 0 && selectedIds.length >= cfg.maxSelections && !isSelected;
+            return (
+              <button key={cause.id} type="button" disabled={!!atMax} onClick={() => {
+                if (cfg.multiSelect) {
+                  const next = isSelected ? selectedIds.filter((id) => id !== cause.id) : [...selectedIds, cause.id];
+                  onChange(next.join("||"));
+                } else {
+                  onChange(isSelected ? "" : cause.id);
+                }
+              }}
+                className={`relative flex flex-col text-left p-5 rounded-2xl border-2 transition-all duration-200 ${atMax ? "opacity-40 cursor-not-allowed" : "hover:scale-[1.01]"}`}
+                style={isSelected ? { borderColor: primaryColor, backgroundColor: primaryColor + "08", boxShadow: `0 0 0 1px ${primaryColor}40` } : { borderColor: "var(--color-outline-variant)" }}>
+                {isSelected && <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}><i className="fa-solid fa-check text-white text-[10px]" /></div>}
+                {cause.icon && <i className={`fa-solid ${cause.icon} text-2xl mb-3`} style={{ color: isSelected ? primaryColor : "var(--color-on-surface-variant)" }} />}
+                <span className="font-semibold text-on-surface text-sm mb-1">{cause.name}</span>
+                {cause.description && <p className="text-xs text-on-surface-variant/60 leading-relaxed mb-2">{cause.description}</p>}
+                {cause.goal && (
+                  <div className="mt-auto pt-2 border-t border-outline-variant/10">
+                    <span className="text-[10px] text-on-surface-variant/50">Goal: </span>
+                    <span className="text-xs font-bold" style={{ color: primaryColor }}>{cause.goal}</span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {cfg.multiSelect && cfg.maxSelections && cfg.maxSelections > 0 && (
+          <p className="text-xs text-on-surface-variant/60 ml-1 mt-2">Select up to {cfg.maxSelections}</p>
+        )}
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
   const isMultiCheckbox = field.type === "checkbox" && field.options && field.options.length > 0;
   /* Parse multi-checkbox value as array */
   const checkedValues: string[] = isMultiCheckbox

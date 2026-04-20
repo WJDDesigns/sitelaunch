@@ -42,7 +42,10 @@ export type FieldType =
   | "guest_rsvp"
   | "room_selector"
   | "loan_calculator"
-  | "case_intake";
+  | "case_intake"
+  | "donation_tier"
+  | "volunteer_signup"
+  | "cause_selector";
 
 /* ââ Package Selector types âââââââââââââââââââââââââââââââ */
 
@@ -596,6 +599,71 @@ export interface CaseIntakeConfig {
   jurisdictions?: string[];
 }
 
+/* -- Donation Tier types (Nonprofit) -------------------------------------- */
+
+export interface DonationTier {
+  id: string;
+  label: string;
+  amount: number;
+  /** Impact statement, e.g. "Feeds a family for a week" */
+  impact?: string;
+  icon?: string;
+  /** Whether this tier is highlighted/recommended */
+  featured?: boolean;
+}
+
+export interface DonationTierConfig {
+  /** Preset giving levels */
+  tiers: DonationTier[];
+  /** Allow custom/other amount */
+  allowCustom?: boolean;
+  /** Currency symbol */
+  currency?: string;
+  /** Whether this is a recurring donation selector */
+  showRecurring?: boolean;
+  /** Recurring frequency options */
+  recurringOptions?: ("one_time" | "monthly" | "quarterly" | "annually")[];
+}
+
+/* -- Volunteer Signup types (Nonprofit) ----------------------------------- */
+
+export interface VolunteerSignupConfig {
+  /** Available days */
+  days?: string[];
+  /** Available time slots */
+  timeSlots?: string[];
+  /** Skill/interest tags volunteers can select */
+  skills?: string[];
+  /** Show one-time vs recurring toggle */
+  showFrequency?: boolean;
+  /** Show notes/special skills field */
+  showNotes?: boolean;
+  /** Max time slots a volunteer can select (0 = unlimited) */
+  maxSlots?: number;
+}
+
+/* -- Cause Selector types (Nonprofit) ------------------------------------- */
+
+export interface CauseOption {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  /** Optional funding goal or target */
+  goal?: string;
+}
+
+export interface CauseSelectorConfig {
+  /** Available causes/programs */
+  causes: CauseOption[];
+  /** Allow selecting multiple causes */
+  multiSelect?: boolean;
+  /** Max causes that can be selected (0 = unlimited) */
+  maxSelections?: number;
+  /** Number of grid columns (2-4) */
+  columns?: 2 | 3 | 4;
+}
+
 /** Condition to show/hide a field or step based on another field's value */
 export interface ShowCondition {
   /** ID of the field to evaluate (from any step) */
@@ -690,6 +758,12 @@ export interface FieldDef {
   loanCalculatorConfig?: LoanCalculatorConfig;
   /** For case_intake fields — legal case intake config */
   caseIntakeConfig?: CaseIntakeConfig;
+  /** For donation_tier fields — nonprofit donation config */
+  donationTierConfig?: DonationTierConfig;
+  /** For volunteer_signup fields — nonprofit volunteer config */
+  volunteerSignupConfig?: VolunteerSignupConfig;
+  /** For cause_selector fields — nonprofit cause/program config */
+  causeSelectorConfig?: CauseSelectorConfig;
   /** Show this field only when the condition is met */
   showCondition?: ShowCondition;
   /** For file/files fields: optional cloud storage destination */
@@ -770,7 +844,9 @@ export const MIN_COL_SPAN: Partial<Record<FieldType, 1 | 2 | 3 | 4>> = {
   guest_rsvp: 2,
   case_intake: 2,
   loan_calculator: 2,
+  volunteer_signup: 2,
   /* Full width only (4) -- complex/wide fields */
+  // donation_tier, cause_selector, room_selector default to GRID_COLUMNS
   // package, repeater, asset_collection, site_structure, feature_selector,
   // goal_builder, approval, brand_style, competitor_analyzer, timeline,
   // budget_allocator, matrix, questionnaire, room_selector -- all default to GRID_COLUMNS

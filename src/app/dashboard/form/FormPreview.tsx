@@ -1482,6 +1482,176 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
     );
   }
 
+  /* Donation Tier — preview */
+  if (field.type === "donation_tier") {
+    const cfg = field.donationTierConfig;
+    const currency = cfg?.currency || "$";
+    const tiers = cfg?.tiers ?? [];
+    const freqOpts = cfg?.recurringOptions ?? [];
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="space-y-4">
+          {cfg?.showRecurring && freqOpts.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {freqOpts.map((opt, i) => {
+                const labels: Record<string, string> = { one_time: "One-Time", monthly: "Monthly", quarterly: "Quarterly", annually: "Annually" };
+                return (
+                  <div key={opt} className="px-4 py-2 rounded-xl border-2 text-xs font-medium"
+                    style={i === 0 ? { borderColor: primaryColor, backgroundColor: primaryColor + "10", color: primaryColor } : { borderColor: "var(--color-outline-variant)" }}>
+                    {labels[opt] || opt}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className={`grid ${tiers.length >= 4 ? "grid-cols-4" : tiers.length === 3 ? "grid-cols-3" : "grid-cols-2"} gap-3`}>
+            {tiers.map((tier, i) => (
+              <div key={tier.id} className={`relative flex flex-col items-center text-center p-5 rounded-2xl border-2 transition-all ${tier.featured ? "ring-1 ring-primary/20" : ""}`}
+                style={i === 0 ? { borderColor: primaryColor, backgroundColor: primaryColor + "10" } : { borderColor: "var(--color-outline-variant)" }}>
+                {tier.featured && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: primaryColor }}>Popular</span>}
+                {i === 0 && <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}><i className="fa-solid fa-check text-white text-[10px]" /></div>}
+                {tier.icon && <i className={`fa-solid ${tier.icon} text-2xl mb-2`} style={{ color: i === 0 ? primaryColor : "var(--color-on-surface-variant)" }} />}
+                <span className="text-xs font-medium text-on-surface-variant mb-1">{tier.label}</span>
+                <span className="text-2xl font-bold mb-2" style={{ color: i === 0 ? primaryColor : "var(--color-on-surface)" }}>{currency}{tier.amount}</span>
+                {tier.impact && <p className="text-[10px] text-on-surface-variant/60 leading-tight">{tier.impact}</p>}
+              </div>
+            ))}
+          </div>
+          {cfg?.allowCustom && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-1 block">Or enter a custom amount</label>
+              <div className="relative w-48">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-sm font-medium">{currency}</span>
+                <input type="number" placeholder="0" className={`${INPUT_CLS} pl-7`} style={focusRing} readOnly />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* Volunteer Signup — preview */
+  if (field.type === "volunteer_signup") {
+    const cfg = field.volunteerSignupConfig;
+    const days = cfg?.days ?? [];
+    const timeSlots = cfg?.timeSlots ?? [];
+    const skills = cfg?.skills ?? [];
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="space-y-4">
+          {cfg?.showFrequency && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-2 block">How often can you volunteer?</label>
+              <div className="flex gap-3">
+                {[{ label: "One-Time", icon: "fa-calendar-day" }, { label: "Recurring", icon: "fa-rotate" }].map(({ label, icon }, i) => (
+                  <div key={label} className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm font-medium"
+                    style={i === 0 ? { borderColor: primaryColor, backgroundColor: primaryColor + "10", color: primaryColor } : { borderColor: "var(--color-outline-variant)" }}>
+                    <i className={`fa-solid ${icon}`} />{label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {days.length > 0 && timeSlots.length > 0 && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-2 block">Available Times</label>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-2 pr-3 text-on-surface-variant/50 font-medium" />
+                      {timeSlots.map((slot) => <th key={slot} className="py-2 px-1 text-center text-on-surface-variant/50 font-medium text-[10px]">{slot.split("(")[0].trim()}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {days.map((day, dIdx) => (
+                      <tr key={day}>
+                        <td className="py-1.5 pr-3 text-on-surface font-medium whitespace-nowrap">{day.slice(0, 3)}</td>
+                        {timeSlots.map((slot, sIdx) => (
+                          <td key={slot} className="py-1.5 px-1 text-center">
+                            <div className="w-8 h-8 rounded-lg border transition-all"
+                              style={dIdx === 0 && sIdx === 0 ? { borderColor: primaryColor, backgroundColor: primaryColor, color: "white" } : { borderColor: "var(--color-outline-variant)" }}>
+                              {dIdx === 0 && sIdx === 0 && <div className="w-full h-full flex items-center justify-center"><i className="fa-solid fa-check text-[10px]" /></div>}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {cfg?.maxSlots && cfg.maxSlots > 0 && <p className="text-[10px] text-on-surface-variant/50 mt-1">Select up to {cfg.maxSlots} time slots</p>}
+            </div>
+          )}
+          {skills.length > 0 && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-2 block">Skills & Interests</label>
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill, i) => (
+                  <div key={skill} className="px-3 py-1.5 rounded-full border text-xs font-medium"
+                    style={i < 2 ? { borderColor: primaryColor, backgroundColor: primaryColor + "15", color: primaryColor } : { borderColor: "var(--color-outline-variant)" }}>
+                    {i < 2 && <i className="fa-solid fa-check mr-1 text-[10px]" />}{skill}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {cfg?.showNotes && (
+            <div>
+              <label className="text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-wider mb-1 block">Additional Info / Special Skills</label>
+              <textarea rows={2} placeholder="Tell us about any special skills, certifications, or accommodations needed..." className={INPUT_CLS} style={focusRing} readOnly />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* Cause Selector — preview */
+  if (field.type === "cause_selector") {
+    const cfg = field.causeSelectorConfig;
+    const causes = cfg?.causes ?? [];
+    const cols = cfg?.columns ?? 2;
+    const gridCls = cols === 3 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : cols === 4 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2";
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className={`grid ${gridCls} gap-4`}>
+          {causes.map((cause, i) => (
+            <div key={cause.id} className={`relative flex flex-col text-left p-5 rounded-2xl border-2 transition-all`}
+              style={i === 0 ? { borderColor: primaryColor, backgroundColor: primaryColor + "08", boxShadow: `0 0 0 1px ${primaryColor}40` } : { borderColor: "var(--color-outline-variant)" }}>
+              {i === 0 && <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}><i className="fa-solid fa-check text-white text-[10px]" /></div>}
+              {cause.icon && <i className={`fa-solid ${cause.icon} text-2xl mb-3`} style={{ color: i === 0 ? primaryColor : "var(--color-on-surface-variant)" }} />}
+              <span className="font-semibold text-on-surface text-sm mb-1">{cause.name}</span>
+              {cause.description && <p className="text-xs text-on-surface-variant/60 leading-relaxed mb-2">{cause.description}</p>}
+              {cause.goal && (
+                <div className="mt-auto pt-2 border-t border-outline-variant/10">
+                  <span className="text-[10px] text-on-surface-variant/50">Goal: </span>
+                  <span className="text-xs font-bold" style={{ color: primaryColor }}>{cause.goal}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {cfg?.multiSelect && cfg?.maxSelections && cfg.maxSelections > 0 && (
+          <p className="text-xs text-on-surface-variant/60 ml-1 mt-2">Select up to {cfg.maxSelections}</p>
+        )}
+      </div>
+    );
+  }
+
   /* All other fields — fully interactive */
   return (
     <div>

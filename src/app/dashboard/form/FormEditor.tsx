@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider, RatingConfig, SliderConfig, SocialHandlesConfig, SocialPlatformId, MatrixConfig, QuestionnaireConfig, QuestionnaireQuestion, PropertyDetailsConfig, InsuranceInfoConfig, GuestRsvpConfig, RoomSelectorConfig, RoomOption, LoanCalculatorConfig, CaseIntakeConfig } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider, RatingConfig, SliderConfig, SocialHandlesConfig, SocialPlatformId, MatrixConfig, QuestionnaireConfig, QuestionnaireQuestion, PropertyDetailsConfig, InsuranceInfoConfig, GuestRsvpConfig, RoomSelectorConfig, RoomOption, LoanCalculatorConfig, CaseIntakeConfig, DonationTierConfig, DonationTier, VolunteerSignupConfig, CauseSelectorConfig, CauseOption } from "@/lib/forms";
 import { SOCIAL_PLATFORMS, GRID_COLUMNS, MIN_COL_SPAN, getMinColSpan, getEffectiveColSpan } from "@/lib/forms";
 import { COUNTRIES } from "@/data/countries";
 import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
@@ -135,6 +135,12 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
     tags: ["finance", "real_estate"] },
   { type: "case_intake", label: "Case Intake", icon: "fa-scale-balanced", group: "advanced", category: "smart", description: "Case type, jurisdiction & incident details",
     tags: ["legal"] },
+  { type: "donation_tier", label: "Donation Tiers", icon: "fa-hand-holding-heart", group: "advanced", category: "smart", description: "Giving levels with impact statements",
+    tags: ["nonprofit"] },
+  { type: "volunteer_signup", label: "Volunteer Signup", icon: "fa-people-carry-box", group: "advanced", category: "smart", description: "Availability grid, skills & frequency",
+    tags: ["nonprofit", "events"] },
+  { type: "cause_selector", label: "Cause / Program", icon: "fa-ribbon", group: "advanced", category: "smart", description: "Pick causes or programs to support",
+    tags: ["nonprofit"] },
 ];
 
 function iconFor(type: FieldType) {
@@ -458,6 +464,46 @@ function makeField(type: FieldType, label: string): FieldDef {
       showOpposingParty: true,
       showDescription: true,
       showStatuteWarning: false,
+    };
+  }
+  if (type === "donation_tier") {
+    base.label = "Select Your Giving Level";
+    base.donationTierConfig = {
+      tiers: [
+        { id: `tier_${uid()}`, label: "Supporter", amount: 25, impact: "Provides meals for a family for one week", icon: "fa-heart" },
+        { id: `tier_${uid()}`, label: "Champion", amount: 100, impact: "Supplies school materials for 10 children", icon: "fa-star", featured: true },
+        { id: `tier_${uid()}`, label: "Hero", amount: 250, impact: "Funds a community workshop for a month", icon: "fa-trophy" },
+        { id: `tier_${uid()}`, label: "Visionary", amount: 500, impact: "Sponsors an entire program for one quarter", icon: "fa-crown" },
+      ],
+      allowCustom: true,
+      currency: "$",
+      showRecurring: true,
+      recurringOptions: ["one_time", "monthly", "quarterly", "annually"],
+    };
+  }
+  if (type === "volunteer_signup") {
+    base.label = "Volunteer Availability";
+    base.volunteerSignupConfig = {
+      days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      timeSlots: ["Morning (8am-12pm)", "Afternoon (12pm-5pm)", "Evening (5pm-9pm)"],
+      skills: ["Teaching", "Cooking", "Driving", "Construction", "Fundraising", "Event Planning", "Mentoring", "Administrative", "Technology", "Medical"],
+      showFrequency: true,
+      showNotes: true,
+      maxSlots: 0,
+    };
+  }
+  if (type === "cause_selector") {
+    base.label = "Which cause speaks to you?";
+    base.causeSelectorConfig = {
+      causes: [
+        { id: `cause_${uid()}`, name: "Education", description: "Support literacy programs and school supplies for underserved communities", icon: "fa-graduation-cap", goal: "$50,000" },
+        { id: `cause_${uid()}`, name: "Hunger Relief", description: "Help feed families in need through local food banks and meal programs", icon: "fa-bowl-food", goal: "$30,000" },
+        { id: `cause_${uid()}`, name: "Environment", description: "Fund clean water initiatives and conservation projects", icon: "fa-leaf", goal: "$40,000" },
+        { id: `cause_${uid()}`, name: "Health & Wellness", description: "Provide medical supplies and health screenings to those without access", icon: "fa-heart-pulse", goal: "$60,000" },
+      ],
+      multiSelect: true,
+      maxSelections: 0,
+      columns: 2,
     };
   }
   return base;
