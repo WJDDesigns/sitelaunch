@@ -1,7 +1,6 @@
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import dynamic from "next/dynamic";
-const InsightsDashboard = dynamic(() => import("./InsightsDashboard"), { ssr: false });
+import InsightsDashboard from "./InsightsDashboardLazy";
 import type { InsightDashboard } from "./actions";
 
 export default async function InsightsPage() {

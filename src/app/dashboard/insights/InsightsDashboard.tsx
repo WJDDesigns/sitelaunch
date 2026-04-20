@@ -24,8 +24,8 @@ function rgb(c: string) { return `rgb(${c})`; }
 
 /* Recharts sets SVG fill/stroke via inline attributes, so CSS var() doesn't
    work reliably. Use hardcoded theme-appropriate colors for axis ticks. */
-const TICK_LIGHT = "rgb(199 198 203 / 0.6)";
-const TICK_DIM   = "rgb(199 198 203 / 0.4)";
+const TICK_LIGHT = "rgb(199 198 203 / 0.9)";
+const TICK_DIM   = "rgb(199 198 203 / 0.7)";
 
 const SIZE_CLASSES: Record<WidgetSize, string> = {
   sm: "col-span-1 row-span-1",

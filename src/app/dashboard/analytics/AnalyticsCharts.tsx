@@ -90,7 +90,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
    Use hardcoded colors that match the dark theme design tokens. */
 const PRIMARY = "#696cf8";
 const TERTIARY = "#3ec9a8";
-const TICK_COLOR = "rgb(199 198 203 / 0.5)";
+const TICK_COLOR = "rgb(199 198 203 / 0.85)";
 const GRID_COLOR = "rgb(228 226 230 / 0.06)";
 
 export default function AnalyticsCharts({ chartData, funnelData, topPages, stats }: Props) {
