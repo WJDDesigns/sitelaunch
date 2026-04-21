@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, notifyPartnerOfSubmission } from "@/lib/notifications";
+import { fireWebhooks } from "@/lib/webhooks";
+import { fireSheetsSync } from "@/lib/sheets/sync";
+import { sendMail } from "@/lib/email";
+import { emailTemplate, escapeHtml, getRenderedEmail } from "@/lib/email-templates";
 
 type SubmissionStatus = "draft" | "submitted" | "in_review" | "complete" | "archived";
 
@@ -202,4 +206,225 @@ export async function getSubmissionsCsvData() {
   const { data: submissions, error } = await query;
   if (error) throw new Error(error.message);
   return submissions ?? [];
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Resend entry -- re-fire a submission through its notification flows
+ * ────────────────────────────────────────────────────────────────────── */
+
+export interface ResendIntegrationInfo {
+  defaultEmails: string[];
+  webhooks: { id: string; name: string; provider: string }[];
+  hasSheets: boolean;
+  sheetsFeeds: { id: string; spreadsheetName: string; sheetName: string }[];
+}
+
+/**
+ * Load available integrations for a submission so the modal can show
+ * checkboxes for what to re-fire.
+ */
+export async function getResendIntegrationInfo(
+  submissionId: string,
+): Promise<ResendIntegrationInfo> {
+  await authorizeSubmissions([submissionId]);
+  const admin = createAdminClient();
+
+  const { data: sub } = await admin
+    .from("submissions")
+    .select("partner_id, partner_form_id")
+    .eq("id", submissionId)
+    .maybeSingle();
+  if (!sub) throw new Error("Submission not found.");
+
+  // Default notification emails
+  const { data: partner } = await admin
+    .from("partners")
+    .select("support_email")
+    .eq("id", sub.partner_id)
+    .maybeSingle();
+
+  let defaultEmails: string[] = [];
+  if (partner?.support_email) {
+    defaultEmails = [partner.support_email];
+  } else {
+    const { data: owners } = await admin
+      .from("partner_members")
+      .select("user_id")
+      .eq("partner_id", sub.partner_id)
+      .eq("role", "partner_owner");
+    if (owners && owners.length > 0) {
+      const { data: profiles } = await admin
+        .from("profiles")
+        .select("email")
+        .in("id", owners.map((o) => o.user_id));
+      defaultEmails = (profiles ?? []).map((p) => p.email).filter(Boolean) as string[];
+    }
+  }
+
+  // Form-level notification_emails override default
+  const { data: pf } = await admin
+    .from("partner_forms")
+    .select("notification_emails")
+    .eq("id", sub.partner_form_id)
+    .maybeSingle();
+  const formEmails = (pf?.notification_emails as string[] | null) ?? [];
+  if (formEmails.length > 0) {
+    defaultEmails = formEmails;
+  }
+
+  // Webhooks
+  const { data: webhookRows } = await admin
+    .from("form_webhooks")
+    .select("id, name, provider")
+    .eq("partner_form_id", sub.partner_form_id)
+    .eq("partner_id", sub.partner_id)
+    .eq("is_enabled", true);
+
+  // Google Sheets feeds
+  const { data: sheetRows } = await admin
+    .from("sheets_feeds")
+    .select("id, spreadsheet_name, sheet_name")
+    .eq("partner_form_id", sub.partner_form_id)
+    .eq("partner_id", sub.partner_id)
+    .eq("is_enabled", true);
+
+  return {
+    defaultEmails,
+    webhooks: (webhookRows ?? []).map((w) => ({
+      id: w.id,
+      name: w.name,
+      provider: w.provider,
+    })),
+    hasSheets: (sheetRows ?? []).length > 0,
+    sheetsFeeds: (sheetRows ?? []).map((s) => ({
+      id: s.id,
+      spreadsheetName: s.spreadsheet_name,
+      sheetName: s.sheet_name,
+    })),
+  };
+}
+
+export interface ResendOptions {
+  sendEmail: boolean;
+  emailOverride?: string; // if set, send to this instead of default
+  sendWebhooks: boolean;
+  sendSheets: boolean;
+}
+
+export interface ResendResult {
+  ok: boolean;
+  sent: string[];
+  errors: string[];
+}
+
+/**
+ * Resend a submission through selected flows.
+ */
+export async function resendSubmissionAction(
+  submissionId: string,
+  options: ResendOptions,
+): Promise<ResendResult> {
+  await authorizeSubmissions([submissionId]);
+
+  const sent: string[] = [];
+  const errors: string[] = [];
+
+  // Email notification
+  if (options.sendEmail) {
+    try {
+      if (options.emailOverride) {
+        // Send to override address instead of defaults
+        await sendResendNotificationEmail(submissionId, options.emailOverride);
+      } else {
+        await notifyPartnerOfSubmission(submissionId);
+      }
+      sent.push("Email notification");
+    } catch (err) {
+      console.error("[resend] email failed:", err);
+      errors.push(`Email: ${(err as Error).message}`);
+    }
+  }
+
+  // Webhooks
+  if (options.sendWebhooks) {
+    try {
+      await fireWebhooks(submissionId);
+      sent.push("Webhooks");
+    } catch (err) {
+      console.error("[resend] webhooks failed:", err);
+      errors.push(`Webhooks: ${(err as Error).message}`);
+    }
+  }
+
+  // Google Sheets
+  if (options.sendSheets) {
+    try {
+      await fireSheetsSync(submissionId);
+      sent.push("Google Sheets");
+    } catch (err) {
+      console.error("[resend] sheets failed:", err);
+      errors.push(`Sheets: ${(err as Error).message}`);
+    }
+  }
+
+  return { ok: errors.length === 0, sent, errors };
+}
+
+/**
+ * Send the partner notification email to a specific override address.
+ * Used for testing -- builds the same email but routes it to the override.
+ */
+async function sendResendNotificationEmail(
+  submissionId: string,
+  toEmail: string,
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: sub } = await admin
+    .from("submissions")
+    .select("id, client_name, client_email, partner_id")
+    .eq("id", submissionId)
+    .maybeSingle();
+  if (!sub) throw new Error("Submission not found.");
+
+  const { data: partner } = await admin
+    .from("partners")
+    .select("name")
+    .eq("id", sub.partner_id)
+    .maybeSingle();
+  if (!partner) throw new Error("Partner not found.");
+
+  const clientName = sub.client_name || "A client";
+  const clientEmail = sub.client_email || "(no email provided)";
+  const appRoot = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.linqme.io";
+  const dashboardLink = `${appRoot.replace(/\/$/, "")}/dashboard/submissions/${sub.id}`;
+
+  const dbEmail = await getRenderedEmail("submission_partner", {
+    partner_name: partner.name,
+    client_name: clientName,
+    client_email: clientEmail,
+    dashboard_link: dashboardLink,
+  });
+
+  const html = dbEmail?.html ?? emailTemplate({
+    heading: `[Resend] New submission for ${partner.name}`,
+    body: `
+      <p style="margin: 0 0 8px;">
+        <strong>${escapeHtml(clientName)}</strong> submitted their form.
+        <br/><em style="color: #999; font-size: 12px;">This is a resend -- the original notification was already delivered.</em>
+      </p>
+      <p style="margin: 0 0 0;">Client email: <a href="mailto:${escapeHtml(clientEmail)}" style="color: #696cf8;">${escapeHtml(clientEmail)}</a></p>
+    `,
+    cta: { label: "View submission", url: dashboardLink },
+    partnerName: partner.name,
+  });
+
+  await sendMail({
+    to: toEmail,
+    subject: dbEmail?.subject
+      ? `[Resend] ${dbEmail.subject}`
+      : `[Resend] Submission -- ${clientName} -- ${partner.name}`,
+    html,
+    replyTo: sub.client_email || undefined,
+  });
 }
