@@ -201,6 +201,30 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+/* ─── Smart Overview Toggle ─── */
+
+export async function toggleSmartOverviewAction(enabled: boolean) {
+  const session = await requireSession();
+  const account = await getCurrentAccount(session.userId);
+  if (!account) throw new Error("No account");
+
+  const admin = createAdminClient();
+  // Merge into existing settings JSONB
+  const { data: partner } = await admin
+    .from("partners")
+    .select("settings")
+    .eq("id", account.id)
+    .maybeSingle();
+
+  const currentSettings = (partner?.settings as Record<string, unknown>) ?? {};
+  await admin
+    .from("partners")
+    .update({ settings: { ...currentSettings, smart_overview_enabled: enabled } })
+    .eq("id", account.id);
+
+  revalidatePath("/dashboard/settings");
+}
+
 /* ─── Profile Actions ─── */
 
 export async function updateProfileAction(formData: FormData) {

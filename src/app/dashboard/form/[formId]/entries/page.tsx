@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import type { FormSchema } from "@/lib/forms";
 import EntriesTable from "./EntriesTable";
+import SmartOverviewBox from "./SmartOverviewBox";
+import { getSmartOverview } from "./actions";
 
 interface PageProps {
   params: Promise<{ formId: string }>;
@@ -64,13 +67,28 @@ export default async function FormEntriesPage({ params }: PageProps) {
     created_at: s.created_at,
   }));
 
-  // Get partner primary color
-  const { data: partner } = await supabase
-    .from("partners")
-    .select("primary_color")
-    .eq("id", account.id)
-    .maybeSingle();
+  // Get partner details and smart overview data
+  const adminClient = createAdminClient();
+  const [{ data: partner }, { data: aiIntegrations }, cachedOverview] =
+    await Promise.all([
+      supabase
+        .from("partners")
+        .select("primary_color, settings")
+        .eq("id", account.id)
+        .maybeSingle(),
+      adminClient
+        .from("ai_integrations")
+        .select("id")
+        .eq("partner_id", account.id)
+        .limit(1),
+      getSmartOverview(formId),
+    ]);
+
   const primaryColor = partner?.primary_color || "#c0c1ff";
+  const partnerSettings = (partner?.settings as Record<string, unknown>) ?? {};
+  const smartOverviewEnabled = partnerSettings.smart_overview_enabled === true;
+  const hasAiProvider = (aiIntegrations ?? []).length > 0;
+  const showSmartOverview = smartOverviewEnabled && hasAiProvider;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 space-y-6">
@@ -90,6 +108,22 @@ export default async function FormEntriesPage({ params }: PageProps) {
           </p>
         </div>
       </header>
+
+      {showSmartOverview && (
+        <SmartOverviewBox
+          formId={formId}
+          currentEntryCount={rows.length}
+          cachedOverview={
+            cachedOverview.overview
+              ? {
+                  overview: cachedOverview.overview,
+                  generatedAt: cachedOverview.generatedAt!,
+                  entryCount: cachedOverview.entryCount,
+                }
+              : null
+          }
+        />
+      )}
 
       <EntriesTable
         entries={rows}

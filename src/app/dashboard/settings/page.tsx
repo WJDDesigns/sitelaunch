@@ -21,6 +21,7 @@ import SessionsSection from "./SessionsSection";
 import ProfileSection from "./ProfileSection";
 import SettingsTabs from "./SettingsTabs";
 import DashboardPaletteSection from "./DashboardPaletteSection";
+import SmartOverviewSection from "./SmartOverviewSection";
 import ChangelogSection from "./ChangelogSection";
 import SupportForm from "../../support/SupportForm";
 import {
@@ -54,7 +55,7 @@ export default async function SettingsPage() {
 
   // Fetch user profile and partner record in parallel
   const admin = createAdminClient();
-  const [{ data: profile }, { data: partner }] = await Promise.all([
+  const [{ data: profile }, { data: partner }, { data: aiIntegrations }] = await Promise.all([
     admin
       .from("profiles")
       .select("full_name, avatar_url")
@@ -65,7 +66,16 @@ export default async function SettingsPage() {
       .select("*")
       .eq("id", account.id)
       .maybeSingle(),
+    admin
+      .from("ai_integrations")
+      .select("id")
+      .eq("partner_id", account.id)
+      .limit(1),
   ]);
+
+  const hasAiProvider = (aiIntegrations ?? []).length > 0;
+  const partnerSettings = (partner?.settings as Record<string, unknown>) ?? {};
+  const smartOverviewEnabled = partnerSettings.smart_overview_enabled === true;
 
   const rootHost = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "linqme.io").replace(/:\d+$/, "");
 
@@ -81,6 +91,8 @@ export default async function SettingsPage() {
       />
 
       <DashboardPaletteSection />
+
+      <SmartOverviewSection enabled={smartOverviewEnabled} hasAiProvider={hasAiProvider} />
 
       <MfaSettingsSection />
 
