@@ -2216,10 +2216,20 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
           const rawVal = localAlloc[ch.id] ?? 0;
           const max = getMax(ch.id);
           const val = Math.min(rawVal, max);
-          const pct = max > 0 ? (val / max) * 100 : 0;
-          const displayVal = cfg.showAsPercentage && isConstrained && totalBudget > 0
-            ? `${Math.round((val / totalBudget) * 100)}%`
-            : `${currency}${val.toLocaleString()}`;
+          // Use the total budget as a visual reference for the slider, but cap at max.
+          // If total allocated is small relative to budget, zoom the slider to make
+          // dragging practical -- cap the visual range at 2x current total or max,
+          // whichever is smaller, with a minimum of 20% of the total budget.
+          const sliderMax = (() => {
+            if (!isConstrained || totalBudget <= 0) return max;
+            const minRange = Math.max(totalBudget * 0.2, 100);
+            const zoomedRange = Math.max(totalAllocated * 2, minRange);
+            return Math.min(Math.ceil(zoomedRange), max);
+          })();
+          const pct = sliderMax > 0 ? (val / sliderMax) * 100 : 0;
+          const displayPct = cfg.showAsPercentage && isConstrained && totalBudget > 0
+            ? ` (${Math.round((val / totalBudget) * 100)}%)`
+            : "";
 
           return (
             <div key={ch.id} className="rounded-xl border border-outline-variant/50 bg-surface-container p-3">
@@ -2228,23 +2238,40 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
                   {ch.icon && <i className={`${ch.icon} text-sm`} style={{ color: primaryColor }} />}
                   <span className="text-xs font-semibold text-on-surface">{ch.label}</span>
                 </div>
-                <span className="text-sm font-bold tabular-nums" style={{ color: primaryColor }}>{displayVal}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-on-surface-variant/40">{currency}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={max}
+                    value={val}
+                    onChange={(e) => {
+                      const n = Math.max(0, Math.min(Number(e.target.value) || 0, max));
+                      handleSliderChange(ch.id, n);
+                    }}
+                    className="w-20 text-right text-sm font-bold tabular-nums bg-transparent border-0 border-b border-outline-variant/20 focus:border-primary/50 outline-none py-0.5 transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    style={{ color: primaryColor }}
+                  />
+                  {displayPct && (
+                    <span className="text-[10px] text-on-surface-variant/50 font-medium">{displayPct}</span>
+                  )}
+                </div>
               </div>
               <div className="relative">
                 <div className="h-2 rounded-full bg-surface-container-highest" />
-                <div className="absolute top-0 left-0 h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: primaryColor }} />
+                <div className="absolute top-0 left-0 h-2 rounded-full" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: primaryColor }} />
                 <input
                   type="range"
                   min={0}
-                  max={max}
-                  step={getStep(max)}
-                  value={Math.min(val, max)}
+                  max={sliderMax}
+                  step={getStep(sliderMax)}
+                  value={Math.min(val, sliderMax)}
                   onChange={(e) => handleSliderChange(ch.id, Number(e.target.value))}
                   className="absolute inset-0 w-full opacity-0 cursor-pointer"
                   style={{ height: "8px" }}
                 />
                 <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 bg-white shadow-md pointer-events-none"
-                  style={{ left: `calc(${pct}% - 10px)`, borderColor: primaryColor }} />
+                  style={{ left: `calc(${Math.min(pct, 100)}% - 10px)`, borderColor: primaryColor }} />
               </div>
             </div>
           );
