@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useTransition, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   INTEGRATIONS,
   CATEGORIES,
@@ -30,6 +30,7 @@ interface Props {
 
 export default function IntegrationsGrid({ connected }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<IntegrationCategory | "all" | "popular">("popular");
   const [search, setSearch] = useState("");
   const [connectingId, setConnectingId] = useState<string | null>(null);
@@ -37,6 +38,29 @@ export default function IntegrationsGrid({ connected }: Props) {
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
+
+  /* Show toast on OAuth redirect */
+  useEffect(() => {
+    const connectedParam = searchParams.get("connected");
+    const errorParam = searchParams.get("error");
+    if (connectedParam) {
+      const label = connectedParam.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      setToast({ text: `${label} connected successfully!`, ok: true });
+      router.replace("/dashboard/integrations", { scroll: false });
+    } else if (errorParam) {
+      const label = errorParam.replace(/_/g, " ");
+      setToast({ text: `Connection failed: ${label}`, ok: false });
+      router.replace("/dashboard/integrations", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  /* Auto-dismiss toast */
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const categoryCounts = useMemo(() => getCategoryCounts(), []);
 
@@ -253,7 +277,22 @@ export default function IntegrationsGrid({ connected }: Props) {
   /* ── Render ─────────────────────────────────────────────────────── */
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 relative">
+      {/* ── Toast ─────────────────────────────────────────────────── */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg border transition-all animate-in slide-in-from-top-2 fade-in duration-300 ${
+          toast.ok
+            ? "bg-tertiary/10 border-tertiary/20 text-tertiary"
+            : "bg-error/10 border-error/20 text-error"
+        }`}>
+          <i className={`fa-solid ${toast.ok ? "fa-circle-check" : "fa-circle-xmark"}`} />
+          <span className="text-sm font-medium">{toast.text}</span>
+          <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100 transition-opacity">
+            <i className="fa-solid fa-xmark text-xs" />
+          </button>
+        </div>
+      )}
+
       {/* ── Sidebar ───────────────────────────────────────────────── */}
       <aside className="lg:w-56 xl:w-64 shrink-0">
         <nav className="space-y-0.5 lg:sticky lg:top-8">
