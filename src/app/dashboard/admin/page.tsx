@@ -91,6 +91,7 @@ export default async function AdminDashboardPage() {
           { label: "All Customers", desc: "Search and manage every customer", icon: "fa-sitemap", href: "/dashboard/admin/partners" },
           { label: "Storage", desc: "File storage usage per customer", icon: "fa-hard-drive", href: "/dashboard/admin/storage" },
           { label: "Activity Log", desc: "Audit trail of platform events", icon: "fa-timeline", href: "/dashboard/admin/activity" },
+          { label: "Integration Requests", desc: "Most-demanded integration requests", icon: "fa-lightbulb", href: "/dashboard/admin/integrations" },
         ].map((link) => (
           <Link
             key={link.href}

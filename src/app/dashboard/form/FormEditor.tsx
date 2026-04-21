@@ -545,6 +545,18 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
   const [isDragging, setIsDragging] = useState(false);
   const autoExpandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Resize-to-resize state ────────────────────────────── */
+  const resizeRef = useRef<{
+    stepId: string;
+    fieldId: string;
+    startX: number;
+    startSpan: number;
+    minSpan: number;
+    gridColWidth: number;
+  } | null>(null);
+  const [resizingFieldId, setResizingFieldId] = useState<string | null>(null);
+  const [resizePreviewSpan, setResizePreviewSpan] = useState<number | null>(null);
+
   /* ── Undo / Redo history ───────────────────────────────── */
   const MAX_HISTORY = 50;
   const historyRef = useRef<string[]>([JSON.stringify(initialSchema)]);
@@ -719,6 +731,68 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
           : s,
       ),
     );
+  }
+
+  /* ── Resize handlers ────────────────────────────────────── */
+
+  function startResize(e: React.MouseEvent, stepId: string, fieldId: string, fieldType: FieldType, currentSpan: number) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Find the grid container to measure column width
+    const target = e.currentTarget as HTMLElement;
+    const gridEl = target.closest(".grid.grid-cols-4") as HTMLElement | null;
+    if (!gridEl) return;
+
+    const gridRect = gridEl.getBoundingClientRect();
+    const gap = 8; // gap-2 = 0.5rem = 8px
+    const gridColWidth = (gridRect.width - gap * 3) / GRID_COLUMNS;
+
+    resizeRef.current = {
+      stepId,
+      fieldId,
+      startX: e.clientX,
+      startSpan: currentSpan,
+      minSpan: getMinColSpan(fieldType),
+      gridColWidth,
+    };
+    setResizingFieldId(fieldId);
+    setResizePreviewSpan(currentSpan);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const dx = ev.clientX - resizeRef.current.startX;
+      const spanDelta = Math.round(dx / resizeRef.current.gridColWidth);
+      const newSpan = Math.max(
+        resizeRef.current.minSpan,
+        Math.min(GRID_COLUMNS, resizeRef.current.startSpan + spanDelta),
+      );
+      setResizePreviewSpan(newSpan);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      if (resizeRef.current) {
+        const { stepId: sid, fieldId: fid, startSpan } = resizeRef.current;
+        // Use functional updater to read latest preview span
+        setResizePreviewSpan((latest) => {
+          if (latest !== null && latest !== startSpan) {
+            updateField(sid, fid, { colSpan: latest as 1 | 2 | 3 | 4 });
+          }
+          return null;
+        });
+      }
+      resizeRef.current = null;
+      setResizingFieldId(null);
+    };
+
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
   }
 
   /* ── Drag handlers ─────────────────────────────────────── */
@@ -1244,10 +1318,14 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                             const ghostLabel = dragInfo?.kind === "palette" ? dragInfo.label : dragInfo?.kind === "field" ? schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragInfo.fieldId)?.label ?? "Field" : "Field";
                             const ghostIcon = dragInfo?.kind === "palette" ? iconFor(dragInfo.fieldType) : dragInfo?.kind === "field" ? iconFor(schema.steps.flatMap((s) => s.fields).find((f) => f.id === dragInfo.fieldId)?.type ?? "text") : "fa-question";
 
+                            const isResizing = resizingFieldId === field.id;
+                            const displaySpan = isResizing && resizePreviewSpan !== null ? resizePreviewSpan : colSpan;
+                            const canResize = minSpan < GRID_COLUMNS;
+
                             const colSpanCls =
-                              colSpan === 1 ? "col-span-1"
-                              : colSpan === 2 ? "col-span-2"
-                              : colSpan === 3 ? "col-span-3"
+                              displaySpan === 1 ? "col-span-1"
+                              : displaySpan === 2 ? "col-span-2"
+                              : displaySpan === 3 ? "col-span-3"
                               : "col-span-4";
 
                             return (
@@ -1260,7 +1338,7 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                                     <span className="text-sm font-medium text-primary/60 truncate">{ghostLabel}</span>
                                   </div>
                                 )}
-                                <div className={`${colSpanCls} relative`}>
+                                <div className={`${colSpanCls} relative ${isResizing ? "z-20" : ""}`} style={isResizing ? { transition: "none" } : undefined}>
                                   {/* Left side-drop indicator */}
                                   {isDropLeft && (
                                     <div className="absolute -left-1 top-0 bottom-0 w-1 rounded-full bg-primary z-10" />
@@ -1270,21 +1348,23 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                                     <div className="absolute -right-1 top-0 bottom-0 w-1 rounded-full bg-primary z-10" />
                                   )}
                                   <div
-                                    draggable
-                                    onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; startDragField(step.id, field.id); }}
+                                    draggable={!isResizing}
+                                    onDragStart={(e) => { if (isResizing) { e.preventDefault(); return; } e.stopPropagation(); e.dataTransfer.effectAllowed = "move"; startDragField(step.id, field.id); }}
                                     onDragOver={(e) => handleDragOverField(e, step.id, fi)}
                                     onDrop={(e) => handleDrop(e, step.id, fi)}
                                     onDragEnd={handleDragEnd}
                                     onClick={() => selectField(step.id, field.id)}
-                                    className={`flex items-center gap-2 px-2.5 sm:px-3 py-2.5 rounded-xl cursor-grab active:cursor-grabbing transition-all duration-200 ${
-                                      isSelected
-                                        ? "bg-primary/10 border border-primary/40"
-                                        : "bg-surface-container-low border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-container-high"
+                                    className={`relative flex items-center gap-2 px-2.5 sm:px-3 py-2.5 rounded-xl cursor-grab active:cursor-grabbing transition-all duration-200 group/field ${
+                                      isResizing
+                                        ? "bg-primary/10 border-2 border-primary/50 ring-2 ring-primary/20"
+                                        : isSelected
+                                          ? "bg-primary/10 border border-primary/40"
+                                          : "bg-surface-container-low border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-container-high"
                                     }`}
                                   >
                                     <div className="text-on-surface-variant/40 hover:text-on-surface-variant cursor-grab select-none shrink-0"><i className="fa-solid fa-grip-vertical text-[10px]" /></div>
                                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${
-                                      isSelected ? "bg-primary/20 text-primary" : "bg-surface-container-highest text-primary"
+                                      isSelected || isResizing ? "bg-primary/20 text-primary" : "bg-surface-container-highest text-primary"
                                     }`}>
                                       <FaIcon name={iconFor(field.type)} />
                                     </div>
@@ -1297,9 +1377,13 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                                       </div>
                                     </div>
                                     {/* Column span badge */}
-                                    {colSpan < GRID_COLUMNS && (
-                                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0 tabular-nums" title={`${colSpan} of ${GRID_COLUMNS} columns${minSpan < GRID_COLUMNS ? ` (min ${minSpan})` : ""}`}>
-                                        {colSpan}/{GRID_COLUMNS}
+                                    {displaySpan < GRID_COLUMNS && (
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 tabular-nums ${
+                                        isResizing
+                                          ? "bg-primary/20 text-primary border-primary/40 scale-110"
+                                          : "bg-primary/10 text-primary border-primary/20"
+                                      }`} title={`${displaySpan} of ${GRID_COLUMNS} columns${minSpan < GRID_COLUMNS ? ` (min ${minSpan})` : ""}`}>
+                                        {displaySpan}/{GRID_COLUMNS}
                                       </span>
                                     )}
                                     <button
@@ -1308,6 +1392,26 @@ export default function FormEditor({ initialSchema, onOpenTemplates, formId, has
                                     >
                                       <i className="fa-solid fa-xmark text-xs" />
                                     </button>
+
+                                    {/* Resize handle -- corner drag lines */}
+                                    {canResize && (
+                                      <div
+                                        onMouseDown={(e) => startResize(e, step.id, field.id, field.type, colSpan)}
+                                        className={`absolute bottom-0 right-0 w-5 h-5 cursor-ew-resize select-none ${
+                                          isResizing
+                                            ? "opacity-100"
+                                            : "opacity-0 group-hover/field:opacity-100"
+                                        } transition-opacity`}
+                                        title="Drag to resize"
+                                      >
+                                        {/* Three diagonal lines forming a corner resize grip */}
+                                        <svg viewBox="0 0 20 20" className="w-full h-full" fill="none">
+                                          <line x1="18" y1="8" x2="8" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-primary/40" />
+                                          <line x1="18" y1="12" x2="12" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-primary/40" />
+                                          <line x1="18" y1="16" x2="16" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-primary/40" />
+                                        </svg>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </React.Fragment>

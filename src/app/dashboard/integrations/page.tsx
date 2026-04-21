@@ -1,6 +1,7 @@
 import { requireSession, getCurrentAccount } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import IntegrationsGrid from "./IntegrationsGrid";
+import IntegrationRequestSection from "./IntegrationRequestSection";
 
 export default async function IntegrationsPage() {
   const session = await requireSession();
@@ -29,6 +30,7 @@ export default async function IntegrationsPage() {
     { data: captchaRows },
     geocodingResult,
     { data: sheetsRows },
+    { data: existingRequests },
   ] = await Promise.all([
     admin
       .from("cloud_integrations")
@@ -56,6 +58,11 @@ export default async function IntegrationsPage() {
       .from("sheets_connections")
       .select("id, account_email, connected_at")
       .eq("partner_id", account.id),
+    admin
+      .from("integration_requests")
+      .select("integration_name, created_at")
+      .eq("partner_id", account.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   /* Normalize all rows into a flat array with their table tag */
@@ -96,6 +103,13 @@ export default async function IntegrationsPage() {
       </header>
 
       <IntegrationsGrid connected={connected} />
+
+      <IntegrationRequestSection
+        existingRequests={(existingRequests ?? []).map((r) => ({
+          integration_name: r.integration_name as string,
+          created_at: r.created_at as string,
+        }))}
+      />
     </div>
   );
 }
