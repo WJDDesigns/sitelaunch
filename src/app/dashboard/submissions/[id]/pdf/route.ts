@@ -94,66 +94,184 @@ export async function GET(
   <meta charset="utf-8">
   <title>${escapeHtml(clientName)} - Submission</title>
   <style>
-    @page { margin: 48px 56px; size: A4; }
-    * { box-sizing: border-box; }
+    @page {
+      margin: 0;
+      size: A4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      color: #1a1a2e; margin: 0; padding: 0; line-height: 1.6; font-size: 13px;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: #1a1a2e;
+      line-height: 1.6;
+      font-size: 13px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
-    .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 3px solid ${primaryColor}; }
-    .header h1 { font-size: 22px; font-weight: 800; margin: 0; color: #111; letter-spacing: -0.3px; }
-    .header .subtitle { font-size: 12px; color: #666; margin: 4px 0 0 0; }
-    .header .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: ${statusColor}; background: ${statusColor}15; border: 1px solid ${statusColor}30; }
-    .header .date { font-size: 11px; color: #999; margin: 8px 0 0 0; }
+    .page-wrapper {
+      padding: 56px 64px 48px 64px;
+      min-height: 100vh;
+    }
 
-    .meta-box { background: #f7f8fa; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; border: 1px solid #eef0f2; }
-    .meta-box table { width: 100%; font-size: 12px; border-collapse: collapse; }
-    .meta-box td { padding: 4px 0; }
-    .meta-box .meta-label { color: #888; width: 140px; }
-    .meta-box .meta-value { text-align: right; color: #555; font-family: 'SF Mono', Monaco, monospace; font-size: 11px; }
+    /* ── Header ─────────────────────────────── */
+    .header {
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      border-bottom: 3px solid ${primaryColor};
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #111;
+      letter-spacing: -0.3px;
+      margin-bottom: 4px;
+    }
+    .header .subtitle {
+      font-size: 12px;
+      color: #666;
+    }
+    .header .status-badge {
+      display: inline-block;
+      padding: 5px 16px;
+      border-radius: 20px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: ${statusColor};
+      background: ${statusColor}15;
+      border: 1px solid ${statusColor}30;
+    }
+    .header .date {
+      font-size: 11px;
+      color: #999;
+      margin-top: 8px;
+    }
 
-    .step-section { margin-bottom: 32px; page-break-inside: avoid; }
-    .step-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: #888; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 2px solid ${primaryColor}20; font-weight: 700; }
+    /* ── Meta box ───────────────────────────── */
+    .meta-box {
+      background: #f7f8fa;
+      border-radius: 10px;
+      padding: 18px 24px;
+      margin-bottom: 36px;
+      border: 1px solid #eef0f2;
+    }
+    .meta-box table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+    }
+    .meta-box td {
+      padding: 5px 0;
+    }
+    .meta-box .meta-label {
+      color: #888;
+      width: 140px;
+    }
+    .meta-box .meta-value {
+      text-align: right;
+      color: #555;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 11px;
+    }
 
-    .fields-table { width: 100%; border-collapse: collapse; }
-    .label-cell { padding: 10px 16px; font-size: 12px; color: #777; vertical-align: top; width: 35%; border-bottom: 1px solid #f0f1f3; font-weight: 500; }
-    .value-cell { padding: 10px 16px; font-size: 13px; color: #222; white-space: pre-wrap; border-bottom: 1px solid #f0f1f3; line-height: 1.5; word-break: break-word; }
+    /* ── Step sections ──────────────────────── */
+    .step-section {
+      margin-bottom: 36px;
+      page-break-inside: avoid;
+    }
+    .step-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: ${primaryColor};
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid ${primaryColor}25;
+      font-weight: 700;
+    }
 
-    .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; }
-    .footer p { font-size: 9px; color: #bbb; text-transform: uppercase; letter-spacing: 2.5px; margin: 0; }
+    /* ── Fields table ───────────────────────── */
+    .fields-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .fields-table tr:last-child .label-cell,
+    .fields-table tr:last-child .value-cell {
+      border-bottom: none;
+    }
+    .label-cell {
+      padding: 12px 20px 12px 0;
+      font-size: 12px;
+      color: #777;
+      vertical-align: top;
+      width: 35%;
+      border-bottom: 1px solid #f0f1f3;
+      font-weight: 500;
+    }
+    .value-cell {
+      padding: 12px 0 12px 20px;
+      font-size: 13px;
+      color: #222;
+      white-space: pre-wrap;
+      border-bottom: 1px solid #f0f1f3;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+
+    /* ── Footer ─────────────────────────────── */
+    .footer {
+      margin-top: 56px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .footer p {
+      font-size: 9px;
+      color: #bbb;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div>
-      <h1>${escapeHtml(clientName)}</h1>
-      <p class="subtitle">${escapeHtml(sub.client_email || "\u2014")} &middot; ${escapeHtml(partnerName)}</p>
+  <div class="page-wrapper">
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <h1>${escapeHtml(clientName)}</h1>
+          <p class="subtitle">${escapeHtml(sub.client_email || "\u2014")} &middot; ${escapeHtml(partnerName)}</p>
+        </div>
+        <div style="text-align:right;">
+          <div class="status-badge">${sub.status.replace("_", " ")}</div>
+          <p class="date">${submittedDate}</p>
+        </div>
+      </div>
     </div>
-    <div style="text-align:right;">
-      <div class="status-badge">${sub.status.replace("_", " ")}</div>
-      <p class="date">${submittedDate}</p>
+
+    <div class="meta-box">
+      <table>
+        <tr>
+          <td class="meta-label">Submission ID</td>
+          <td class="meta-value">${sub.id}</td>
+        </tr>
+        <tr>
+          <td class="meta-label">Partner</td>
+          <td class="meta-value" style="font-family:inherit;">${escapeHtml(partnerName)}</td>
+        </tr>
+      </table>
     </div>
-  </div>
 
-  <div class="meta-box">
-    <table>
-      <tr>
-        <td class="meta-label">Submission ID</td>
-        <td class="meta-value">${sub.id}</td>
-      </tr>
-      <tr>
-        <td class="meta-label">Partner</td>
-        <td class="meta-value" style="font-family:inherit;">${escapeHtml(partnerName)}</td>
-      </tr>
-    </table>
-  </div>
+    ${stepsHtml}
 
-  ${stepsHtml}
-
-  <div class="footer">
-    <p>Generated by linqme &middot; ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+    <div class="footer">
+      <p>Generated by linqme &middot; ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+    </div>
   </div>
 </body>
 </html>`;
