@@ -7,6 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptToken } from "@/lib/cloud/encryption";
 import { appendRow, refreshSheetsToken } from "./google-sheets";
 import { encryptToken } from "@/lib/cloud/encryption";
+import { formatFieldValue } from "@/lib/format-field-value";
+import type { FormSchema, FieldDef } from "@/lib/forms";
 
 interface SheetsFeed {
   id: string;
@@ -42,6 +44,17 @@ export async function fireSheetsSync(submissionId: string): Promise<void> {
     .eq("is_enabled", true);
 
   if (feedErr || !feeds || feeds.length === 0) return;
+
+  // Load form schema for field order + formatting
+  const { data: pf } = await admin
+    .from("partner_forms")
+    .select("form_templates ( schema )")
+    .eq("id", sub.partner_form_id)
+    .maybeSingle();
+
+  const tplRaw = pf?.form_templates;
+  const tplObj = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+  const schema = (tplObj?.schema as FormSchema) ?? null;
 
   // Get tokens -- try dedicated sheets_connections first, fall back to cloud_integrations google_drive
   const { data: sheetsConn } = await admin
@@ -89,6 +102,9 @@ export async function fireSheetsSync(submissionId: string): Promise<void> {
 
   const rawData = (sub.data ?? {}) as Record<string, unknown>;
 
+  // Build schema-aligned fields list for auto-map
+  const allFields: FieldDef[] = schema?.steps?.flatMap((s) => s.fields) ?? [];
+
   // Sync to each feed concurrently
   await Promise.allSettled(
     (feeds as SheetsFeed[]).map(async (feed) => {
@@ -98,17 +114,26 @@ export async function fireSheetsSync(submissionId: string): Promise<void> {
         if (feed.field_map && feed.field_map.length > 0) {
           // Mapped fields -- in the order defined by field_map
           values = feed.field_map.map((m) => {
+            const field = allFields.find((f) => f.id === m.fieldId);
             const val = rawData[m.fieldId];
+            if (field && val !== undefined && val !== null && val !== "") {
+              return formatFieldValue(val, field);
+            }
             return formatCellValue(val);
           });
         } else {
-          // Auto-map: timestamp + client info + all data fields
-          values = [
-            sub.submitted_at ?? new Date().toISOString(),
-            sub.client_name ?? "",
-            sub.client_email ?? "",
-            ...Object.values(rawData).map(formatCellValue),
-          ];
+          // Auto-map: "Submitted At" + each schema field in order
+          // This matches the header order used in FormSendToPanel.tsx:
+          // ["Submitted At", ...schema.steps.flatMap(s => s.fields.map(f => f.label))]
+          values = [sub.submitted_at ?? new Date().toISOString()];
+          for (const field of allFields) {
+            const val = rawData[field.id];
+            if (val === undefined || val === null || val === "") {
+              values.push("");
+            } else {
+              values.push(formatFieldValue(val, field));
+            }
+          }
         }
 
         await appendRow(accessToken, feed.spreadsheet_id, feed.sheet_name, values);

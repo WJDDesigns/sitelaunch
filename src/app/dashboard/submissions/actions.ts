@@ -372,7 +372,8 @@ export async function resendSubmissionAction(
 
 /**
  * Send the partner notification email to a specific override address.
- * Used for testing -- builds the same email but routes it to the override.
+ * Used for testing -- builds the same email as the normal notification
+ * with all form fields included.
  */
 async function sendResendNotificationEmail(
   submissionId: string,
@@ -382,7 +383,7 @@ async function sendResendNotificationEmail(
 
   const { data: sub } = await admin
     .from("submissions")
-    .select("id, client_name, client_email, partner_id")
+    .select("id, client_name, client_email, data, partner_id, partner_form_id")
     .eq("id", submissionId)
     .maybeSingle();
   if (!sub) throw new Error("Submission not found.");
@@ -394,26 +395,70 @@ async function sendResendNotificationEmail(
     .maybeSingle();
   if (!partner) throw new Error("Partner not found.");
 
+  // Load form schema for field labels
+  const { data: pf } = await admin
+    .from("partner_forms")
+    .select("form_templates ( schema )")
+    .eq("id", sub.partner_form_id)
+    .maybeSingle();
+
+  const tplRaw = pf?.form_templates;
+  const tplObj = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+  const formSchema = (tplObj?.schema as {
+    steps: Array<{ fields: Array<{ id: string; label: string; type?: string }> }>;
+  }) ?? null;
+
+  const allFields = formSchema?.steps?.flatMap((s) => s.fields) ?? [];
+  const submissionData = (sub.data ?? {}) as Record<string, unknown>;
+
   const clientName = sub.client_name || "A client";
   const clientEmail = sub.client_email || "(no email provided)";
   const appRoot = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.linqme.io";
   const dashboardLink = `${appRoot.replace(/\/$/, "")}/dashboard/submissions/${sub.id}`;
 
-  const dbEmail = await getRenderedEmail("submission_partner", {
-    partner_name: partner.name,
-    client_name: clientName,
-    client_email: clientEmail,
-    dashboard_link: dashboardLink,
-  });
+  // Build all-fields HTML table
+  const rows: string[] = [];
+  for (const field of allFields) {
+    if (field.type === "heading") continue;
+    const value = submissionData[field.id];
+    if (value === null || value === undefined || value === "") continue;
 
-  const html = dbEmail?.html ?? emailTemplate({
-    heading: `[Resend] New submission for ${partner.name}`,
+    const label = escapeHtml(field.label || field.id);
+    let displayValue: string;
+    if (typeof value === "boolean") {
+      displayValue = value ? "Yes" : "No";
+    } else if (Array.isArray(value)) {
+      displayValue = escapeHtml(value.join(", "));
+    } else if (typeof value === "object") {
+      displayValue = escapeHtml(JSON.stringify(value));
+    } else {
+      displayValue = escapeHtml(String(value));
+    }
+
+    rows.push(
+      `<tr>` +
+      `<td style="padding:8px 12px;border-bottom:1px solid rgba(105,108,248,0.1);color:#94a3b8;font-size:13px;line-height:1.5;vertical-align:top;white-space:nowrap;width:140px;">${label}</td>` +
+      `<td style="padding:8px 12px;border-bottom:1px solid rgba(105,108,248,0.1);color:#e2e8f0;font-size:13px;line-height:1.5;vertical-align:top;">${displayValue}</td>` +
+      `</tr>`,
+    );
+  }
+
+  const allFieldsHtml = rows.length > 0
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b1326;border-radius:12px;margin-top:16px;">` +
+      `<tr><td style="padding:16px;">` +
+      `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">` +
+      rows.join("") +
+      `</table></td></tr></table>`
+    : "";
+
+  const html = emailTemplate({
+    heading: `New submission for ${partner.name}`,
     body: `
       <p style="margin: 0 0 8px;">
-        <strong>${escapeHtml(clientName)}</strong> submitted their form.
-        <br/><em style="color: #999; font-size: 12px;">This is a resend -- the original notification was already delivered.</em>
+        <strong>${escapeHtml(clientName)}</strong> submitted their onboarding form.
       </p>
       <p style="margin: 0 0 0;">Client email: <a href="mailto:${escapeHtml(clientEmail)}" style="color: #696cf8;">${escapeHtml(clientEmail)}</a></p>
+      ${allFieldsHtml}
     `,
     cta: { label: "View submission", url: dashboardLink },
     partnerName: partner.name,
@@ -421,9 +466,7 @@ async function sendResendNotificationEmail(
 
   await sendMail({
     to: toEmail,
-    subject: dbEmail?.subject
-      ? `[Resend] ${dbEmail.subject}`
-      : `[Resend] Submission -- ${clientName} -- ${partner.name}`,
+    subject: `New submission -- ${clientName} -- ${partner.name}`,
     html,
     replyTo: sub.client_email || undefined,
   });

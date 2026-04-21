@@ -607,6 +607,234 @@ export default async function SubmissionDetailPage({ params }: Props) {
                 );
               }
 
+              /* ── Property Details ── */
+              if (f.type === "property_details" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const pd = parsed as Record<string, string>;
+                const labels: Record<string, string> = {
+                  property_type: "Property Type", bedrooms: "Bedrooms", bathrooms: "Bathrooms",
+                  sqft: "Sq Ft", lot_size: "Lot Size", year_built: "Year Built",
+                  parking: "Parking Spaces", stories: "Stories", price: "Price",
+                };
+                const formatPdVal = (key: string, val: string) => {
+                  if (key === "property_type") return val.charAt(0).toUpperCase() + val.slice(1).replace(/_/g, " ");
+                  if (key === "price") { const n = Number(val); return !isNaN(n) ? `$${n.toLocaleString()}` : val; }
+                  if (key === "sqft" || key === "lot_size") { const n = Number(val); return !isNaN(n) ? n.toLocaleString() : val; }
+                  return val;
+                };
+                const entries = Object.entries(pd).filter(([, val]) => val !== null && val !== undefined && val !== "");
+                if (entries.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {entries.map(([key, val]) => (
+                          <div key={key} className="flex items-center gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-28 shrink-0">{labels[key] ?? key.replace(/_/g, " ")}</span>
+                            <span className="text-on-surface font-medium">{formatPdVal(key, val)}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Insurance Info ── */
+              if (f.type === "insurance_info" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const ins = parsed as Record<string, string>;
+                const labels: Record<string, string> = {
+                  provider: "Provider", plan_type: "Plan Type", policy_number: "Policy #",
+                  group_number: "Group #", subscriber_name: "Subscriber", subscriber_dob: "DOB",
+                  relationship: "Relationship", provider_other: "Other Provider",
+                };
+                const entries = Object.entries(ins).filter(([, val]) => val !== null && val !== undefined && val !== "");
+                if (entries.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {entries.map(([key, val]) => (
+                          <div key={key} className="flex items-center gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-28 shrink-0">{labels[key] ?? key.replace(/_/g, " ")}</span>
+                            <span className="text-on-surface font-medium">{val}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Guest RSVP ── */
+              if (f.type === "guest_rsvp" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const rsvp = parsed as Record<string, string>;
+                const parts: [string, string][] = [];
+                if (rsvp.attending) parts.push(["Attending", rsvp.attending.charAt(0).toUpperCase() + rsvp.attending.slice(1)]);
+                if (rsvp.meal) parts.push(["Meal", rsvp.meal]);
+                if (rsvp.dietary) parts.push(["Dietary", rsvp.dietary.replace(/\|\|/g, ", ")]);
+                if (rsvp.plus_ones) parts.push(["Plus Ones", rsvp.plus_ones]);
+                if (rsvp.notes) parts.push(["Notes", rsvp.notes]);
+                if (parts.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {parts.map(([label, val]) => (
+                          <div key={label} className="flex items-center gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-24 shrink-0">{label}</span>
+                            <span className="text-on-surface font-medium">{val}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Room Selector (pipe-delimited IDs) ── */
+              if (f.type === "room_selector") {
+                const raw = String(v);
+                const selectedIds = raw.split("||").filter(Boolean);
+                const roomLabels = new Map((f.roomSelectorConfig?.rooms ?? []).map((r) => [r.id, r.name]));
+                return (
+                  <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                    <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                    <dd className="sm:col-span-2 flex flex-wrap gap-1.5">
+                      {selectedIds.map((id) => (
+                        <span key={id} className="text-[11px] px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium">
+                          {roomLabels.get(id) ?? id}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                );
+              }
+
+              /* ── Loan Calculator ── */
+              if (f.type === "loan_calculator" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const loan = parsed as Record<string, string>;
+                const currency = f.loanCalculatorConfig?.currency ?? "$";
+                const parts: [string, string][] = [];
+                if (loan.loanAmount) parts.push(["Loan Amount", `${currency}${Number(loan.loanAmount).toLocaleString()}`]);
+                if (loan.interestRate) parts.push(["Interest Rate", `${loan.interestRate}%`]);
+                if (loan.termMonths) parts.push(["Term", `${loan.termMonths} months`]);
+                if (parts.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {parts.map(([label, val]) => (
+                          <div key={label} className="flex items-center gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-24 shrink-0">{label}</span>
+                            <span className="text-on-surface font-medium">{val}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Case Intake ── */
+              if (f.type === "case_intake" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const ci = parsed as Record<string, string>;
+                const labels: Record<string, string> = {
+                  case_type: "Case Type", jurisdiction: "Jurisdiction",
+                  date_of_incident: "Date of Incident", opposing_party: "Opposing Party",
+                  description: "Description",
+                };
+                const entries = Object.entries(ci).filter(([, val]) => val !== null && val !== undefined && val !== "");
+                if (entries.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {entries.map(([key, val]) => (
+                          <div key={key} className="flex items-start gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-28 shrink-0">{labels[key] ?? key.replace(/_/g, " ")}</span>
+                            <span className="text-on-surface font-medium">{key === "date_of_incident" ? new Date(val).toLocaleDateString() : val}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Donation Tier ── */
+              if (f.type === "donation_tier" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const dt = parsed as Record<string, string>;
+                const currency = f.donationTierConfig?.currency ?? "$";
+                const tiers = f.donationTierConfig?.tiers ?? [];
+                const parts: [string, string][] = [];
+                if (dt.selectedTier) {
+                  const tier = tiers.find((t) => t.id === dt.selectedTier);
+                  parts.push(["Tier", tier ? `${tier.label} (${currency}${tier.amount})` : dt.selectedTier]);
+                }
+                if (dt.customAmount) parts.push(["Custom Amount", `${currency}${Number(dt.customAmount).toLocaleString()}`]);
+                if (dt.frequency) parts.push(["Frequency", dt.frequency.charAt(0).toUpperCase() + dt.frequency.slice(1)]);
+                if (parts.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {parts.map(([label, val]) => (
+                          <div key={label} className="flex items-center gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-28 shrink-0">{label}</span>
+                            <span className="text-on-surface font-medium">{val}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Volunteer Signup ── */
+              if (f.type === "volunteer_signup" && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const vs = parsed as Record<string, string>;
+                const parts: [string, string][] = [];
+                if (vs.days) parts.push(["Days", vs.days.replace(/\|\|/g, ", ")]);
+                if (vs.timeSlots) parts.push(["Time Slots", vs.timeSlots.replace(/\|\|/g, ", ")]);
+                if (vs.skills) parts.push(["Skills", vs.skills.replace(/\|\|/g, ", ")]);
+                if (vs.frequency) parts.push(["Frequency", vs.frequency.charAt(0).toUpperCase() + vs.frequency.slice(1)]);
+                if (vs.notes) parts.push(["Notes", vs.notes]);
+                if (parts.length > 0) {
+                  return (
+                    <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                      <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                      <dd className="sm:col-span-2 space-y-1">
+                        {parts.map(([label, val]) => (
+                          <div key={label} className="flex items-start gap-2 text-sm">
+                            <span className="text-on-surface-variant/60 text-xs w-24 shrink-0">{label}</span>
+                            <span className="text-on-surface font-medium">{val}</span>
+                          </div>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+              }
+
+              /* ── Cause Selector (pipe-delimited IDs) ── */
+              if (f.type === "cause_selector") {
+                const raw = String(v);
+                const selectedIds = raw.split("||").filter(Boolean);
+                const causeLabels = new Map((f.causeSelectorConfig?.causes ?? []).map((c) => [c.id, c.name]));
+                return (
+                  <div key={f.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                    <dt className="text-xs text-on-surface-variant/60">{f.label}</dt>
+                    <dd className="sm:col-span-2 flex flex-wrap gap-1.5">
+                      {selectedIds.map((id) => (
+                        <span key={id} className="text-[11px] px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium">
+                          {causeLabels.get(id) ?? id}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                );
+              }
+
               /* ── Default field rendering ── */
               const display = typeof v === "object" ? JSON.stringify(v) : String(v);
               return (

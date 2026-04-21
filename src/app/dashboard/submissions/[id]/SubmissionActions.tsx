@@ -110,7 +110,17 @@ export default function SubmissionActions({ submissionId, currentStatus }: Props
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-on-surface-variant border border-outline-variant/20 rounded-xl hover:border-primary/30 hover:text-primary transition-all"
       >
         <i className="fa-solid fa-file-pdf text-[10px]" />
-        Export PDF
+        PDF
+      </a>
+
+      {/* CSV export */}
+      <a
+        href={`/dashboard/submissions/${submissionId}/csv`}
+        download
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-on-surface-variant border border-outline-variant/20 rounded-xl hover:border-primary/30 hover:text-primary transition-all"
+      >
+        <i className="fa-solid fa-file-csv text-[10px]" />
+        CSV
       </a>
 
       {/* Delete */}

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { FormSchema } from "@/lib/forms";
+import type { FormSchema, FieldDef } from "@/lib/forms";
+import { formatFieldValue } from "@/lib/format-field-value";
 
 function escapeHtml(str: string): string {
   return str
@@ -49,39 +50,30 @@ export async function GET(
       for (const step of schema.steps) {
         let fieldsHtml = "";
         for (const f of step.fields) {
-          if (f.type === "heading") continue;
+          if (f.type === "heading" || f.type === "captcha") continue;
           if (f.type === "file" || f.type === "files") {
             fieldsHtml += `
               <tr>
-                <td style="padding:10px 14px;font-size:12px;color:#888;vertical-align:top;width:35%;border-bottom:1px solid #f0f0f0;">${escapeHtml(f.label)}</td>
-                <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;"><em style="color:#999;">See attachments</em></td>
+                <td class="label-cell">${escapeHtml(f.label)}</td>
+                <td class="value-cell"><em style="color:#999;">See attachments</em></td>
               </tr>`;
             continue;
           }
           const v = data[f.id];
-          let display = "—";
+          let display = "\u2014";
           if (v !== undefined && v !== null && v !== "") {
-            display = String(v);
-            // Pretty-print repeater JSON
-            if (f.type === "repeater" && display.startsWith("[")) {
-              try {
-                const entries = JSON.parse(display) as Record<string, string>[];
-                display = entries
-                  .map((e, i) => `Entry ${i + 1}: ${Object.entries(e).map(([k, val]) => `${k}: ${val}`).join(", ")}`)
-                  .join("\n");
-              } catch { /* keep raw */ }
-            }
+            display = formatFieldValue(v, f as FieldDef);
           }
           fieldsHtml += `
             <tr>
-              <td style="padding:10px 14px;font-size:12px;color:#888;vertical-align:top;width:35%;border-bottom:1px solid #f0f0f0;">${escapeHtml(f.label)}</td>
-              <td style="padding:10px 14px;font-size:13px;color:#333;white-space:pre-wrap;border-bottom:1px solid #f0f0f0;">${escapeHtml(display)}</td>
+              <td class="label-cell">${escapeHtml(f.label)}</td>
+              <td class="value-cell">${escapeHtml(display)}</td>
             </tr>`;
         }
         stepsHtml += `
-          <div style="margin-bottom:28px;">
-            <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;margin:0 0 12px 0;padding-bottom:8px;border-bottom:2px solid ${primaryColor}22;">${escapeHtml(step.title)}</h2>
-            <table style="width:100%;border-collapse:collapse;">${fieldsHtml}</table>
+          <div class="step-section">
+            <h2 class="step-title">${escapeHtml(step.title)}</h2>
+            <table class="fields-table">${fieldsHtml}</table>
           </div>`;
       }
     }
@@ -90,50 +82,78 @@ export async function GET(
       ? new Date(sub.submitted_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
       : `Draft (started ${new Date(sub.created_at).toLocaleDateString()})`;
 
+    const statusColors: Record<string, string> = {
+      submitted: "#3b82f6", in_review: "#f59e0b", complete: "#10b981",
+      archived: "#6b7280", draft: "#6b7280",
+    };
+    const statusColor = statusColors[sub.status as string] ?? primaryColor;
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>${escapeHtml(clientName)} - Submission</title>
   <style>
-    @page { margin: 40px 50px; size: A4; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; margin: 0; padding: 0; line-height: 1.5; }
+    @page { margin: 48px 56px; size: A4; }
     * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      color: #1a1a2e; margin: 0; padding: 0; line-height: 1.6; font-size: 13px;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+
+    .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 3px solid ${primaryColor}; }
+    .header h1 { font-size: 22px; font-weight: 800; margin: 0; color: #111; letter-spacing: -0.3px; }
+    .header .subtitle { font-size: 12px; color: #666; margin: 4px 0 0 0; }
+    .header .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: ${statusColor}; background: ${statusColor}15; border: 1px solid ${statusColor}30; }
+    .header .date { font-size: 11px; color: #999; margin: 8px 0 0 0; }
+
+    .meta-box { background: #f7f8fa; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; border: 1px solid #eef0f2; }
+    .meta-box table { width: 100%; font-size: 12px; border-collapse: collapse; }
+    .meta-box td { padding: 4px 0; }
+    .meta-box .meta-label { color: #888; width: 140px; }
+    .meta-box .meta-value { text-align: right; color: #555; font-family: 'SF Mono', Monaco, monospace; font-size: 11px; }
+
+    .step-section { margin-bottom: 32px; page-break-inside: avoid; }
+    .step-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: #888; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 2px solid ${primaryColor}20; font-weight: 700; }
+
+    .fields-table { width: 100%; border-collapse: collapse; }
+    .label-cell { padding: 10px 16px; font-size: 12px; color: #777; vertical-align: top; width: 35%; border-bottom: 1px solid #f0f1f3; font-weight: 500; }
+    .value-cell { padding: 10px 16px; font-size: 13px; color: #222; white-space: pre-wrap; border-bottom: 1px solid #f0f1f3; line-height: 1.5; word-break: break-word; }
+
+    .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; }
+    .footer p { font-size: 9px; color: #bbb; text-transform: uppercase; letter-spacing: 2.5px; margin: 0; }
   </style>
 </head>
 <body>
-  <!-- Header -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:24px;margin-bottom:24px;border-bottom:2px solid ${primaryColor};">
+  <div class="header">
     <div>
-      <h1 style="font-size:24px;font-weight:800;margin:0;color:#111;">${escapeHtml(clientName)}</h1>
-      <p style="font-size:13px;color:#666;margin:4px 0 0 0;">${escapeHtml(sub.client_email || "—")} &middot; ${escapeHtml(partnerName)}</p>
+      <h1>${escapeHtml(clientName)}</h1>
+      <p class="subtitle">${escapeHtml(sub.client_email || "\u2014")} &middot; ${escapeHtml(partnerName)}</p>
     </div>
     <div style="text-align:right;">
-      <div style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${primaryColor};background:${primaryColor}15;border:1px solid ${primaryColor}30;">${sub.status}</div>
-      <p style="font-size:11px;color:#999;margin:6px 0 0 0;">${submittedDate}</p>
+      <div class="status-badge">${sub.status.replace("_", " ")}</div>
+      <p class="date">${submittedDate}</p>
     </div>
   </div>
 
-  <!-- Metadata -->
-  <div style="background:#f8f9fa;border-radius:8px;padding:14px 18px;margin-bottom:28px;">
-    <table style="width:100%;font-size:12px;">
+  <div class="meta-box">
+    <table>
       <tr>
-        <td style="color:#888;padding:3px 0;">Submission ID</td>
-        <td style="text-align:right;font-family:monospace;color:#666;padding:3px 0;">${sub.id}</td>
+        <td class="meta-label">Submission ID</td>
+        <td class="meta-value">${sub.id}</td>
       </tr>
       <tr>
-        <td style="color:#888;padding:3px 0;">Partner</td>
-        <td style="text-align:right;color:#666;padding:3px 0;">${escapeHtml(partnerName)}</td>
+        <td class="meta-label">Partner</td>
+        <td class="meta-value" style="font-family:inherit;">${escapeHtml(partnerName)}</td>
       </tr>
     </table>
   </div>
 
-  <!-- Responses -->
   ${stepsHtml}
 
-  <!-- Footer -->
-  <div style="margin-top:40px;padding-top:16px;border-top:1px solid #eee;text-align:center;">
-    <p style="font-size:10px;color:#bbb;text-transform:uppercase;letter-spacing:2px;">Generated by linqme &middot; ${new Date().toLocaleDateString()}</p>
+  <div class="footer">
+    <p>Generated by linqme &middot; ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
   </div>
 </body>
 </html>`;
