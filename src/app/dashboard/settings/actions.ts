@@ -203,7 +203,7 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
 
 /* ─── Smart Overview Toggle ─── */
 
-export async function toggleSmartOverviewAction(enabled: boolean) {
+export async function toggleSmartOverviewAction(enabled: boolean, forPartners: boolean = false) {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
   if (!account) throw new Error("No account");
@@ -219,7 +219,13 @@ export async function toggleSmartOverviewAction(enabled: boolean) {
   const currentSettings = (partner?.settings as Record<string, unknown>) ?? {};
   await admin
     .from("partners")
-    .update({ settings: { ...currentSettings, smart_overview_enabled: enabled } })
+    .update({
+      settings: {
+        ...currentSettings,
+        smart_overview_enabled: enabled,
+        smart_overview_for_partners: enabled ? forPartners : false,
+      },
+    })
     .eq("id", account.id);
 
   revalidatePath("/dashboard/settings");

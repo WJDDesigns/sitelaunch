@@ -13,19 +13,34 @@ export async function generateSmartOverview(formId: string) {
 
   const admin = createAdminClient();
 
-  // Check smart_overview_enabled in partner settings
+  // Check smart_overview_enabled in partner settings (or parent agency settings)
   const { data: partner } = await admin
     .from("partners")
-    .select("settings")
+    .select("settings, parent_partner_id")
     .eq("id", account.id)
     .maybeSingle();
 
   const settings = (partner?.settings as Record<string, unknown>) ?? {};
-  if (settings.smart_overview_enabled !== true) {
+  let enabled = settings.smart_overview_enabled === true;
+
+  // If not enabled directly, check parent agency's settings
+  if (!enabled && partner?.parent_partner_id) {
+    const { data: parentPartner } = await admin
+      .from("partners")
+      .select("settings")
+      .eq("id", partner.parent_partner_id)
+      .maybeSingle();
+    const parentSettings = (parentPartner?.settings as Record<string, unknown>) ?? {};
+    enabled =
+      parentSettings.smart_overview_enabled === true &&
+      parentSettings.smart_overview_for_partners === true;
+  }
+
+  if (!enabled) {
     throw new Error("Smart Overview is not enabled");
   }
 
-  // Load partner AI integration
+  // Load partner AI integration (falls back to parent agency automatically)
   const ai = await getPartnerAI(account.id);
   if (!ai) throw new Error("No AI provider connected");
 

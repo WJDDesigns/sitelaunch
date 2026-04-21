@@ -68,12 +68,13 @@ export default async function FormEntriesPage({ params }: PageProps) {
   }));
 
   // Get partner details and smart overview data
+  // Check both the account and its parent agency for AI + smart overview settings
   const adminClient = createAdminClient();
-  const [{ data: partner }, { data: aiIntegrations }, cachedOverview] =
+  const [{ data: partner }, { data: aiIntegrations }, { data: parentAiIntegrations }, cachedOverview] =
     await Promise.all([
-      supabase
+      adminClient
         .from("partners")
-        .select("primary_color, settings")
+        .select("primary_color, settings, parent_partner_id")
         .eq("id", account.id)
         .maybeSingle(),
       adminClient
@@ -81,14 +82,46 @@ export default async function FormEntriesPage({ params }: PageProps) {
         .select("id")
         .eq("partner_id", account.id)
         .limit(1),
+      // Also check parent agency for AI integrations (for sub-partners)
+      (async () => {
+        const { data: p } = await adminClient
+          .from("partners")
+          .select("parent_partner_id")
+          .eq("id", account.id)
+          .maybeSingle();
+        if (!p?.parent_partner_id) return { data: null };
+        return adminClient
+          .from("ai_integrations")
+          .select("id")
+          .eq("partner_id", p.parent_partner_id)
+          .limit(1);
+      })(),
       getSmartOverview(formId),
     ]);
 
   const primaryColor = partner?.primary_color || "#c0c1ff";
   const partnerSettings = (partner?.settings as Record<string, unknown>) ?? {};
   const smartOverviewEnabled = partnerSettings.smart_overview_enabled === true;
-  const hasAiProvider = (aiIntegrations ?? []).length > 0;
-  const showSmartOverview = smartOverviewEnabled && hasAiProvider;
+
+  // If this partner doesn't have its own AI, check if parent agency has one + enabled for partners
+  let hasAiProvider = (aiIntegrations ?? []).length > 0;
+  let showSmartOverview = smartOverviewEnabled && hasAiProvider;
+
+  if (!showSmartOverview && partner?.parent_partner_id) {
+    const { data: parentPartner } = await adminClient
+      .from("partners")
+      .select("settings")
+      .eq("id", partner.parent_partner_id)
+      .maybeSingle();
+    const parentSettings = (parentPartner?.settings as Record<string, unknown>) ?? {};
+    const parentEnabled = parentSettings.smart_overview_enabled === true;
+    const parentForPartners = parentSettings.smart_overview_for_partners === true;
+    const parentHasAi = (parentAiIntegrations ?? []).length > 0;
+    if (parentEnabled && parentForPartners && parentHasAi) {
+      hasAiProvider = true;
+      showSmartOverview = true;
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 space-y-6">

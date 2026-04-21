@@ -55,7 +55,7 @@ export default async function SettingsPage() {
 
   // Fetch user profile and partner record in parallel
   const admin = createAdminClient();
-  const [{ data: profile }, { data: partner }, { data: aiIntegrations }] = await Promise.all([
+  const [{ data: profile }, { data: partner }, { data: aiIntegrations }, { data: childPartners }] = await Promise.all([
     admin
       .from("profiles")
       .select("full_name, avatar_url")
@@ -71,11 +71,18 @@ export default async function SettingsPage() {
       .select("id")
       .eq("partner_id", account.id)
       .limit(1),
+    admin
+      .from("partners")
+      .select("id")
+      .eq("parent_partner_id", account.id)
+      .limit(1),
   ]);
 
   const hasAiProvider = (aiIntegrations ?? []).length > 0;
+  const isAgency = (childPartners ?? []).length > 0;
   const partnerSettings = (partner?.settings as Record<string, unknown>) ?? {};
   const smartOverviewEnabled = partnerSettings.smart_overview_enabled === true;
+  const smartOverviewForPartners = partnerSettings.smart_overview_for_partners === true;
 
   const rootHost = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "linqme.io").replace(/:\d+$/, "");
 
@@ -92,7 +99,12 @@ export default async function SettingsPage() {
 
       <DashboardPaletteSection />
 
-      <SmartOverviewSection enabled={smartOverviewEnabled} hasAiProvider={hasAiProvider} />
+      <SmartOverviewSection
+        enabled={smartOverviewEnabled}
+        forPartners={smartOverviewForPartners}
+        hasAiProvider={hasAiProvider}
+        isAgency={isAgency}
+      />
 
       <MfaSettingsSection />
 

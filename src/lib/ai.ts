@@ -9,6 +9,7 @@ export interface AIIntegration {
 
 /**
  * Get the first available AI integration for a partner.
+ * Falls back to parent agency's AI integration if the partner has none.
  * Prefers anthropic > openai > google_ai.
  */
 export async function getPartnerAI(partnerId: string): Promise<AIIntegration | null> {
@@ -18,7 +19,18 @@ export async function getPartnerAI(partnerId: string): Promise<AIIntegration | n
     .select("provider, api_key_encrypted, model_preference")
     .eq("partner_id", partnerId);
 
-  if (!integrations || integrations.length === 0) return null;
+  if (!integrations || integrations.length === 0) {
+    // Fall back to parent agency's AI integration
+    const { data: partner } = await admin
+      .from("partners")
+      .select("parent_partner_id")
+      .eq("id", partnerId)
+      .maybeSingle();
+    if (partner?.parent_partner_id) {
+      return getPartnerAI(partner.parent_partner_id);
+    }
+    return null;
+  }
 
   // Prefer anthropic > openai > google_ai
   const priority = ["anthropic", "openai", "google_ai"];

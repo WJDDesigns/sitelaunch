@@ -1,20 +1,40 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toggleSmartOverviewAction } from "./actions";
 
 interface Props {
   enabled: boolean;
+  forPartners: boolean;
   hasAiProvider: boolean;
+  isAgency: boolean;
 }
 
-export default function SmartOverviewSection({ enabled, hasAiProvider }: Props) {
+export default function SmartOverviewSection({
+  enabled,
+  forPartners,
+  hasAiProvider,
+  isAgency,
+}: Props) {
   const [isPending, startTransition] = useTransition();
+  const [optimisticEnabled, setOptimisticEnabled] = useState(enabled);
+  const [optimisticForPartners, setOptimisticForPartners] = useState(forPartners);
 
   function handleToggle() {
     if (!hasAiProvider) return;
+    const next = !optimisticEnabled;
+    setOptimisticEnabled(next);
     startTransition(async () => {
-      await toggleSmartOverviewAction(!enabled);
+      await toggleSmartOverviewAction(next, next ? optimisticForPartners : false);
+    });
+  }
+
+  function handleForPartnersToggle() {
+    if (!hasAiProvider || !optimisticEnabled) return;
+    const next = !optimisticForPartners;
+    setOptimisticForPartners(next);
+    startTransition(async () => {
+      await toggleSmartOverviewAction(optimisticEnabled, next);
     });
   }
 
@@ -37,8 +57,7 @@ export default function SmartOverviewSection({ enabled, hasAiProvider }: Props) 
 
           {!hasAiProvider && (
             <p className="text-xs text-on-surface-variant/40 mt-3">
-              Connect an AI provider in the AI Integrations section to use Smart
-              Overview.
+              Connect an AI provider in Integrations to use Smart Overview.
             </p>
           )}
         </div>
@@ -46,20 +65,52 @@ export default function SmartOverviewSection({ enabled, hasAiProvider }: Props) 
         <button
           type="button"
           role="switch"
-          aria-checked={enabled}
+          aria-checked={optimisticEnabled}
           disabled={!hasAiProvider || isPending}
           onClick={handleToggle}
           className={`relative mt-1 inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 ${
-            enabled ? "bg-primary" : "bg-outline-variant/20"
+            optimisticEnabled ? "bg-primary" : "bg-outline-variant/20"
           }`}
         >
           <span
             className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ${
-              enabled ? "translate-x-6" : "translate-x-1"
+              optimisticEnabled ? "translate-x-6" : "translate-x-1"
             }`}
           />
         </button>
       </div>
+
+      {/* Agency: enable for child partners */}
+      {isAgency && optimisticEnabled && (
+        <div className="mt-4 pt-4 border-t border-outline-variant/[0.08]">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={optimisticForPartners}
+              disabled={!hasAiProvider || isPending}
+              onClick={handleForPartnersToggle}
+              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 ${
+                optimisticForPartners ? "bg-primary" : "bg-outline-variant/20"
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                  optimisticForPartners ? "translate-x-[18px]" : "translate-x-[3px]"
+                }`}
+              />
+            </button>
+            <div>
+              <span className="text-sm font-medium text-on-surface group-hover:text-primary transition-colors">
+                Also enable for your partners
+              </span>
+              <p className="text-xs text-on-surface-variant/50 mt-0.5">
+                Partners under your agency will see Smart Overview on their entries pages using your AI provider.
+              </p>
+            </div>
+          </label>
+        </div>
+      )}
     </section>
   );
 }
