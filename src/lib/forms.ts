@@ -824,6 +824,9 @@ export interface FieldDef {
   };
   /** Column span in a 4-column grid layout (1-4). Default = 4 (full width). */
   colSpan?: 1 | 2 | 3 | 4;
+  /** Numeric values for options -- used by calculated fields to resolve choice-based fields to numbers.
+   *  Maps option label -> numeric value, e.g. { "Basic": 99, "Pro": 199, "Enterprise": 499 } */
+  optionValues?: Record<string, number>;
   /** Display mode for select/radio/checkbox fields. "icon_cards" renders options as a card grid with icons. */
   displayMode?: "default" | "icon_cards";
   /** Map of option value -> Font Awesome icon class (e.g. { "Instagram": "fa-brands fa-instagram" }). Used when displayMode is "icon_cards". */

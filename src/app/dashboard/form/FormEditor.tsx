@@ -2183,7 +2183,17 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                         icons[newLabel] = icons[oldLabel];
                         delete icons[oldLabel];
                       }
-                      onUpdate({ options: opts, ...(Object.keys(icons).length > 0 ? { optionIcons: icons } : { optionIcons: undefined }) });
+                      // Move option value mapping to new label
+                      const vals = { ...(field.optionValues ?? {}) };
+                      if (oldLabel !== newLabel && vals[oldLabel] !== undefined) {
+                        vals[newLabel] = vals[oldLabel];
+                        delete vals[oldLabel];
+                      }
+                      onUpdate({
+                        options: opts,
+                        ...(Object.keys(icons).length > 0 ? { optionIcons: icons } : { optionIcons: undefined }),
+                        ...(Object.keys(vals).length > 0 ? { optionValues: vals } : { optionValues: undefined }),
+                      });
                     }}
                     placeholder="Option label"
                     className="flex-1 min-w-0 px-2 py-1 text-xs bg-transparent border-0 text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:ring-1 focus:ring-primary/30 rounded-lg"
@@ -2196,7 +2206,13 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                       const removed = opts.splice(idx, 1)[0];
                       const icons = { ...(field.optionIcons ?? {}) };
                       delete icons[removed];
-                      onUpdate({ options: opts, optionIcons: Object.keys(icons).length > 0 ? icons : undefined });
+                      const vals = { ...(field.optionValues ?? {}) };
+                      delete vals[removed];
+                      onUpdate({
+                        options: opts,
+                        optionIcons: Object.keys(icons).length > 0 ? icons : undefined,
+                        optionValues: Object.keys(vals).length > 0 ? vals : undefined,
+                      });
                     }}
                     className="text-on-surface-variant/30 hover:text-error text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     title="Remove option"
@@ -2218,6 +2234,57 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
             >
               <i className="fa-solid fa-plus text-[10px]" />Add option
             </button>
+
+            {/* Calculation values -- assign numeric values to each option for formulas */}
+            {(field.options ?? []).length > 0 && (
+              <details className="group/calc">
+                <summary className="flex items-center gap-2 cursor-pointer text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:text-on-surface-variant/80 transition-colors select-none">
+                  <i className="fa-solid fa-chevron-right text-[8px] group-open/calc:rotate-90 transition-transform" />
+                  <i className="fa-solid fa-calculator text-[9px] text-primary/50" />
+                  Calculation Values
+                  {field.optionValues && Object.keys(field.optionValues).length > 0 && (
+                    <span className="text-[9px] font-normal text-primary/60 ml-auto">
+                      {Object.keys(field.optionValues).length} mapped
+                    </span>
+                  )}
+                </summary>
+                <div className="mt-2 space-y-1.5 pl-4">
+                  <p className="text-[10px] text-on-surface-variant/50 mb-2">
+                    Assign a number to each option so calculated fields can reference this field in formulas.
+                  </p>
+                  {(field.options ?? []).map((opt, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="flex-1 text-xs text-on-surface-variant truncate">{opt}</span>
+                      <input
+                        type="number"
+                        value={field.optionValues?.[opt] ?? ""}
+                        onChange={(e) => {
+                          const vals = { ...(field.optionValues ?? {}) };
+                          const num = parseFloat(e.target.value);
+                          if (e.target.value === "" || isNaN(num)) {
+                            delete vals[opt];
+                          } else {
+                            vals[opt] = num;
+                          }
+                          onUpdate({ optionValues: Object.keys(vals).length > 0 ? vals : undefined });
+                        }}
+                        placeholder="--"
+                        className="w-20 px-2 py-1 text-xs text-right font-mono bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none placeholder:text-on-surface-variant/30"
+                      />
+                    </div>
+                  ))}
+                  {field.optionValues && Object.keys(field.optionValues).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdate({ optionValues: undefined })}
+                      className="text-[10px] text-error/50 hover:text-error transition-colors"
+                    >
+                      Clear all values
+                    </button>
+                  )}
+                </div>
+              </details>
+            )}
 
             {/* Auto-detect social icons -- only in icon_cards mode with options */}
             {field.displayMode === "icon_cards" && (field.options ?? []).length > 0 && (
@@ -3110,7 +3177,7 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                 className={INPUT_CLS}
               />
               <span className="text-[10px] text-on-surface-variant/50 mt-1 block">
-                Reference other fields by their Field ID in curly braces, e.g. {"{price}"} or {"{quantity}"}. Supports +, -, *, /, parentheses, and numbers.
+                Reference other fields by their Field ID in curly braces, e.g. {"{price}"} + {"{quantity}"}. Works with number, rating, slider fields directly. For select/radio/checkbox, set Calculation Values on those fields first.
               </span>
             </label>
             <label className="block">

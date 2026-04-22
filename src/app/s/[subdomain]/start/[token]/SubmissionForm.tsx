@@ -314,7 +314,7 @@ export default function SubmissionForm({
     }
     return (
       <div key={f.id} className={`${colCls} ${animClass} sl-d${Math.min(i + 2, 5)}`}>
-        <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} partnerId={partnerId} captchaSiteKey={captchaSiteKey} captchaProvider={captchaProvider} captchaTokenRef={captchaTokenRef} hasPaymentGateway={hasPaymentGateway} geocodingProvider={geocodingProvider} googleMapsReady={googleMapsReady} onUpdateField={updateField} />
+        <CelestialField field={f} value={data[f.id]} error={errors[f.id]} onChange={(v) => updateField(f.id, v)} primaryColor={primaryColor} allData={data} allFields={schema.steps.flatMap((s) => s.fields)} partnerId={partnerId} captchaSiteKey={captchaSiteKey} captchaProvider={captchaProvider} captchaTokenRef={captchaTokenRef} hasPaymentGateway={hasPaymentGateway} geocodingProvider={geocodingProvider} googleMapsReady={googleMapsReady} onUpdateField={updateField} />
       </div>
     );
   };
@@ -2572,11 +2572,11 @@ function AddressAutocompleteField({ field, value, error, onChange, primaryColor,
 }
 
 function CelestialField({
-  field, value, error, onChange, primaryColor, allData, partnerId,
+  field, value, error, onChange, primaryColor, allData, allFields, partnerId,
   captchaSiteKey, captchaProvider, captchaTokenRef, hasPaymentGateway, geocodingProvider, googleMapsReady,
   onUpdateField,
 }: {
-  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>; partnerId?: string;
+  field: FieldDef; value: unknown; error?: string; onChange: (v: unknown) => void; primaryColor: string; allData: Record<string, unknown>; allFields?: FieldDef[]; partnerId?: string;
   captchaSiteKey?: string | null; captchaProvider?: "recaptcha" | "turnstile" | null; captchaTokenRef?: React.MutableRefObject<string | null>; hasPaymentGateway?: boolean;
   geocodingProvider?: "google" | "openstreetmap" | null;
   googleMapsReady?: boolean;
@@ -4574,8 +4574,34 @@ function CelestialField({
       // Replace {field_id} with numeric values from allData
       expr = expr.replace(/\{([^}]+)\}/g, (_, fieldId: string) => {
         const raw = allData[fieldId];
+        const refField = allFields?.find((f) => f.id === fieldId);
         if (raw === undefined || raw === null || raw === "") return "0";
-        // Try to extract a number from the value
+
+        // If the referenced field has optionValues mapping, look up the numeric value
+        if (refField?.optionValues && typeof raw === "string") {
+          // For multi-checkbox, sum up all selected option values
+          if (refField.type === "checkbox" && refField.options && refField.options.length > 0) {
+            const selected = Array.isArray(raw) ? raw as string[] : String(raw).split("||").filter(Boolean);
+            const sum = selected.reduce((acc, opt) => acc + (refField.optionValues![opt] ?? 0), 0);
+            return String(sum);
+          }
+          // For select/radio, look up the single selected value
+          const mapped = refField.optionValues[raw];
+          if (mapped !== undefined) return String(mapped);
+        }
+
+        // For multi-checkbox without optionValues, count selected items
+        if (refField?.type === "checkbox" && refField.options && refField.options.length > 0) {
+          const selected = Array.isArray(raw) ? raw as string[] : String(raw).split("||").filter(Boolean);
+          return String(selected.length);
+        }
+
+        // For toggle fields, treat as 1 (yes) or 0 (no)
+        if (refField?.type === "toggle") {
+          return raw === "yes" || raw === true || raw === "true" ? "1" : "0";
+        }
+
+        // Try to extract a number from the value (works for number, rating, slider, text with numbers)
         const str = String(raw).replace(/[^0-9.\-]/g, "");
         const n = parseFloat(str);
         return isNaN(n) ? "0" : String(n);
