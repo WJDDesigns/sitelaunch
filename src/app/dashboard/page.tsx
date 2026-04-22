@@ -189,7 +189,7 @@ export default async function DashboardOverview() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-up delay-2">
-        <QuickAction href="/dashboard/form" icon="fa-pen-ruler" label="Form Builder" />
+        <QuickAction href="/dashboard/forms" icon="fa-pen-ruler" label="Form Builder" />
         <QuickAction href="/dashboard/entries" icon="fa-inbox" label="Entries" />
         <QuickAction href="/dashboard/settings" icon="fa-gear" label="Settings" />
         {session.role === "superadmin" && (

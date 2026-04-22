@@ -99,7 +99,7 @@ export async function createFormAction(name: string): Promise<ActionResult> {
 
   if (pfErr || !pf) return { ok: false, error: pfErr?.message ?? "Failed to create form." };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true, formId: pf.id };
 }
 
@@ -132,7 +132,7 @@ export async function deleteFormAction(formId: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -170,7 +170,7 @@ export async function setDefaultFormAction(formId: string): Promise<ActionResult
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -194,7 +194,7 @@ export async function renameFormAction(formId: string, name: string): Promise<Ac
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -259,13 +259,13 @@ export async function toggleFormActiveAction(formId: string, isActive: boolean):
         notifType,
         title,
         message,
-        `/dashboard/form/${formId}`,
+        `/dashboard/forms/${formId}`,
       );
     }
   }
 
-  revalidatePath("/dashboard/form");
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath("/dashboard/forms");
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }
 
@@ -336,8 +336,8 @@ export async function updateFormNotificationSettingsAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath("/dashboard/forms");
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }
 
@@ -407,7 +407,7 @@ export async function duplicateFormAction(formId: string): Promise<ActionResult>
 
   if (pfErr || !pf) return { ok: false, error: pfErr?.message ?? "Failed." };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true, formId: pf.id };
 }
 
@@ -430,7 +430,7 @@ export async function updateThemeModeAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -457,7 +457,7 @@ export async function updateLayoutStyleAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }
 
@@ -490,7 +490,7 @@ export async function updateStartPageSettingsAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
-  revalidatePath("/dashboard/form");
+  revalidatePath(`/dashboard/forms/${formId}`);
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }

@@ -69,7 +69,7 @@ export async function saveWebhookAction(
       .eq("id", data.id)
       .eq("partner_id", account.id);
     if (error) return { ok: false, error: error.message };
-    revalidatePath(`/dashboard/form/${formId}`);
+    revalidatePath(`/dashboard/forms/${formId}`);
     return { ok: true, id: data.id };
   } else {
     // Create new
@@ -88,7 +88,7 @@ export async function saveWebhookAction(
       .select("id")
       .single();
     if (error) return { ok: false, error: error.message };
-    revalidatePath(`/dashboard/form/${formId}`);
+    revalidatePath(`/dashboard/forms/${formId}`);
     return { ok: true, id: row.id };
   }
 }
@@ -109,7 +109,7 @@ export async function deleteWebhookAction(
     .eq("partner_id", account.id);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }
 

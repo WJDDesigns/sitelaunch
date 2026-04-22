@@ -27,7 +27,7 @@ const ITEMS = [
   {
     key: "form",
     label: "Customize your form",
-    href: "/dashboard/form",
+    href: "/dashboard/forms",
     icon: "fa-pen-ruler",
   },
   {

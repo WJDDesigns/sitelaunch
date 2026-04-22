@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Pagination from "@/components/Pagination";
-import SmartOverviewBox from "../form/[formId]/entries/SmartOverviewBox";
+import SmartOverviewBox from "../forms/[formId]/entries/SmartOverviewBox";
 
 const PAGE_SIZE = 25;
 import {

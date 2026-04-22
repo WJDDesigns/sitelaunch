@@ -119,7 +119,7 @@ export async function applyTemplateAction(templateId: string, formId?: string): 
     if (upErr) return { ok: false, error: upErr.message };
   }
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -171,7 +171,7 @@ export async function startBlankFormAction(): Promise<TemplateResult> {
       .eq("id", pf.template_id);
   }
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -221,6 +221,6 @@ export async function saveAsTemplateAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }

@@ -21,7 +21,7 @@ const TIER_LABELS: Record<string, string> = {
 
 const WORKSPACE_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "fa-table-cells" },
-  { href: "/dashboard/form", label: "Forms", icon: "fa-pen-ruler" },
+  { href: "/dashboard/forms", label: "Forms", icon: "fa-pen-ruler" },
   { href: "/dashboard/integrations", label: "Integrations", icon: "fa-plug" },
   { href: "/dashboard/entries", label: "Entries", icon: "fa-inbox" },
   { href: "/dashboard/accounts", label: "Accounts", icon: "fa-users" },
@@ -50,7 +50,7 @@ const ADMIN_NAV = [
 /** Scoped nav for partner_member users — they only see their own partner's stuff */
 function getPartnerMemberNav(partnerId: string, allowFormEditing: boolean) {
   const formsLink = allowFormEditing
-    ? { href: "/dashboard/form", label: "Forms", icon: "fa-pen-ruler" }
+    ? { href: "/dashboard/forms", label: "Forms", icon: "fa-pen-ruler" }
     : { href: "/dashboard/forms", label: "Forms", icon: "fa-file-lines" };
   return [
     { href: "/dashboard", label: "Dashboard", icon: "fa-table-cells" },

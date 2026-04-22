@@ -81,7 +81,7 @@ export async function saveFormSchemaAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
-  if (formId) revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath("/dashboard/forms");
+  if (formId) revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }

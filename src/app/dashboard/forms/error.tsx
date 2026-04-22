@@ -2,15 +2,15 @@
 
 import ErrorBoundaryUI from "@/components/ErrorBoundaryUI";
 
-export default function FormsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function FormBuilderError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <ErrorBoundaryUI
       error={error}
       reset={reset}
-      title="Forms error"
-      message="Something went wrong loading forms. Your data is safe. Try refreshing the page."
-      backHref="/dashboard"
-      backLabel="Back to Dashboard"
+      title="Form builder error"
+      message="Something went wrong with the form builder. Your forms are safe. Try refreshing the page."
+      backHref="/dashboard/forms"
+      backLabel="Back to Forms"
     />
   );
 }

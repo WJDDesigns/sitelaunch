@@ -53,7 +53,7 @@ export async function updateFormPartnersAction(
     if (error) return { ok: false, error: error.message };
   }
 
-  revalidatePath(`/dashboard/form/${formId}`);
-  revalidatePath("/dashboard/form");
+  revalidatePath(`/dashboard/forms/${formId}`);
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }

@@ -119,7 +119,7 @@ export default function FormSettingsPanel({
     startTransition(async () => {
       const result = await deleteFormAction(formId);
       if (result.ok) {
-        router.push("/dashboard/form");
+        router.push("/dashboard/forms");
       } else {
         setMsg(result.error ?? "Failed.");
       }
@@ -168,7 +168,7 @@ export default function FormSettingsPanel({
 
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
-          <div className="bg-surface-container rounded-2xl border border-outline-variant/15 p-6 w-full max-w-lg shadow-2xl space-y-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-container rounded-2xl border border-outline-variant/15 p-6 w-full max-w-lg shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-on-surface">Form settings</h2>
               <button onClick={() => setShowSettings(false)} className="text-on-surface-variant/60 hover:text-on-surface transition-colors" aria-label="Close settings">

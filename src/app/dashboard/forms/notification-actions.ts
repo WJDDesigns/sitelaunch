@@ -102,7 +102,7 @@ export async function createFormNotification(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true, id: data.id };
 }
 
@@ -149,7 +149,7 @@ export async function updateFormNotification(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }
 
@@ -168,7 +168,7 @@ export async function deleteFormNotification(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true };
 }
 
@@ -218,6 +218,6 @@ export async function duplicateFormNotification(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/dashboard/form/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}`);
   return { ok: true, id: data.id };
 }

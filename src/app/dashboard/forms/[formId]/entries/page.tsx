@@ -127,7 +127,7 @@ export default async function FormEntriesPage({ params }: PageProps) {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 space-y-6">
       <header className="flex items-center gap-4 flex-wrap">
         <Link
-          href={`/dashboard/form/${formId}`}
+          href={`/dashboard/forms/${formId}`}
           className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant/60 hover:text-primary hover:bg-primary/5 transition-all"
         >
           <i className="fa-solid fa-arrow-left text-xs" />

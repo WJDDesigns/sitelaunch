@@ -68,7 +68,7 @@ export async function submitFormChangeRequest(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   return { ok: true };
 }
 
@@ -120,7 +120,7 @@ export async function reviewFormChangeRequest(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   revalidatePath("/dashboard/admin");
   return { ok: true };
 }

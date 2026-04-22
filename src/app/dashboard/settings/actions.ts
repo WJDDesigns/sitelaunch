@@ -89,7 +89,7 @@ export async function updateWorkspaceSettingsAction(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/settings");
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   revalidatePath("/dashboard");
 }
 
@@ -197,7 +197,7 @@ export async function saveWorkspaceDomainAction(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/settings");
-  revalidatePath("/dashboard/form");
+  revalidatePath("/dashboard/forms");
   revalidatePath("/dashboard");
 }
 

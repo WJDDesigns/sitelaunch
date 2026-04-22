@@ -29,7 +29,7 @@ export default function CreateFormButton({ canCreate, formsLimit, prominent }: P
       if (result.ok && result.formId) {
         setShowModal(false);
         setName("");
-        router.push(`/dashboard/form/${result.formId}`);
+        router.push(`/dashboard/forms/${result.formId}`);
       } else {
         setError(result.error ?? "Failed to create form.");
       }
