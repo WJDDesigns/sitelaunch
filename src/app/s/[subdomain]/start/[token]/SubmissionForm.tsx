@@ -4588,55 +4588,64 @@ function CelestialField({
     const cfg = field.calculatedFieldConfig;
     // Evaluate formula by replacing field references with numeric values
     let computedValue: number | null = null;
+    let debugExpr = "";
+    let debugReason = "";
     try {
-      let expr = cfg.formula;
-      // Replace {field_id} with numeric values from allData
-      expr = expr.replace(/\{([^}]+)\}/g, (_, fieldId: string) => {
-        const raw = allData[fieldId];
-        const refField = allFields?.find((f) => f.id === fieldId);
-        if (raw === undefined || raw === null || raw === "") return "0";
+      let expr = cfg.formula || "";
+      if (!expr.trim()) {
+        debugReason = "empty formula";
+      } else {
+        // Replace {field_id} with numeric values from allData
+        expr = expr.replace(/\{([^}]+)\}/g, (_, fieldId: string) => {
+          const raw = allData[fieldId];
+          const refField = allFields?.find((f) => f.id === fieldId);
+          if (raw === undefined || raw === null || raw === "") return "0";
 
-        // If the referenced field has optionValues mapping, look up the numeric value
-        if (refField?.optionValues && typeof raw === "string") {
-          // For multi-checkbox, sum up all selected option values
-          if (refField.type === "checkbox" && refField.options && refField.options.length > 0) {
-            const selected = Array.isArray(raw) ? raw as string[] : String(raw).split("||").filter(Boolean);
-            const sum = selected.reduce((acc, opt) => acc + (refField.optionValues![opt] ?? 0), 0);
-            return String(sum);
+          // If the referenced field has optionValues mapping, look up the numeric value
+          if (refField?.optionValues && typeof raw === "string") {
+            // For multi-checkbox, sum up all selected option values
+            if (refField.type === "checkbox" && refField.options && refField.options.length > 0) {
+              const selected = Array.isArray(raw) ? raw as string[] : String(raw).split("||").filter(Boolean);
+              const sum = selected.reduce((acc, opt) => acc + (refField.optionValues![opt] ?? 0), 0);
+              return String(sum);
+            }
+            // For select/radio, look up the single selected value
+            const mapped = refField.optionValues[raw];
+            if (mapped !== undefined) return String(mapped);
           }
-          // For select/radio, look up the single selected value
-          const mapped = refField.optionValues[raw];
-          if (mapped !== undefined) return String(mapped);
-        }
 
-        // For multi-checkbox without optionValues, count selected items
-        if (refField?.type === "checkbox" && refField.options && refField.options.length > 0) {
-          const selected = Array.isArray(raw) ? raw as string[] : String(raw).split("||").filter(Boolean);
-          return String(selected.length);
-        }
+          // For multi-checkbox without optionValues, count selected items
+          if (refField?.type === "checkbox" && refField.options && refField.options.length > 0) {
+            const selected = Array.isArray(raw) ? raw as string[] : String(raw).split("||").filter(Boolean);
+            return String(selected.length);
+          }
 
-        // For toggle fields, treat as 1 (yes) or 0 (no)
-        if (refField?.type === "toggle") {
-          return raw === "yes" || raw === true || raw === "true" ? "1" : "0";
-        }
+          // For toggle fields, treat as 1 (yes) or 0 (no)
+          if (refField?.type === "toggle") {
+            return raw === "yes" || raw === true || raw === "true" ? "1" : "0";
+          }
 
-        // For rating fields with valuePerStar, multiply star count by the multiplier
-        if (refField?.type === "rating" && refField.ratingConfig?.valuePerStar) {
-          const stars = parseFloat(String(raw));
-          return isNaN(stars) ? "0" : String(stars * refField.ratingConfig.valuePerStar);
-        }
+          // For rating fields with valuePerStar, multiply star count by the multiplier
+          if (refField?.type === "rating" && refField.ratingConfig?.valuePerStar) {
+            const stars = parseFloat(String(raw));
+            return isNaN(stars) ? "0" : String(stars * refField.ratingConfig.valuePerStar);
+          }
 
-        // Try to extract a number from the value (works for number, rating, slider, text with numbers)
-        const str = String(raw).replace(/[^0-9.\-]/g, "");
-        const n = parseFloat(str);
-        return isNaN(n) ? "0" : String(n);
-      });
-      // Safe arithmetic eval -- only allow digits, operators, parens, dots, spaces
-      if (/^[\d\s+\-*/.()]+$/.test(expr)) {
-        computedValue = Function(`"use strict"; return (${expr})`)() as number;
-        if (!isFinite(computedValue)) computedValue = null;
+          // Try to extract a number from the value (works for number, rating, slider, text with numbers)
+          const str = String(raw).replace(/[^0-9.\-]/g, "");
+          const n = parseFloat(str);
+          return isNaN(n) ? "0" : String(n);
+        });
+        debugExpr = expr;
+        // Safe arithmetic eval -- only allow digits, operators, parens, dots, spaces
+        if (/^[\d\s+\-*/.()]+$/.test(expr)) {
+          computedValue = Function(`"use strict"; return (${expr})`)() as number;
+          if (!isFinite(computedValue)) { debugReason = "not finite"; computedValue = null; }
+        } else {
+          debugReason = `regex failed on: "${expr}"`;
+        }
       }
-    } catch { computedValue = null; }
+    } catch (err) { debugReason = `error: ${err}`; computedValue = null; }
     // Format the result
     let displayValue = "--";
     const hiddenValue = computedValue !== null ? String(computedValue) : "";
@@ -4665,6 +4674,10 @@ function CelestialField({
           </span>
           <i className="fa-solid fa-calculator text-on-surface-variant/30" />
         </div>
+        {/* TEMP DEBUG -- remove after fixing */}
+        <p className="text-[9px] text-on-surface-variant/40 mt-1 font-mono break-all">
+          formula=&quot;{cfg.formula || "(empty)"}&quot; | expr=&quot;{debugExpr || "(none)"}&quot; | result={computedValue !== null ? String(computedValue) : "null"} | {debugReason}
+        </p>
         {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
       </div>
     );
