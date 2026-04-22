@@ -74,7 +74,8 @@ Key functions in `src/lib/auth.ts`:
 - `requireSession()` -- guard, redirects unauthenticated users
 - `getCurrentAccount(userId)` -- resolves the ROOT partner by walking up parent_partner_id
 - `getPartnerMemberContext(userId)` -- returns the directly assigned sub-partner (not root)
-- `getVisiblePartners()` -- superadmins see all, regular users see root + children
+- `getVisiblePartners()` -- returns root + children for ALL users (including superadmins)
+- `getAllPartnersAdmin()` -- superadmin-only: returns all partners in the system
 
 Partner hierarchy: root partners have `parent_partner_id = null`. Sub-partners reference their parent. `getCurrentAccount` always walks to the root.
 

@@ -100,26 +100,39 @@ export async function getVisiblePartners() {
   const selectCols =
     "id, slug, name, custom_domain, logo_url, primary_color, accent_color, parent_partner_id, plan_type, plan_tier, created_at";
 
-  if (session?.role === "superadmin") {
-    const { data } = await supabase
-      .from("partners")
-      .select(selectCols)
-      .order("created_at", { ascending: false })
-      .limit(500);
-    return data ?? [];
-  }
-
   if (!session) return [];
 
   const account = await getCurrentAccount(session.userId);
   if (!account) return [];
 
-  // Root + direct sub-partners. Covers the 2-level hierarchy we support today.
+  // Root + direct sub-partners only. Even superadmins see only their own
+  // business hierarchy here -- the admin area has its own "all partners" view.
   const { data } = await supabase
     .from("partners")
     .select(selectCols)
     .or(`id.eq.${account.id},parent_partner_id.eq.${account.id}`)
     .order("created_at", { ascending: false });
+
+  return data ?? [];
+}
+
+/**
+ * Admin-only: fetch ALL partners in the system (for the admin partners page).
+ */
+export async function getAllPartnersAdmin() {
+  const session = await getSession();
+  if (!session || session.role !== "superadmin") return [];
+
+  const supabase = await createClient();
+
+  const selectCols =
+    "id, slug, name, custom_domain, logo_url, primary_color, accent_color, parent_partner_id, plan_type, plan_tier, created_at";
+
+  const { data } = await supabase
+    .from("partners")
+    .select(selectCols)
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   return data ?? [];
 }
