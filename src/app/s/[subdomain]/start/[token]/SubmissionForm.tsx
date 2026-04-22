@@ -2571,6 +2571,81 @@ function AddressAutocompleteField({ field, value, error, onChange, primaryColor,
   );
 }
 
+/**
+ * CSP-safe arithmetic evaluator. Parses and evaluates expressions with
+ * +, -, *, /, and parentheses without using Function() or eval().
+ * Returns null if the expression is invalid or produces a non-finite result.
+ */
+function safeEvalArithmetic(expr: string): number | null {
+  // Only allow safe characters
+  if (!/^[\d\s+\-*/.()]+$/.test(expr)) return null;
+  const tokens: string[] = [];
+  const src = expr.replace(/\s+/g, "");
+  let i = 0;
+  while (i < src.length) {
+    if ("+-*/()".includes(src[i])) {
+      tokens.push(src[i]);
+      i++;
+    } else if (/[\d.]/.test(src[i])) {
+      let num = "";
+      while (i < src.length && /[\d.]/.test(src[i])) { num += src[i]; i++; }
+      tokens.push(num);
+    } else {
+      return null; // unexpected character
+    }
+  }
+  let pos = 0;
+  function peek() { return tokens[pos] ?? ""; }
+  function consume() { return tokens[pos++]; }
+  // Grammar: expr = term (('+' | '-') term)*
+  function parseExpr(): number {
+    let left = parseTerm();
+    while (peek() === "+" || peek() === "-") {
+      const op = consume();
+      const right = parseTerm();
+      left = op === "+" ? left + right : left - right;
+    }
+    return left;
+  }
+  // term = factor (('*' | '/') factor)*
+  function parseTerm(): number {
+    let left = parseFactor();
+    while (peek() === "*" || peek() === "/") {
+      const op = consume();
+      const right = parseFactor();
+      left = op === "*" ? left * right : left / right;
+    }
+    return left;
+  }
+  // factor = number | '(' expr ')' | unary +/- factor
+  function parseFactor(): number {
+    if (peek() === "(") {
+      consume(); // '('
+      const val = parseExpr();
+      if (peek() === ")") consume();
+      return val;
+    }
+    if (peek() === "-") {
+      consume();
+      return -parseFactor();
+    }
+    if (peek() === "+") {
+      consume();
+      return parseFactor();
+    }
+    const tok = consume();
+    const n = parseFloat(tok);
+    if (isNaN(n)) return 0;
+    return n;
+  }
+  try {
+    const result = parseExpr();
+    return isFinite(result) ? result : null;
+  } catch {
+    return null;
+  }
+}
+
 function CelestialField({
   field, value, error, onChange, primaryColor, allData, allFields, partnerId,
   captchaSiteKey, captchaProvider, captchaTokenRef, hasPaymentGateway, geocodingProvider, googleMapsReady,
@@ -2666,10 +2741,8 @@ function CelestialField({
           const n = parseFloat(s);
           return isNaN(n) ? "0" : String(n);
         });
-        if (/^[\d\s+\-*/.()]+$/.test(calcExpr)) {
-          const result = Function(`"use strict"; return (${calcExpr})`)() as number;
-          if (isFinite(result) && result > 0) amount = result.toFixed(2);
-        }
+        const result = safeEvalArithmetic(calcExpr);
+        if (result !== null && result > 0) amount = result.toFixed(2);
       } catch { /* keep original amount */ }
     }
     const currency = (cfg?.currency ?? "usd").toUpperCase();
@@ -4588,13 +4661,9 @@ function CelestialField({
     const cfg = field.calculatedFieldConfig;
     // Evaluate formula by replacing field references with numeric values
     let computedValue: number | null = null;
-    let debugExpr = "";
-    let debugReason = "";
     try {
       let expr = cfg.formula || "";
-      if (!expr.trim()) {
-        debugReason = "empty formula";
-      } else {
+      if (expr.trim()) {
         // Replace {field_id} with numeric values from allData
         expr = expr.replace(/\{([^}]+)\}/g, (_, fieldId: string) => {
           const raw = allData[fieldId];
@@ -4636,16 +4705,10 @@ function CelestialField({
           const n = parseFloat(str);
           return isNaN(n) ? "0" : String(n);
         });
-        debugExpr = expr;
-        // Safe arithmetic eval -- only allow digits, operators, parens, dots, spaces
-        if (/^[\d\s+\-*/.()]+$/.test(expr)) {
-          computedValue = Function(`"use strict"; return (${expr})`)() as number;
-          if (!isFinite(computedValue)) { debugReason = "not finite"; computedValue = null; }
-        } else {
-          debugReason = `regex failed on: "${expr}"`;
-        }
+        // CSP-safe arithmetic evaluator (no Function/eval)
+        computedValue = safeEvalArithmetic(expr);
       }
-    } catch (err) { debugReason = `error: ${err}`; computedValue = null; }
+    } catch { computedValue = null; }
     // Format the result
     let displayValue = "--";
     const hiddenValue = computedValue !== null ? String(computedValue) : "";
@@ -4674,10 +4737,6 @@ function CelestialField({
           </span>
           <i className="fa-solid fa-calculator text-on-surface-variant/30" />
         </div>
-        {/* TEMP DEBUG -- remove after fixing */}
-        <p className="text-[9px] text-on-surface-variant/40 mt-1 font-mono break-all">
-          formula=&quot;{cfg.formula || "(empty)"}&quot; | expr=&quot;{debugExpr || "(none)"}&quot; | result={computedValue !== null ? String(computedValue) : "null"} | {debugReason}
-        </p>
         {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
       </div>
     );
