@@ -3167,6 +3167,7 @@ function CelestialField({
     const categories = cfg.categories ?? ["logos", "colors", "fonts", "documents", "images"];
     return (
       <div className="group">
+        <input type="hidden" name={field.id} value={typeof value === "string" ? value : ""} />
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
@@ -3995,6 +3996,7 @@ function CelestialField({
     const planTypes = ["PPO", "HMO", "EPO", "POS", "HDHP", "Medicare", "Medicaid"];
     return (
       <div className="group">
+        <input type="hidden" name={field.id} value={typeof value === "string" ? value : ""} />
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
@@ -4070,6 +4072,7 @@ function CelestialField({
     const attending = data.attending;
     return (
       <div className="group">
+        <input type="hidden" name={field.id} value={typeof value === "string" ? value : ""} />
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
@@ -4161,6 +4164,7 @@ function CelestialField({
     const gridCls = cols === 2 ? "grid-cols-1 sm:grid-cols-2" : cols === 4 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
     return (
       <div className="group">
+        <input type="hidden" name={field.id} value={typeof value === "string" ? value : ""} />
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
@@ -4229,6 +4233,7 @@ function CelestialField({
     const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     return (
       <div className="group">
+        <input type="hidden" name={field.id} value={typeof value === "string" ? value : ""} />
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}

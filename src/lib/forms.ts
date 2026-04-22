@@ -984,7 +984,7 @@ function evaluateSingleCondition(
       return !isNaN(num) && !isNaN(cmp) && num < cmp;
     }
     default:
-      return true;
+      return false;
   }
 }
 

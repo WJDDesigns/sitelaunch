@@ -81,9 +81,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+    // Fetch current settings, merge in the default provider
+    const { data: partner } = await admin.from("partners").select("settings").eq("id", account.id).single();
+    const currentSettings = (partner?.settings as Record<string, unknown>) ?? {};
     const { error } = await admin
       .from("partners")
-      .update({ default_geocoding_provider: defaultProvider })
+      .update({ settings: { ...currentSettings, default_geocoding_provider: defaultProvider } })
       .eq("id", account.id);
 
     if (error) {

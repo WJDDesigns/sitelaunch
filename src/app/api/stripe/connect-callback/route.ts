@@ -94,9 +94,6 @@ export async function GET(request: NextRequest) {
         provider: "stripe",
         // Store the connected account ID (encrypted for consistency)
         api_key_encrypted: encryptToken(stripeAccountId),
-        // Also store refresh token if provided
-        account_email: accountEmail,
-        stripe_account_id: stripeAccountId,
         connected_at: new Date().toISOString(),
       },
       { onConflict: "partner_id,provider" },

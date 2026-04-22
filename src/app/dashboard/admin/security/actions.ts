@@ -89,7 +89,7 @@ export async function getActiveSessionsAction(): Promise<SessionRow[]> {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data } = await admin
     .from("user_sessions")
-    .select("id, user_id, device_name, device_type, ip_address, last_active_at, created_at, profiles(email, full_name)")
+    .select("id, user_id, device_name, user_agent, ip_address, last_active_at, created_at, profiles(email, full_name)")
     .gte("last_active_at", oneDayAgo)
     .order("last_active_at", { ascending: false })
     .limit(50);
@@ -100,7 +100,7 @@ export async function getActiveSessionsAction(): Promise<SessionRow[]> {
       id: s.id,
       user_id: s.user_id,
       device_name: s.device_name ?? "Unknown",
-      device_type: s.device_type ?? "desktop",
+      device_type: (s.user_agent && /mobile|android|iphone/i.test(s.user_agent as string)) ? "mobile" : "desktop",
       ip_address: s.ip_address,
       last_active_at: s.last_active_at,
       created_at: s.created_at,

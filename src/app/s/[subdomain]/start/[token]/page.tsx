@@ -90,10 +90,11 @@ export default async function SubmissionPage({ params, searchParams }: Props) {
     // Read the workspace default geocoding provider
     const { data: partnerRow } = await admin
       .from("partners")
-      .select("default_geocoding_provider")
+      .select("settings")
       .eq("id", partner.id)
       .maybeSingle();
-    const workspaceDefault = (partnerRow?.default_geocoding_provider as "google" | "openstreetmap") ?? "openstreetmap";
+    const partnerSettings = (partnerRow?.settings as Record<string, unknown>) ?? {};
+    const workspaceDefault = (partnerSettings.default_geocoding_provider as "google" | "openstreetmap") ?? "openstreetmap";
 
     // Check which autocomplete providers the partner has connected
     try {

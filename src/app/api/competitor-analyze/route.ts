@@ -29,13 +29,17 @@ function isPrivateHost(hostname: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { success } = rateLimiter.check(`competitor-analyze:${ip}`, 10, 60);
-  if (!success) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      { status: 429, headers: { "Retry-After": "60" } },
-    );
+  try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = rateLimiter.check(`competitor-analyze:${ip}`, 10, 60);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+  } catch {
+    return NextResponse.json({ error: "Rate limit check failed" }, { status: 500 });
   }
 
   let body: { url: string; partnerId?: string };
