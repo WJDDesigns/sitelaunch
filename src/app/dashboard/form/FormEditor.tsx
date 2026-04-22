@@ -2010,6 +2010,7 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
   hasAI?: boolean;
   hasPaymentGateway?: boolean;
 }) {
+  const formHasCalculated = allFields.some((f) => f.type === "calculated");
   return (
     <div>
       <div className="flex items-center gap-2 mb-6">
@@ -2236,7 +2237,7 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
             </button>
 
             {/* Calculation values -- assign numeric values to each option for formulas */}
-            {(field.options ?? []).length > 0 && (
+            {formHasCalculated && (field.options ?? []).length > 0 && (
               <details className="group/calc">
                 <summary className="flex items-center gap-2 cursor-pointer text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:text-on-surface-variant/80 transition-colors select-none">
                   <i className="fa-solid fa-chevron-right text-[8px] group-open/calc:rotate-90 transition-transform" />
@@ -3121,6 +3122,16 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
               <span className="text-[11px] font-medium text-on-surface-variant">Max Stars</span>
               <input type="number" min={3} max={10} value={field.ratingConfig?.maxStars ?? 5} onChange={(e) => onUpdate({ ratingConfig: { ...field.ratingConfig!, maxStars: Number(e.target.value) || 5 } })} className="w-16 px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none" />
             </label>
+            <div>
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Icon</span>
+              <div className="flex items-center gap-2">
+                <IconPicker value={field.ratingConfig?.icon ?? "fa-star"} onChange={(icon) => onUpdate({ ratingConfig: { ...field.ratingConfig!, icon: icon || undefined } })} />
+                <span className="text-xs text-on-surface-variant/50">Preview:</span>
+                {[1, 2, 3].map((n) => (
+                  <i key={n} className={`fa-solid ${field.ratingConfig?.icon ?? "fa-star"} text-sm text-amber-400`} />
+                ))}
+              </div>
+            </div>
             <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
               <span className="text-xs font-medium text-on-surface">Allow Half Stars</span>
               <label className="relative cursor-pointer">
@@ -3129,6 +3140,16 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                 <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
               </label>
             </div>
+            {formHasCalculated && (
+              <label className="flex items-center gap-2">
+                <span className="text-[11px] font-medium text-on-surface-variant">Value per star</span>
+                <input type="number" step="any" value={field.ratingConfig?.valuePerStar ?? ""} onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  onUpdate({ ratingConfig: { ...field.ratingConfig!, valuePerStar: isNaN(v) ? undefined : v } });
+                }} placeholder="1" className="w-20 px-2 py-1 text-sm font-mono bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none placeholder:text-on-surface-variant/30" />
+                <span className="text-[10px] text-on-surface-variant/50">for formulas</span>
+              </label>
+            )}
           </section>
         )}
 
@@ -3232,6 +3253,19 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                 className={INPUT_CLS}
               />
             </label>
+            {allFields.some((f) => f.type === "payment") && (
+              <div className="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+                <div>
+                  <span className="text-xs font-medium text-on-surface block">Use as Payment Total</span>
+                  <span className="text-[10px] text-on-surface-variant/50">The payment field will use this calculated value as its amount.</span>
+                </div>
+                <label className="relative cursor-pointer">
+                  <input type="checkbox" checked={!!field.calculatedFieldConfig!.useForPayment} onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, useForPayment: e.target.checked || undefined } })} className="sr-only peer" />
+                  <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
+                  <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
+                </label>
+              </div>
+            )}
           </section>
         )}
 

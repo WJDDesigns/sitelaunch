@@ -366,6 +366,10 @@ export interface RatingConfig {
   maxStars: number;
   /** Allow half-star selections */
   allowHalf?: boolean;
+  /** Font Awesome icon class for the rating symbol (default "fa-star") */
+  icon?: string;
+  /** Numeric value per star for calculations (default = star number, e.g. 1,2,3,4,5) */
+  valuePerStar?: number;
 }
 
 /* -- Slider field types --------------------------------------------------- */
@@ -683,6 +687,8 @@ export interface CalculatedFieldConfig {
   prefix?: string;
   /** Suffix text shown after the result */
   suffix?: string;
+  /** When true, the payment field uses this calculated value as its total */
+  useForPayment?: boolean;
 }
 
 /* -- Chained Select (hierarchical dropdown) types -------------------------- */

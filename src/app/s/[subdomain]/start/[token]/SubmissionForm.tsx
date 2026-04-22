@@ -2652,7 +2652,15 @@ function CelestialField({
     }
     // Payment gateway is connected: show card collection UI
     const cfg = field.paymentConfig;
-    const amount = cfg?.amountCents ? (cfg.amountCents / 100).toFixed(2) : null;
+    // Check if a calculated field is set as payment total
+    const calcPaymentField = allFields?.find((f) => f.type === "calculated" && f.calculatedFieldConfig?.useForPayment);
+    let amount: string | null = cfg?.amountCents ? (cfg.amountCents / 100).toFixed(2) : null;
+    if (calcPaymentField) {
+      // Resolve the calculated field value from form state
+      const calcVal = allData?.[calcPaymentField.id];
+      const parsed = typeof calcVal === "string" ? parseFloat(calcVal) : typeof calcVal === "number" ? calcVal : NaN;
+      if (!isNaN(parsed) && parsed > 0) amount = parsed.toFixed(2);
+    }
     const currency = (cfg?.currency ?? "usd").toUpperCase();
     return (
       <div className="group">
@@ -3726,8 +3734,8 @@ function CelestialField({
                   onChange(currentVal === starVal ? "" : String(starVal));
                 }
               }}>
-                <i className={`fa-solid fa-star ${isFull ? "" : isHalf ? "opacity-0" : "opacity-20"}`} style={isFull ? { color: primaryColor } : undefined} />
-                {isHalf && <i className="fa-solid fa-star-half-stroke absolute inset-0" style={{ color: primaryColor }} />}
+                <i className={`fa-solid ${field.ratingConfig?.icon ?? "fa-star"} ${isFull ? "" : isHalf ? "opacity-0" : "opacity-20"}`} style={isFull ? { color: primaryColor } : undefined} />
+                {isHalf && <i className={`fa-solid ${(field.ratingConfig?.icon && field.ratingConfig.icon !== "fa-star") ? field.ratingConfig.icon : "fa-star-half-stroke"} absolute inset-0`} style={{ color: primaryColor }} />}
               </button>
             );
           })}
@@ -4601,6 +4609,12 @@ function CelestialField({
           return raw === "yes" || raw === true || raw === "true" ? "1" : "0";
         }
 
+        // For rating fields with valuePerStar, multiply star count by the multiplier
+        if (refField?.type === "rating" && refField.ratingConfig?.valuePerStar) {
+          const stars = parseFloat(String(raw));
+          return isNaN(stars) ? "0" : String(stars * refField.ratingConfig.valuePerStar);
+        }
+
         // Try to extract a number from the value (works for number, rating, slider, text with numbers)
         const str = String(raw).replace(/[^0-9.\-]/g, "");
         const n = parseFloat(str);
@@ -4612,9 +4626,14 @@ function CelestialField({
         if (!isFinite(computedValue)) computedValue = null;
       }
     } catch { computedValue = null; }
+    // Sync computed value back to form state so other fields (e.g. payment) can read it
+    const computedStr = computedValue !== null ? String(computedValue) : "";
+    if (onUpdateField && computedStr !== (typeof value === "string" ? value : "")) {
+      onUpdateField(field.id, computedStr);
+    }
     // Format the result
     let displayValue = "--";
-    const hiddenValue = computedValue !== null ? String(computedValue) : "";
+    const hiddenValue = computedStr;
     if (computedValue !== null) {
       const decimals = cfg.decimalPlaces ?? 2;
       if (cfg.format === "currency") {
