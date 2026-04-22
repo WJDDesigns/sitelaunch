@@ -70,6 +70,59 @@ export async function createCheckoutAction(
     }
     stripeCouponId = couponResult.coupon.stripeCouponId;
 
+    // Verify the Stripe coupon exists; if not, re-create it
+    if (stripeCouponId) {
+      try {
+        await stripe.coupons.retrieve(stripeCouponId);
+      } catch {
+        // Coupon doesn't exist in this Stripe account -- re-create it
+        console.log("[billing] Stripe coupon not found, re-creating:", stripeCouponId, "for code:", couponCode);
+        try {
+          const newCoupon = await stripe.coupons.create({
+            ...(couponResult.coupon.type === "percentage"
+              ? { percent_off: couponResult.coupon.value }
+              : { amount_off: couponResult.coupon.value, currency: "usd" }),
+            duration: "once",
+            name: couponResult.coupon.code,
+            metadata: { linqme_code: couponResult.coupon.code },
+          });
+          stripeCouponId = newCoupon.id;
+          // Update the DB with the new Stripe coupon ID
+          const adminForCoupon = createAdminClient();
+          await adminForCoupon
+            .from("coupons")
+            .update({ stripe_coupon_id: newCoupon.id })
+            .eq("id", couponResult.coupon.id);
+          console.log("[billing] Re-created Stripe coupon:", newCoupon.id);
+        } catch (createErr) {
+          console.error("[billing] Failed to re-create Stripe coupon:", createErr);
+          return { ok: false, error: "Failed to apply coupon discount. Please try again or contact support." };
+        }
+      }
+    } else {
+      // No Stripe coupon ID stored -- create one now
+      try {
+        const newCoupon = await stripe.coupons.create({
+          ...(couponResult.coupon.type === "percentage"
+            ? { percent_off: couponResult.coupon.value }
+            : { amount_off: couponResult.coupon.value, currency: "usd" }),
+          duration: "once",
+          name: couponResult.coupon.code,
+          metadata: { linqme_code: couponResult.coupon.code },
+        });
+        stripeCouponId = newCoupon.id;
+        const adminForCoupon = createAdminClient();
+        await adminForCoupon
+          .from("coupons")
+          .update({ stripe_coupon_id: newCoupon.id })
+          .eq("id", couponResult.coupon.id);
+        console.log("[billing] Created new Stripe coupon:", newCoupon.id);
+      } catch (createErr) {
+        console.error("[billing] Failed to create Stripe coupon:", createErr);
+        return { ok: false, error: "Failed to apply coupon discount. Please try again or contact support." };
+      }
+    }
+
     // Record redemption
     await redeemCoupon(
       couponResult.coupon.id,
