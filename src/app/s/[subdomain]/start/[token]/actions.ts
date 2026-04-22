@@ -57,8 +57,8 @@ export async function saveStepAction(
   for (const f of step.fields) {
     let raw = formData.get(f.id);
     if (raw === null) continue;
-    // Normalize consent checkbox: browsers send "on" by default, we need "yes"
-    if (f.type === "consent" && raw === "on") raw = "yes";
+    // Normalize consent/checkbox: browsers send "on" by default, we need "yes"
+    if ((f.type === "consent" || f.type === "checkbox") && raw === "on") raw = "yes";
     // Complex fields (timeline, approval, budget_allocator, etc.) send their
     // data as JSON strings. Try to parse them back into structured objects so
     // the JSONB column stores real objects instead of stringified JSON.

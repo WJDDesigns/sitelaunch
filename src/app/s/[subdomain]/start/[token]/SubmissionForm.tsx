@@ -1780,6 +1780,8 @@ function TimelineField({ field, value, error, onChange, primaryColor }: {
   if (data.endDate) allDates.push({ label: "Deadline", date: data.endDate, color: "#f44336" });
   allDates.sort((a, b) => a.date.localeCompare(b.date));
 
+  const timelineSerialized = typeof value === "string" ? value : JSON.stringify(data);
+
   return (
     <div className="group">
       <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
@@ -1787,6 +1789,8 @@ function TimelineField({ field, value, error, onChange, primaryColor }: {
         {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
       </label>
       {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+      {/* Hidden input ensures FormData captures the timeline JSON */}
+      <input type="hidden" name={field.id} value={timelineSerialized} />
 
       <div className="space-y-3">
         {/* Start / End dates */}
@@ -2000,6 +2004,8 @@ function SocialHandlesField({ field, value, error, onChange, primaryColor }: {
     return <i className="fa-solid fa-circle-question text-xs text-on-surface-variant/30" title="Could not verify" />;
   };
 
+  const serializedValue = typeof value === "string" ? value : (value ? JSON.stringify(value) : "");
+
   return (
     <div className="group">
       <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
@@ -2007,6 +2013,8 @@ function SocialHandlesField({ field, value, error, onChange, primaryColor }: {
         {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
       </label>
       {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+      {/* Hidden input ensures FormData captures the social handles JSON */}
+      <input type="hidden" name={field.id} value={serializedValue} />
       <div className={field.socialHandlesConfig?.columns === 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
         {enabledPlatforms.map((p) => {
           const handle = getHandle(p.id);
@@ -2129,6 +2137,8 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
     return 500;
   };
 
+  const budgetSerialized = typeof value === "string" ? value : JSON.stringify(localAlloc);
+
   return (
     <div className="group">
       <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
@@ -2136,6 +2146,8 @@ function BudgetAllocatorField({ field, value, error, onChange, primaryColor }: {
         {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
       </label>
       {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+      {/* Hidden input ensures FormData captures the budget allocation JSON */}
+      <input type="hidden" name={field.id} value={budgetSerialized} />
 
       {/* Total budget indicator (constrained mode) */}
       {isConstrained && totalBudget > 0 && (
@@ -2900,6 +2912,8 @@ function CelestialField({
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the feature selection */}
+        <input type="hidden" name={field.id} value={selected.join("||")} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {features.map((feat) => {
             const isSelected = selected.includes(feat.id);
@@ -2973,12 +2987,15 @@ function CelestialField({
       const next = goalData.map(g => g.goalId === gid ? { ...g, refinements: { ...g.refinements, [refId]: val } } : g);
       onChange(JSON.stringify(next));
     };
+    const goalSerialized = typeof value === "string" ? value : JSON.stringify(goalData);
     return (
       <div className="group">
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the goal builder JSON */}
+        <input type="hidden" name={field.id} value={goalSerialized} />
         <div className="space-y-3">
           {goals.map((goal) => {
             const sel = isGoalSelected(goal.id);
@@ -3044,12 +3061,15 @@ function CelestialField({
       catch { return { approved: false }; }
     })();
     const updateApproval = (patch: Partial<ApprovalData>) => onChange(JSON.stringify({ ...data, ...patch }));
+    const approvalSerialized = typeof value === "string" ? value : JSON.stringify(data);
     return (
       <div className="group">
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
           <FieldIcon icon={field.icon} color={primaryColor} />{field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the approval JSON */}
+        <input type="hidden" name={field.id} value={approvalSerialized} />
         <div className="space-y-4">
           {cfg.scopeText && (
             <div className="max-h-56 overflow-y-auto rounded-xl border-2 p-4 text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap bg-surface-container-lowest/50 custom-scrollbar"
@@ -3545,6 +3565,7 @@ function CelestialField({
       }
       onChange(JSON.stringify(next));
     };
+    const matrixSerialized = typeof value === "string" ? value : JSON.stringify(answers);
     return (
       <div className="group">
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
@@ -3552,6 +3573,8 @@ function CelestialField({
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the matrix JSON */}
+        <input type="hidden" name={field.id} value={matrixSerialized} />
         <div className="overflow-x-auto rounded-xl border-2 border-outline-variant/20">
           <table className="w-full text-sm">
             <thead>
@@ -3608,6 +3631,7 @@ function CelestialField({
       const next = { ...answers, [qId]: ansLabel };
       onChange(JSON.stringify(next));
     };
+    const questionnaireSerialized = typeof value === "string" ? value : JSON.stringify(answers);
     return (
       <div className="group">
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
@@ -3615,6 +3639,8 @@ function CelestialField({
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the questionnaire JSON */}
+        <input type="hidden" name={field.id} value={questionnaireSerialized} />
         <div className="space-y-4">
           {cfg.questions.map((q, qi) => (
             <div key={q.id} className="rounded-xl border border-outline-variant/20 p-4 bg-surface-container-lowest/50">
@@ -3667,6 +3693,8 @@ function CelestialField({
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the rating value */}
+        <input type="hidden" name={field.id} value={currentVal > 0 ? String(currentVal) : ""} />
         <div className="flex items-center gap-1.5">
           {Array.from({ length: maxStars }, (_, i) => {
             const starVal = i + 1;
@@ -3705,6 +3733,8 @@ function CelestialField({
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the toggle value */}
+        <input type="hidden" name={field.id} value={typeof value === "string" ? value : ""} />
         <button type="button" onClick={() => onChange(isYes ? "no" : "yes")}
           className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 w-full"
           style={value ? { borderColor: primaryColor, backgroundColor: primaryColor + "08" } : { borderColor: "var(--color-outline-variant)" }}>
@@ -3740,7 +3770,7 @@ function CelestialField({
           <div className="relative">
             <div className="h-2 rounded-full bg-surface-container-highest" />
             <div className="absolute top-0 left-0 h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: primaryColor }} />
-            <input type="range" min={cfg.min} max={cfg.max} step={cfg.step} value={numVal}
+            <input type="range" name={field.id} min={cfg.min} max={cfg.max} step={cfg.step} value={numVal}
               onChange={(e) => onChange(e.target.value)}
               className="absolute inset-0 w-full opacity-0 cursor-pointer"
               style={{ height: "8px" }} />
@@ -3764,6 +3794,7 @@ function CelestialField({
     const fields = cfg.fields ?? ["property_type", "bedrooms", "bathrooms", "sqft", "year_built"];
     const data: Record<string, string> = typeof value === "string" && value ? (() => { try { return JSON.parse(value); } catch { return {}; } })() : (typeof value === "object" && value ? value as Record<string, string> : {});
     const update = (key: string, val: string) => onChange(JSON.stringify({ ...data, [key]: val }));
+    const serializedProp = typeof value === "string" ? value : (value ? JSON.stringify(value) : "");
     const propertyTypes = [
       { value: "single_family", label: "Single Family" }, { value: "condo", label: "Condo" },
       { value: "townhouse", label: "Townhouse" }, { value: "multi_family", label: "Multi-Family" },
@@ -3777,6 +3808,8 @@ function CelestialField({
           {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
         </label>
         {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        {/* Hidden input ensures FormData captures the property details JSON */}
+        <input type="hidden" name={field.id} value={serializedProp} />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {fields.includes("property_type") && (
             <div className="col-span-2 sm:col-span-3">
@@ -4466,6 +4499,8 @@ function CelestialField({
 
       ) : field.displayMode === "icon_cards" && (field.type === "select" || field.type === "radio" || isMultiCheckbox) ? (
         <>
+          {/* Hidden input ensures FormData captures the icon card selection */}
+          <input type="hidden" name={field.id} value={isMultiCheckbox ? checkedValues.join("||") : str} />
           <IconCardSelector
             options={field.options ?? []}
             optionIcons={field.optionIcons}
@@ -4499,6 +4534,8 @@ function CelestialField({
 
       ) : isMultiCheckbox ? (
         <div className="space-y-2">
+          {/* Hidden input carries the joined value for FormData */}
+          <input type="hidden" name={field.id} value={str} />
           {(field.options ?? []).map((opt) => {
             const isChecked = checkedValues.includes(opt);
             const atMax = field.maxSelections && field.maxSelections > 0 && checkedValues.length >= field.maxSelections && !isChecked;
@@ -4519,7 +4556,7 @@ function CelestialField({
 
       ) : field.type === "checkbox" ? (
         <label htmlFor={field.id} className="flex items-center gap-3 cursor-pointer py-3 px-4 rounded-xl border-2 transition-all duration-200" style={value ? { borderColor: primaryColor, backgroundColor: primaryColor + "08" } : { borderColor: "var(--color-outline-variant)" }}>
-          <input id={field.id} name={field.id} type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked ? "yes" : "")} className="h-5 w-5 rounded" style={{ accentColor: primaryColor }} />
+          <input id={field.id} name={field.id} type="checkbox" value="yes" checked={!!value} onChange={(e) => onChange(e.target.checked ? "yes" : "")} className="h-5 w-5 rounded" style={{ accentColor: primaryColor }} />
           <span className="text-sm text-on-surface">{field.placeholder || "Yes"}</span>
         </label>
 
