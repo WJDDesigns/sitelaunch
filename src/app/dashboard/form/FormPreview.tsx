@@ -1652,6 +1652,43 @@ function PreviewField({ field, primaryColor, isPhone, previewValue, onPreviewCha
     );
   }
 
+  /* Chained Select -- preview */
+  if (field.type === "chained_select") {
+    const cfg = field.chainedSelectConfig;
+    const levels = cfg?.levels ?? [{ label: "Level 1" }, { label: "Level 2" }];
+    return (
+      <div className="space-y-2">
+        {levels.map((level, i) => (
+          <div key={i}>
+            <span className="block text-[10px] font-medium text-on-surface-variant/50 mb-0.5">{level.label}</span>
+            <div className="rounded-lg border border-outline-variant/20 bg-surface-container/30 px-3 py-2 text-xs text-on-surface-variant/40">
+              {level.placeholder ?? `Select ${level.label.toLowerCase()}...`}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /* Calculated Field -- preview */
+  if (field.type === "calculated") {
+    const cfg = field.calculatedFieldConfig;
+    const symbol = cfg?.currencySymbol ?? "$";
+    const sample = cfg?.format === "currency" ? `${symbol}0.00` : cfg?.format === "percent" ? "0.00%" : "0.00";
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          {field.label}{field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <div className="rounded-xl border border-outline-variant/20 bg-surface-container/30 px-4 py-3 flex items-center justify-between">
+          <span className="text-xl font-bold text-on-surface-variant/40">{sample}</span>
+          <i className="fa-solid fa-calculator text-on-surface-variant/20 text-sm" />
+        </div>
+      </div>
+    );
+  }
+
   /* All other fields — fully interactive */
   return (
     <div>

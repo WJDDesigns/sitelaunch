@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
-import type { FormSchema, FieldDef, UploadedFile, PackageRule, RepeaterSubField } from "@/lib/forms";
+import type { FormSchema, FieldDef, UploadedFile, PackageRule, RepeaterSubField, ChainedSelectOption } from "@/lib/forms";
 import { evaluateCondition, getEffectiveColSpan } from "@/lib/forms";
 import { isLightColor } from "@/lib/color-utils";
 import { COUNTRIES as COUNTRIES_DATA } from "@/data/countries";
@@ -4493,6 +4493,127 @@ function CelestialField({
         {cfg.multiSelect && cfg.maxSelections && cfg.maxSelections > 0 && (
           <p className="text-xs text-on-surface-variant/60 ml-1 mt-2">Select up to {cfg.maxSelections}</p>
         )}
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  if (field.type === "chained_select" && field.chainedSelectConfig) {
+    const cfg = field.chainedSelectConfig;
+    // Parse current selections
+    let selections: Record<string, string> = {};
+    try {
+      selections = typeof value === "string" && value ? JSON.parse(value) : {};
+    } catch { selections = {}; }
+
+    // Build available options for each level by walking the tree
+    const levelOptions: ChainedSelectOption[][] = [];
+    let currentOptions = cfg.options;
+    for (let i = 0; i < cfg.levels.length; i++) {
+      levelOptions.push(currentOptions);
+      const selectedValue = selections[`level_${i}`];
+      if (!selectedValue) break;
+      const selected = currentOptions.find((o) => o.value === selectedValue);
+      if (!selected?.children?.length) break;
+      currentOptions = selected.children;
+    }
+
+    const handleLevelChange = (levelIndex: number, newValue: string) => {
+      const updated: Record<string, string> = {};
+      // Keep selections up to (but not including) the changed level
+      for (let i = 0; i < levelIndex; i++) {
+        if (selections[`level_${i}`]) updated[`level_${i}`] = selections[`level_${i}`];
+      }
+      // Set the new value
+      if (newValue) updated[`level_${levelIndex}`] = newValue;
+      onChange(JSON.stringify(updated));
+    };
+
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+          {field.required && <span className="ml-1" style={{ color: primaryColor }}>*</span>}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <input type="hidden" name={field.id} value={JSON.stringify(selections)} />
+        <div className="space-y-3">
+          {cfg.levels.map((level, i) => {
+            const options = levelOptions[i];
+            if (!options) return null; // Parent not selected yet
+            const currentVal = selections[`level_${i}`] ?? "";
+            return (
+              <div key={i}>
+                <label className="block text-[11px] font-medium text-on-surface-variant/70 mb-1 ml-1">{level.label}</label>
+                <select
+                  value={currentVal}
+                  onChange={(e) => handleLevelChange(i, e.target.value)}
+                  className={INPUT_CLS}
+                  style={{ ...focusRing, borderColor: errBorder }}
+                >
+                  <option value="">{level.placeholder ?? `Select ${level.label.toLowerCase()}...`}</option>
+                  {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+        {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
+      </div>
+    );
+  }
+
+  if (field.type === "calculated" && field.calculatedFieldConfig) {
+    const cfg = field.calculatedFieldConfig;
+    // Evaluate formula by replacing field references with numeric values
+    let computedValue: number | null = null;
+    try {
+      let expr = cfg.formula;
+      // Replace {field_id} with numeric values from allData
+      expr = expr.replace(/\{([^}]+)\}/g, (_, fieldId: string) => {
+        const raw = allData[fieldId];
+        if (raw === undefined || raw === null || raw === "") return "0";
+        // Try to extract a number from the value
+        const str = String(raw).replace(/[^0-9.\-]/g, "");
+        const n = parseFloat(str);
+        return isNaN(n) ? "0" : String(n);
+      });
+      // Safe arithmetic eval -- only allow digits, operators, parens, dots, spaces
+      if (/^[\d\s+\-*/.()]+$/.test(expr)) {
+        computedValue = Function(`"use strict"; return (${expr})`)() as number;
+        if (!isFinite(computedValue)) computedValue = null;
+      }
+    } catch { computedValue = null; }
+    // Format the result
+    let displayValue = "--";
+    const hiddenValue = computedValue !== null ? String(computedValue) : "";
+    if (computedValue !== null) {
+      const decimals = cfg.decimalPlaces ?? 2;
+      if (cfg.format === "currency") {
+        displayValue = `${cfg.currencySymbol ?? "$"}${computedValue.toFixed(decimals)}`;
+      } else if (cfg.format === "percent") {
+        displayValue = `${computedValue.toFixed(decimals)}%`;
+      } else {
+        displayValue = computedValue.toFixed(decimals);
+      }
+      if (cfg.prefix) displayValue = cfg.prefix + displayValue;
+      if (cfg.suffix) displayValue = displayValue + cfg.suffix;
+    }
+    return (
+      <div className="group">
+        <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">
+          <FieldIcon icon={field.icon} color={primaryColor} />{field.label}
+        </label>
+        {field.hint && <p className="text-xs text-on-surface-variant/60 mb-2 ml-1">{field.hint}</p>}
+        <input type="hidden" name={field.id} value={hiddenValue} />
+        <div className="rounded-xl border border-outline-variant/20 bg-surface-container/30 px-4 py-3 flex items-center justify-between">
+          <span className="text-2xl font-bold tracking-tight" style={{ color: primaryColor }}>
+            {displayValue}
+          </span>
+          <i className="fa-solid fa-calculator text-on-surface-variant/30" />
+        </div>
         {error && <p className="text-sm text-error mt-1.5 sl-fade-up flex items-center gap-1.5"><i className="fa-solid fa-circle-exclamation text-xs flex-shrink-0" />{error}</p>}
       </div>
     );

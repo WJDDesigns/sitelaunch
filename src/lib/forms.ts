@@ -45,7 +45,9 @@ export type FieldType =
   | "case_intake"
   | "donation_tier"
   | "volunteer_signup"
-  | "cause_selector";
+  | "cause_selector"
+  | "calculated"
+  | "chained_select";
 
 /* ââ Package Selector types âââââââââââââââââââââââââââââââ */
 
@@ -664,6 +666,50 @@ export interface CauseSelectorConfig {
   columns?: 2 | 3 | 4;
 }
 
+/* -- Calculated Field types ------------------------------------------------ */
+
+export type CalculatedFormat = "number" | "currency" | "percent";
+
+export interface CalculatedFieldConfig {
+  /** Formula string with field references like {field_id}, e.g. "{price} * 1.08" */
+  formula: string;
+  /** How to display the result */
+  format: CalculatedFormat;
+  /** Decimal places (default 2) */
+  decimalPlaces?: number;
+  /** Currency symbol for currency format (default "$") */
+  currencySymbol?: string;
+  /** Prefix text shown before the result */
+  prefix?: string;
+  /** Suffix text shown after the result */
+  suffix?: string;
+}
+
+/* -- Chained Select (hierarchical dropdown) types -------------------------- */
+
+export interface ChainedSelectOption {
+  /** Display label */
+  label: string;
+  /** Value stored in the data */
+  value: string;
+  /** Child options shown when this option is selected */
+  children?: ChainedSelectOption[];
+}
+
+export interface ChainedSelectLevel {
+  /** Label for this dropdown level, e.g. "Category", "Service" */
+  label: string;
+  /** Placeholder text */
+  placeholder?: string;
+}
+
+export interface ChainedSelectConfig {
+  /** Level definitions (labels and placeholders) */
+  levels: ChainedSelectLevel[];
+  /** Root-level options tree */
+  options: ChainedSelectOption[];
+}
+
 /** Condition to show/hide a field or step based on another field's value */
 export interface ShowCondition {
   /** ID of the field to evaluate (from any step) */
@@ -764,6 +810,10 @@ export interface FieldDef {
   volunteerSignupConfig?: VolunteerSignupConfig;
   /** For cause_selector fields — nonprofit cause/program config */
   causeSelectorConfig?: CauseSelectorConfig;
+  /** For calculated fields -- formula and display config */
+  calculatedFieldConfig?: CalculatedFieldConfig;
+  /** For chained_select fields -- hierarchical dropdown config */
+  chainedSelectConfig?: ChainedSelectConfig;
   /** Show this field only when the condition is met */
   showCondition?: ShowCondition;
   /** For file/files fields: optional cloud storage destination */
@@ -845,6 +895,8 @@ export const MIN_COL_SPAN: Partial<Record<FieldType, 1 | 2 | 3 | 4>> = {
   case_intake: 2,
   loan_calculator: 2,
   volunteer_signup: 2,
+  calculated: 1,
+  chained_select: 2,
   /* Full width only (4) -- complex/wide fields */
   // donation_tier, cause_selector, room_selector default to GRID_COLUMNS
   // package, repeater, asset_collection, site_structure, feature_selector,
@@ -986,7 +1038,20 @@ export function validateStepData(
     if (f.type === "file" || f.type === "files") continue;
     // Heading fields are display-only, never validated.
     if (f.type === "heading") continue;
+    // Calculated fields are computed read-only, never validated.
+    if (f.type === "calculated") continue;
     const v = data[f.id];
+    if (f.type === "chained_select") {
+      if (f.required) {
+        try {
+          const parsed = typeof v === "string" ? JSON.parse(v) : (typeof v === "object" ? v : null);
+          if (!parsed) { errors[f.id] = "Please make a selection"; continue; }
+          const keys = Object.keys(parsed).filter((k) => parsed[k]);
+          if (keys.length === 0) errors[f.id] = "Please make a selection";
+        } catch { errors[f.id] = "Please make a selection"; }
+      }
+      continue;
+    }
     // Repeater entries are validated inline â the component handles required sub-fields.
     if (f.type === "repeater") {
       if (f.required) {

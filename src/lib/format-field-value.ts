@@ -252,6 +252,30 @@ export function formatFieldValue(
       return selectedIds.map((id) => causeLabels.get(id) ?? id).join(", ");
     }
 
+    case "chained_select": {
+      try {
+        const cs = typeof value === "string" ? JSON.parse(value) : value;
+        if (typeof cs === "object" && cs !== null) {
+          const values = Object.keys(cs)
+            .sort()
+            .map((k) => cs[k])
+            .filter(Boolean);
+          return values.join(" > ");
+        }
+      } catch { /* fall through */ }
+      return String(value);
+    }
+
+    case "calculated": {
+      const cfg = field.calculatedFieldConfig;
+      const n = parseFloat(String(value));
+      if (isNaN(n)) return String(value);
+      const decimals = cfg?.decimalPlaces ?? 2;
+      if (cfg?.format === "currency") return `${cfg.currencySymbol ?? "$"}${n.toFixed(decimals)}`;
+      if (cfg?.format === "percent") return `${n.toFixed(decimals)}%`;
+      return n.toFixed(decimals);
+    }
+
     default:
       break;
   }

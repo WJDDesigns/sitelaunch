@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider, RatingConfig, SliderConfig, SocialHandlesConfig, SocialPlatformId, MatrixConfig, QuestionnaireConfig, QuestionnaireQuestion, PropertyDetailsConfig, InsuranceInfoConfig, GuestRsvpConfig, RoomSelectorConfig, RoomOption, LoanCalculatorConfig, CaseIntakeConfig, DonationTierConfig, DonationTier, VolunteerSignupConfig, CauseSelectorConfig, CauseOption } from "@/lib/forms";
+import type { FormSchema, StepDef, FieldDef, FieldType, PackageConfig, PackageOption, PackageFeature, PackageRule, PackageLayout, RepeaterConfig, RepeaterSubField, AssetCollectionConfig, AssetCategory, SiteStructureConfig, FeatureSelectorConfig, FeatureOption, GoalBuilderConfig, GoalOption, GoalRefinement, ApprovalConfig, PaymentConfig, PaymentProvider, CaptchaConfig, CaptchaProvider, RatingConfig, SliderConfig, SocialHandlesConfig, SocialPlatformId, MatrixConfig, QuestionnaireConfig, QuestionnaireQuestion, PropertyDetailsConfig, InsuranceInfoConfig, GuestRsvpConfig, RoomSelectorConfig, RoomOption, LoanCalculatorConfig, CaseIntakeConfig, DonationTierConfig, DonationTier, VolunteerSignupConfig, CauseSelectorConfig, CauseOption, CalculatedFieldConfig, CalculatedFormat, ChainedSelectConfig, ChainedSelectOption, ChainedSelectLevel } from "@/lib/forms";
 import { SOCIAL_PLATFORMS, GRID_COLUMNS, MIN_COL_SPAN, getMinColSpan, getEffectiveColSpan } from "@/lib/forms";
 import { COUNTRIES } from "@/data/countries";
 import { PROVIDER_META, type CloudProvider } from "@/lib/cloud/providers";
@@ -141,6 +141,10 @@ const FIELD_CATALOGUE: FieldTypeInfo[] = [
     tags: ["nonprofit", "events"] },
   { type: "cause_selector", label: "Cause / Program", icon: "fa-ribbon", group: "advanced", category: "smart", description: "Pick causes or programs to support",
     tags: ["nonprofit"] },
+  { type: "calculated", label: "Calculated Field", icon: "fa-calculator", group: "advanced", category: "smart", description: "Live formula results from other fields",
+    tags: ["finance", "ecommerce", "consulting", "real_estate"] },
+  { type: "chained_select", label: "Chained Dropdown", icon: "fa-bars-staggered", group: "advanced", category: "smart", description: "Hierarchical dependent dropdowns",
+    tags: ["consulting", "ecommerce", "web_design", "healthcare", "education", "real_estate"] },
 ];
 
 function iconFor(type: FieldType) {
@@ -159,6 +163,91 @@ function FaIcon({ name, className }: { name: string; className?: string }) {
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+/* ── Chained Select tree editor ────────────────────────────── */
+
+function ChainedOptionTreeEditor({
+  options,
+  depth,
+  maxDepth,
+  onChange,
+}: {
+  options: ChainedSelectOption[];
+  depth: number;
+  maxDepth: number;
+  onChange: (opts: ChainedSelectOption[]) => void;
+}) {
+  return (
+    <div className={depth > 0 ? "ml-4 pl-3 border-l-2 border-outline-variant/20 space-y-1.5" : "space-y-1.5"}>
+      {options.map((opt, i) => (
+        <div key={i}>
+          <div className="flex gap-1.5 items-center">
+            <input
+              value={opt.label}
+              onChange={(e) => {
+                const updated = [...options];
+                updated[i] = { ...updated[i], label: e.target.value };
+                onChange(updated);
+              }}
+              placeholder="Label"
+              className="flex-1 px-2 py-1 text-xs bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none placeholder:text-on-surface-variant/30"
+            />
+            <input
+              value={opt.value}
+              onChange={(e) => {
+                const updated = [...options];
+                updated[i] = { ...updated[i], value: e.target.value };
+                onChange(updated);
+              }}
+              placeholder="value_key"
+              className="flex-1 px-2 py-1 text-xs bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none placeholder:text-on-surface-variant/30 font-mono"
+            />
+            {depth < maxDepth && (
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = [...options];
+                  updated[i] = {
+                    ...updated[i],
+                    children: [...(updated[i].children ?? []), { label: "", value: "" }],
+                  };
+                  onChange(updated);
+                }}
+                className="text-[10px] text-primary/70 hover:text-primary shrink-0"
+                title="Add child option"
+              >
+                <i className="fa-solid fa-plus" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onChange(options.filter((_, idx) => idx !== i))}
+              className="text-error/60 hover:text-error text-xs shrink-0"
+              title="Remove option"
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </div>
+          {opt.children && opt.children.length > 0 && depth < maxDepth && (
+            <ChainedOptionTreeEditor
+              options={opt.children}
+              depth={depth + 1}
+              maxDepth={maxDepth}
+              onChange={(children) => {
+                const updated = [...options];
+                updated[i] = { ...updated[i], children };
+                onChange(updated);
+              }}
+            />
+          )}
+        </div>
+      ))}
+      {options.length === 0 && (
+        <p className="text-[10px] text-on-surface-variant/40 italic">No options yet</p>
+      )}
+    </div>
+  );
 }
 
 function makeField(type: FieldType, label: string): FieldDef {
@@ -490,6 +579,40 @@ function makeField(type: FieldType, label: string): FieldDef {
       showFrequency: true,
       showNotes: true,
       maxSlots: 0,
+    };
+  }
+  if (type === "calculated") {
+    base.calculatedFieldConfig = {
+      formula: "",
+      format: "currency",
+      decimalPlaces: 2,
+      currencySymbol: "$",
+    };
+  }
+  if (type === "chained_select") {
+    base.chainedSelectConfig = {
+      levels: [
+        { label: "Category", placeholder: "Select category..." },
+        { label: "Service", placeholder: "Select service..." },
+      ],
+      options: [
+        {
+          label: "Web Design", value: "web_design",
+          children: [
+            { label: "Landing Page", value: "landing_page" },
+            { label: "Full Website", value: "full_website" },
+            { label: "E-Commerce", value: "ecommerce" },
+          ],
+        },
+        {
+          label: "Marketing", value: "marketing",
+          children: [
+            { label: "SEO", value: "seo" },
+            { label: "Social Media", value: "social_media" },
+            { label: "PPC Ads", value: "ppc_ads" },
+          ],
+        },
+      ],
     };
   }
   if (type === "cause_selector") {
@@ -2767,6 +2890,171 @@ function FieldSettingsPanel({ field, onUpdate, onClose, allFields, hasAI, hasPay
                 <div className="w-8 h-4 bg-surface-container-highest rounded-full peer-checked:bg-primary transition-colors" />
                 <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-on-surface-variant rounded-full peer-checked:translate-x-4 peer-checked:bg-on-primary transition-all" />
               </label>
+            </div>
+          </section>
+        )}
+
+        {/* -- Calculated Field Settings -- */}
+        {field.type === "calculated" && field.calculatedFieldConfig && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Calculated Field Settings</div>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Formula</span>
+              <textarea
+                value={field.calculatedFieldConfig.formula}
+                onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, formula: e.target.value } })}
+                placeholder='e.g. {package_price} + {feature_total} * 1.08'
+                rows={3}
+                className={INPUT_CLS}
+              />
+              <span className="text-[10px] text-on-surface-variant/50 mt-1 block">
+                Reference other fields with {"{field_id}"}. Supports +, -, *, /, parentheses, and numbers.
+              </span>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Display Format</span>
+              <select
+                value={field.calculatedFieldConfig.format}
+                onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, format: e.target.value as CalculatedFormat } })}
+                className={INPUT_CLS}
+              >
+                <option value="number">Number</option>
+                <option value="currency">Currency</option>
+                <option value="percent">Percent</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Decimal Places</span>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={field.calculatedFieldConfig.decimalPlaces ?? 2}
+                onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, decimalPlaces: Number(e.target.value) } })}
+                className="w-20 px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none"
+              />
+            </label>
+            {field.calculatedFieldConfig.format === "currency" && (
+              <label className="block">
+                <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Currency Symbol</span>
+                <input
+                  value={field.calculatedFieldConfig.currencySymbol ?? "$"}
+                  onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, currencySymbol: e.target.value } })}
+                  placeholder="$"
+                  className="w-20 px-2 py-1 text-sm bg-surface-container-highest/50 border-0 rounded-lg text-on-surface outline-none"
+                />
+              </label>
+            )}
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Prefix (optional)</span>
+              <input
+                value={field.calculatedFieldConfig.prefix ?? ""}
+                onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, prefix: e.target.value || undefined } })}
+                placeholder='e.g. "Total: "'
+                className={INPUT_CLS}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-on-surface-variant mb-1 block">Suffix (optional)</span>
+              <input
+                value={field.calculatedFieldConfig.suffix ?? ""}
+                onChange={(e) => onUpdate({ calculatedFieldConfig: { ...field.calculatedFieldConfig!, suffix: e.target.value || undefined } })}
+                placeholder='e.g. " per month"'
+                className={INPUT_CLS}
+              />
+            </label>
+          </section>
+        )}
+
+        {/* -- Chained Select Settings -- */}
+        {field.type === "chained_select" && field.chainedSelectConfig && (
+          <section className="space-y-3">
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Chained Dropdown Settings</div>
+
+            {/* Level labels */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-on-surface-variant">Levels</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (field.chainedSelectConfig!.levels.length >= 5) return;
+                    onUpdate({
+                      chainedSelectConfig: {
+                        ...field.chainedSelectConfig!,
+                        levels: [...field.chainedSelectConfig!.levels, { label: `Level ${field.chainedSelectConfig!.levels.length + 1}`, placeholder: "" }],
+                      },
+                    });
+                  }}
+                  disabled={field.chainedSelectConfig.levels.length >= 5}
+                  className="text-[10px] text-primary hover:text-primary/80 disabled:opacity-40"
+                >
+                  <i className="fa-solid fa-plus mr-0.5" /> Add Level
+                </button>
+              </div>
+              {field.chainedSelectConfig.levels.map((level, li) => (
+                <div key={li} className="flex gap-2 items-center">
+                  <input
+                    value={level.label}
+                    onChange={(e) => {
+                      const levels = [...field.chainedSelectConfig!.levels];
+                      levels[li] = { ...levels[li], label: e.target.value };
+                      onUpdate({ chainedSelectConfig: { ...field.chainedSelectConfig!, levels } });
+                    }}
+                    placeholder="Level label"
+                    className={INPUT_CLS + " flex-1"}
+                  />
+                  <input
+                    value={level.placeholder ?? ""}
+                    onChange={(e) => {
+                      const levels = [...field.chainedSelectConfig!.levels];
+                      levels[li] = { ...levels[li], placeholder: e.target.value || undefined };
+                      onUpdate({ chainedSelectConfig: { ...field.chainedSelectConfig!, levels } });
+                    }}
+                    placeholder="Placeholder"
+                    className={INPUT_CLS + " flex-1"}
+                  />
+                  {field.chainedSelectConfig!.levels.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const levels = field.chainedSelectConfig!.levels.filter((_, i) => i !== li);
+                        onUpdate({ chainedSelectConfig: { ...field.chainedSelectConfig!, levels } });
+                      }}
+                      className="text-error/60 hover:text-error text-xs"
+                    >
+                      <i className="fa-solid fa-xmark" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Option tree editor */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-on-surface-variant">Options Tree</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdate({
+                      chainedSelectConfig: {
+                        ...field.chainedSelectConfig!,
+                        options: [...field.chainedSelectConfig!.options, { label: "", value: "" }],
+                      },
+                    });
+                  }}
+                  className="text-[10px] text-primary hover:text-primary/80"
+                >
+                  <i className="fa-solid fa-plus mr-0.5" /> Add Root Option
+                </button>
+              </div>
+              <ChainedOptionTreeEditor
+                options={field.chainedSelectConfig.options}
+                depth={0}
+                maxDepth={field.chainedSelectConfig.levels.length - 1}
+                onChange={(options) => onUpdate({ chainedSelectConfig: { ...field.chainedSelectConfig!, options } })}
+              />
             </div>
           </section>
         )}
