@@ -62,7 +62,12 @@ export default function SwitchPlanButton({ targetSlug, label, highlight, isDowng
         couponValid ? couponCode.trim() : undefined,
       );
       if (result.ok) {
-        router.refresh();
+        if (result.redirectUrl) {
+          // Free-to-paid flow: redirect to Stripe checkout
+          window.location.href = result.redirectUrl;
+        } else {
+          router.refresh();
+        }
       } else {
         setError(result.error ?? "Something went wrong.");
       }

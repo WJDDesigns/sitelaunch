@@ -44,15 +44,21 @@ export async function validateBillingCouponAction(
  * Create a Stripe Checkout session for upgrading to a paid plan.
  * Now reads the plan from the DB instead of hardcoded config.
  * Supports optional coupon code for discounts.
+ *
+ * Returns a result object instead of throwing so that error messages
+ * are preserved in production (Next.js strips thrown error messages).
  */
-export async function createCheckoutAction(planSlug: string, couponCode?: string) {
+export async function createCheckoutAction(
+  planSlug: string,
+  couponCode?: string,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
-  if (!account) throw new Error("No account found");
+  if (!account) return { ok: false, error: "No account found." };
 
   const plan = await getPlanBySlug(planSlug);
-  if (!plan) throw new Error("Plan not found");
-  if (!plan.stripePriceId) throw new Error("No Stripe price configured for this plan. Ask your admin to set up Stripe.");
+  if (!plan) return { ok: false, error: "Plan not found." };
+  if (!plan.stripePriceId) return { ok: false, error: "No Stripe price configured for this plan. Ask your admin to set up Stripe." };
 
   // Validate and redeem coupon if provided
   let stripeCouponId: string | null = null;
@@ -60,7 +66,7 @@ export async function createCheckoutAction(planSlug: string, couponCode?: string
   if (couponCode) {
     const couponResult = await validateCoupon(couponCode, plan.priceMonthly);
     if (!couponResult.valid) {
-      throw new Error(couponResult.reason);
+      return { ok: false, error: couponResult.reason };
     }
     stripeCouponId = couponResult.coupon.stripeCouponId;
 
@@ -74,7 +80,13 @@ export async function createCheckoutAction(planSlug: string, couponCode?: string
   }
 
   // Get or create Stripe customer
-  const customerId = await getOrCreateCustomer(account.id, account.name, session.email);
+  let customerId: string;
+  try {
+    customerId = await getOrCreateCustomer(account.id, account.name, session.email);
+  } catch (err) {
+    console.error("[billing] Failed to get/create Stripe customer:", err);
+    return { ok: false, error: "Failed to set up billing customer. Please try again." };
+  }
 
   // Save Stripe customer ID to partner if not already there
   const admin = createAdminClient();
@@ -84,7 +96,7 @@ export async function createCheckoutAction(planSlug: string, couponCode?: string
     .eq("id", account.id);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is not set");
+  if (!appUrl) return { ok: false, error: "App URL is not configured." };
 
   const checkoutParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     customer: customerId,
@@ -108,10 +120,25 @@ export async function createCheckoutAction(planSlug: string, couponCode?: string
     checkoutParams.discounts = [{ coupon: stripeCouponId }];
   }
 
-  const checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+  try {
+    console.log("[billing] Creating checkout session for partner:", account.id, "plan:", planSlug, "price:", plan.stripePriceId);
+    const checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
 
-  if (checkoutSession.url) {
-    redirect(checkoutSession.url);
+    if (!checkoutSession.url) {
+      return { ok: false, error: "Stripe did not return a checkout URL. Please try again." };
+    }
+
+    return { ok: true, url: checkoutSession.url };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown Stripe error";
+    console.error("[billing] Stripe checkout session creation failed:", message, {
+      partnerId: account.id,
+      planSlug,
+      stripePriceId: plan.stripePriceId,
+      customerId,
+      stripeCouponId,
+    });
+    return { ok: false, error: `Checkout failed: ${message}` };
   }
 }
 
@@ -125,7 +152,7 @@ export async function createCheckoutAction(planSlug: string, couponCode?: string
 export async function switchPlanAction(
   targetSlug: string,
   couponCode?: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; redirectUrl?: string }> {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);
   if (!account) return { ok: false, error: "No account found" };
@@ -148,18 +175,12 @@ export async function switchPlanAction(
     .maybeSingle();
 
   if (!activeSub) {
-    // No active subscription -- redirect to checkout for new subscription
-    try {
-      await createCheckoutAction(targetSlug, couponCode);
-      return { ok: true }; // won't reach here due to redirect
-    } catch (err) {
-      // Re-throw redirect errors so Next.js can handle them
-      if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
-      // Check for Next.js redirect digest
-      if (err && typeof err === "object" && "digest" in err) throw err;
-      const message = err instanceof Error ? err.message : "Failed to start checkout";
-      return { ok: false, error: message };
+    // No active subscription -- create checkout for new subscription
+    const checkoutResult = await createCheckoutAction(targetSlug, couponCode);
+    if (checkoutResult.ok) {
+      return { ok: true, redirectUrl: checkoutResult.url };
     }
+    return { ok: false, error: checkoutResult.error };
   }
 
   try {

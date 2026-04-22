@@ -49,10 +49,11 @@ export default function UpgradeButton({ tier, label, highlight }: Props) {
   function handleClick() {
     setError(null);
     startTransition(async () => {
-      try {
-        await createCheckoutAction(tier, couponValid ? couponCode.trim() : undefined);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      const result = await createCheckoutAction(tier, couponValid ? couponCode.trim() : undefined);
+      if (result.ok) {
+        window.location.href = result.url;
+      } else {
+        setError(result.error);
       }
     });
   }
