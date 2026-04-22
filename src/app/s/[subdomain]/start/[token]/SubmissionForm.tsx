@@ -2655,11 +2655,22 @@ function CelestialField({
     // Check if a calculated field is set as payment total
     const calcPaymentField = allFields?.find((f) => f.type === "calculated" && f.calculatedFieldConfig?.useForPayment);
     let amount: string | null = cfg?.amountCents ? (cfg.amountCents / 100).toFixed(2) : null;
-    if (calcPaymentField) {
-      // Resolve the calculated field value from form state
-      const calcVal = allData?.[calcPaymentField.id];
-      const parsed = typeof calcVal === "string" ? parseFloat(calcVal) : typeof calcVal === "number" ? calcVal : NaN;
-      if (!isNaN(parsed) && parsed > 0) amount = parsed.toFixed(2);
+    if (calcPaymentField?.calculatedFieldConfig) {
+      // Evaluate the calculated field formula inline to get the payment amount
+      try {
+        let calcExpr = calcPaymentField.calculatedFieldConfig.formula;
+        calcExpr = calcExpr.replace(/\{([^}]+)\}/g, (_, fid: string) => {
+          const raw = allData[fid];
+          if (raw === undefined || raw === null || raw === "") return "0";
+          const s = String(raw).replace(/[^0-9.\-]/g, "");
+          const n = parseFloat(s);
+          return isNaN(n) ? "0" : String(n);
+        });
+        if (/^[\d\s+\-*/.()]+$/.test(calcExpr)) {
+          const result = Function(`"use strict"; return (${calcExpr})`)() as number;
+          if (isFinite(result) && result > 0) amount = result.toFixed(2);
+        }
+      } catch { /* keep original amount */ }
     }
     const currency = (cfg?.currency ?? "usd").toUpperCase();
     return (
@@ -4626,14 +4637,9 @@ function CelestialField({
         if (!isFinite(computedValue)) computedValue = null;
       }
     } catch { computedValue = null; }
-    // Sync computed value back to form state so other fields (e.g. payment) can read it
-    const computedStr = computedValue !== null ? String(computedValue) : "";
-    if (onUpdateField && computedStr !== (typeof value === "string" ? value : "")) {
-      onUpdateField(field.id, computedStr);
-    }
     // Format the result
     let displayValue = "--";
-    const hiddenValue = computedStr;
+    const hiddenValue = computedValue !== null ? String(computedValue) : "";
     if (computedValue !== null) {
       const decimals = cfg.decimalPlaces ?? 2;
       if (cfg.format === "currency") {
