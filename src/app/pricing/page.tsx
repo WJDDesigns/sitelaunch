@@ -20,6 +20,7 @@ const TIERS = [
       { text: "10 submissions / month", included: true },
       { text: "1 form", included: true },
       { text: "100 MB file storage", included: true },
+      { text: "File uploads (50 MB) + video (100 MB)", included: true },
       { text: "Branded workspace", included: true },
       { text: "Unlimited form fields", included: true },
       { text: "Community support", included: true },
@@ -112,7 +113,7 @@ const FAQ = [
   },
   {
     q: "What file types can clients upload?",
-    a: "Clients can upload any file type including images, PDFs, documents, videos, and design files. Individual files can be up to 100 MB on all plans.",
+    a: "Clients can upload images, PDFs, documents, videos, and archives. Images are auto-compressed for efficient storage. File limit is 50 MB per file, with videos up to 100 MB on all plans.",
   },
 ];
 
