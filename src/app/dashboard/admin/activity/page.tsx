@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 
 interface PageProps {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; logLevel?: string; logCategory?: string }>;
 }
 
 const PAGE_SIZE = 30;
@@ -26,7 +26,7 @@ export default async function ActivityLogPage({ searchParams }: PageProps) {
   await requireSuperadmin();
   const admin = createAdminClient();
 
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, logLevel, logCategory } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const offset = (page - 1) * PAGE_SIZE;
 
@@ -40,6 +40,43 @@ export default async function ActivityLogPage({ searchParams }: PageProps) {
     .range(offset, offset + PAGE_SIZE - 1);
 
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
+
+  // ── System logs ──
+  let logQuery = admin
+    .from("system_logs")
+    .select("id, level, category, message, metadata, partner_id, created_at", { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  if (logLevel && logLevel !== "all") {
+    logQuery = logQuery.eq("level", logLevel);
+  }
+  if (logCategory && logCategory !== "all") {
+    logQuery = logQuery.eq("category", logCategory);
+  }
+
+  const { data: systemLogs, count: logCount } = await logQuery.limit(100);
+
+  // Resolve partner names for logs
+  const logPartnerIds = [...new Set((systemLogs ?? []).filter(l => l.partner_id).map(l => l.partner_id as string))];
+  let logPartnerMap: Record<string, string> = {};
+  if (logPartnerIds.length > 0) {
+    const { data: lps } = await admin.from("partners").select("id, name").in("id", logPartnerIds);
+    for (const p of lps ?? []) {
+      logPartnerMap[p.id] = p.name;
+    }
+  }
+
+  function buildLogUrl(params: Record<string, string | undefined>) {
+    const base: Record<string, string> = {};
+    if (logLevel && logLevel !== "all") base.logLevel = logLevel;
+    if (logCategory && logCategory !== "all") base.logCategory = logCategory;
+    const merged = { ...base, ...params };
+    for (const [k, v] of Object.entries(merged)) {
+      if (!v || v === "all") delete merged[k];
+    }
+    const qs = new URLSearchParams(merged as Record<string, string>).toString();
+    return `/dashboard/admin/activity${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-10 py-8 space-y-6">
@@ -122,6 +159,113 @@ export default async function ActivityLogPage({ searchParams }: PageProps) {
                 </Link>
               )}
             </div>
+          </div>
+        )}
+      </section>
+
+      {/* ── System Log ── */}
+      <section className="glass-panel rounded-2xl border border-outline-variant/15 overflow-hidden">
+        <div className="px-6 py-4 border-b border-outline-variant/10">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+                System Log
+              </h2>
+              <p className="text-xs text-on-surface-variant/60 mt-0.5">
+                Diagnostics from auth, billing, forms, and integrations. {logCount ?? 0} total entries.
+              </p>
+            </div>
+          </div>
+          {/* Filters */}
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {["all", "error", "warn", "info"].map((lvl) => (
+              <Link
+                key={lvl}
+                href={buildLogUrl({ logLevel: lvl === "all" ? undefined : lvl })}
+                className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg border transition-all ${
+                  (logLevel ?? "all") === lvl
+                    ? "bg-primary/10 text-primary border-primary/20"
+                    : "bg-surface-container text-on-surface-variant/60 border-outline-variant/15 hover:border-primary/30"
+                }`}
+              >
+                {lvl === "error" && <i className="fa-solid fa-circle-exclamation text-error mr-1" />}
+                {lvl === "warn" && <i className="fa-solid fa-triangle-exclamation text-amber-400 mr-1" />}
+                {lvl === "info" && <i className="fa-solid fa-circle-info text-primary/50 mr-1" />}
+                {lvl}
+              </Link>
+            ))}
+            <span className="text-on-surface-variant/20 mx-1">|</span>
+            {["all", "auth", "billing", "stripe", "forms", "integrations", "invites"].map((cat) => (
+              <Link
+                key={cat}
+                href={buildLogUrl({ logCategory: cat === "all" ? undefined : cat })}
+                className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg border transition-all ${
+                  (logCategory ?? "all") === cat
+                    ? "bg-primary/10 text-primary border-primary/20"
+                    : "bg-surface-container text-on-surface-variant/60 border-outline-variant/15 hover:border-primary/30"
+                }`}
+              >
+                {cat}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {(systemLogs ?? []).length > 0 ? (
+          <div className="divide-y divide-outline-variant/5 max-h-[700px] overflow-y-auto">
+            {(systemLogs ?? []).map((log) => {
+              const levelIcon = log.level === "error"
+                ? "fa-circle-exclamation text-error"
+                : log.level === "warn"
+                ? "fa-triangle-exclamation text-amber-400"
+                : "fa-circle-info text-primary/50";
+              const levelBg = log.level === "error"
+                ? "bg-error/5"
+                : log.level === "warn"
+                ? "bg-amber-500/5"
+                : "";
+              const meta = (log.metadata && typeof log.metadata === "object") ? log.metadata as Record<string, unknown> : {};
+              const metaKeys = Object.keys(meta);
+              return (
+                <div key={log.id} className={`px-6 py-3 ${levelBg}`}>
+                  <div className="flex items-start gap-3">
+                    <i className={`fa-solid ${levelIcon} text-sm w-5 text-center shrink-0 mt-0.5`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40 bg-surface-container-high px-1.5 py-0.5 rounded">
+                          {log.category}
+                        </span>
+                        {log.partner_id && (
+                          <span className="text-[10px] text-on-surface-variant/50">
+                            {logPartnerMap[log.partner_id] ?? log.partner_id.slice(0, 8)}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-on-surface-variant/40 ml-auto shrink-0">
+                          {new Date(log.created_at).toLocaleString("en-US", {
+                            month: "short", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-on-surface mt-0.5">{log.message}</p>
+                      {metaKeys.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                          {metaKeys.map((k) => (
+                            <span key={k} className="text-[10px] text-on-surface-variant/50 font-mono">
+                              {k}={String(meta[k])}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-6 py-12 text-center text-sm text-on-surface-variant/60">
+            <i className="fa-solid fa-terminal text-2xl text-on-surface-variant/20 mb-3 block" />
+            No system logs yet. Logs will appear as users interact with the platform.
           </div>
         )}
       </section>
