@@ -40,8 +40,8 @@ export async function createCouponAction(input: CouponInput) {
 
   if (existing) throw new Error("A coupon with this code already exists.");
 
-  // Create Stripe coupon
-  let stripeCouponId: string | null = null;
+  // Create Stripe coupon -- required for checkout to work
+  let stripeCouponId: string;
   try {
     const stripeCoupon = await stripe.coupons.create({
       ...(input.type === "percentage"
@@ -58,7 +58,8 @@ export async function createCouponAction(input: CouponInput) {
     stripeCouponId = stripeCoupon.id;
   } catch (err) {
     console.error("[billing] Failed to create Stripe coupon:", err);
-    // Continue without Stripe — coupon will work locally only
+    const msg = err instanceof Error ? err.message : "Unknown Stripe error";
+    throw new Error(`Failed to create coupon in Stripe: ${msg}`);
   }
 
   await admin.from("coupons").insert({

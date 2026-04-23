@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe";
 import { sendMail } from "@/lib/email";
 import { getRenderedEmail, emailTemplate } from "@/lib/email-templates";
 
@@ -108,10 +109,28 @@ export async function sendAgencyInviteAction(
     return { ok: false, error: insertErr?.message ?? "Failed to create invite." };
   }
 
-  // Also create the coupon in the coupons table so it works at checkout
+  // Create coupon in Stripe first, then save to DB with the Stripe ID
   const discountLabel = discountType === "percentage"
     ? `${discountValue}% off`
     : `$${(discountValue / 100).toFixed(0)} off`;
+
+  let stripeCouponId: string | null = null;
+  try {
+    const stripeCoupon = await stripe.coupons.create({
+      ...(discountType === "percentage"
+        ? { percent_off: discountValue }
+        : { amount_off: discountValue, currency: "usd" }),
+      duration: "once",
+      name: couponCode,
+      max_redemptions: 1,
+      redeem_by: Math.floor(expiresAt.getTime() / 1000),
+      metadata: { linqme_code: couponCode, invite_email: trimmedEmail },
+    });
+    stripeCouponId = stripeCoupon.id;
+  } catch (err) {
+    console.error("[invites] Failed to create Stripe coupon:", err);
+    // Non-blocking -- the checkout fallback will auto-create if missing
+  }
 
   await admin.from("coupons").insert({
     code: couponCode,
@@ -123,7 +142,8 @@ export async function sendAgencyInviteAction(
     max_redemptions: 1,
     times_redeemed: 0,
     is_active: true,
-  }).then(() => {});
+    stripe_coupon_id: stripeCouponId,
+  });
 
   // Build signup URL with coupon pre-filled
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "linqme.io";
