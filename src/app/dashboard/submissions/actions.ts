@@ -102,9 +102,8 @@ export async function deleteSubmissionAction(submissionId: string) {
     .eq("submission_id", submissionId);
 
   if (files && files.length > 0) {
-    await admin.storage
-      .from("submissions")
-      .remove(files.map((f) => f.storage_path));
+    const { deleteFromR2 } = await import("@/lib/storage");
+    await Promise.allSettled(files.map((f) => deleteFromR2(f.storage_path)));
   }
 
   const { error } = await admin
@@ -129,9 +128,8 @@ export async function bulkDeleteSubmissionsAction(submissionIds: string[]) {
     .in("submission_id", submissionIds);
 
   if (files && files.length > 0) {
-    await admin.storage
-      .from("submissions")
-      .remove(files.map((f) => f.storage_path));
+    const { deleteFromR2 } = await import("@/lib/storage");
+    await Promise.allSettled(files.map((f) => deleteFromR2(f.storage_path)));
   }
 
   const { error } = await admin

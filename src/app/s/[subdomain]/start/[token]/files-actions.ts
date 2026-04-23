@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { uploadToR2, deleteFromR2 } from "@/lib/storage";
 import type { UploadedFile } from "@/lib/forms";
 
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB per file
@@ -80,13 +81,15 @@ export async function uploadFileAction(
   const admin = createAdminClient();
 
   const safe = sanitizeFilename(f.name);
-  const path = `${sub.partner_id}/${sub.id}/${fieldId}/${Date.now()}-${safe}`;
-  const bytes = Buffer.from(await f.arrayBuffer());
+  const basePath = `${sub.partner_id}/${sub.id}/${fieldId}/${Date.now()}-${safe}`;
+  const rawBytes = Buffer.from(await f.arrayBuffer());
 
-  const { error: upErr } = await admin.storage
-    .from("submissions")
-    .upload(path, bytes, { contentType: f.type || undefined, upsert: false });
-  if (upErr) throw new Error(upErr.message);
+  // Upload to R2 with automatic image compression
+  const { path, mimeType, sizeBytes } = await uploadToR2(
+    basePath,
+    rawBytes,
+    f.type || "application/octet-stream",
+  );
 
   const { data: row, error: insErr } = await admin
     .from("submission_files")
@@ -95,8 +98,8 @@ export async function uploadFileAction(
       field_key: fieldId,
       storage_path: path,
       filename: f.name,
-      mime_type: f.type || null,
-      size_bytes: f.size,
+      mime_type: mimeType,
+      size_bytes: sizeBytes,
     })
     .select("id, storage_path, filename, mime_type, size_bytes")
     .single();
@@ -118,6 +121,6 @@ export async function deleteFileAction(token: string, fileId: string): Promise<v
   if (!row) return;
   if (row.submission_id !== sub.id) throw new Error("Not your file");
 
-  await admin.storage.from("submissions").remove([row.storage_path]);
+  await deleteFromR2(row.storage_path);
   await admin.from("submission_files").delete().eq("id", fileId);
 }

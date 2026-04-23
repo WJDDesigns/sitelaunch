@@ -60,17 +60,18 @@ export default async function SubmissionDetailPage({ params }: Props) {
   const allFiles: (FileRow & { fieldLabel: string })[] = [];
 
   if ((fileRows ?? []).length > 0) {
-    const { data: signedResults } = await supabase.storage
-      .from("submissions")
-      .createSignedUrls(
-        fileRows!.map((f) => f.storage_path),
-        60 * 60,
-      );
-
+    // Generate signed URLs from R2
+    const { getSignedR2Url } = await import("@/lib/storage");
     const urlByPath: Record<string, string | null> = {};
-    for (const r of signedResults ?? []) {
-      if (r.path) urlByPath[r.path] = r.signedUrl ?? null;
-    }
+    await Promise.all(
+      fileRows!.map(async (f) => {
+        try {
+          urlByPath[f.storage_path] = await getSignedR2Url(f.storage_path);
+        } catch {
+          urlByPath[f.storage_path] = null;
+        }
+      }),
+    );
 
     for (const f of fileRows!) {
       const enriched: FileRow = { ...f, url: urlByPath[f.storage_path] ?? null };
