@@ -73,8 +73,8 @@ export default async function LandingPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-primary/10 animate-glow-breathe pointer-events-none hidden md:block" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] rounded-full border border-primary/[0.06] animate-glow-breathe pointer-events-none hidden md:block" style={{ animationDelay: "2s" }} />
 
-        {/* Dark scrim behind text for consistent contrast against animated bg */}
-        <div className="absolute inset-0 z-[5] pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)" }} />
+        {/* Subtle scrim behind text for consistent contrast against animated bg */}
+        <div className="absolute inset-0 z-[5] pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 50% at 50% 40%, rgba(0,0,0,0.2) 0%, transparent 70%)" }} />
 
         {/* Force light text — Vanta fog is always dark regardless of theme */}
         <div className="max-w-5xl mx-auto text-center relative z-10 text-white">
@@ -83,13 +83,13 @@ export default async function LandingPage() {
             <span className="text-xs font-semibold text-primary tracking-wide">Now in Public Beta</span>
           </div>
 
-          <h1 className="animate-fade-up delay-1 text-4xl md:text-5xl lg:text-6xl font-headline font-extrabold tracking-tight mb-8 leading-[1.1] text-white" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)" }}>
+          <h1 className="animate-fade-up delay-1 text-4xl md:text-5xl lg:text-6xl font-headline font-extrabold tracking-tight mb-8 leading-[1.1] text-white" style={{ textShadow: "0 0 30px rgba(0,0,0,0.6), 0 0 60px rgba(0,0,0,0.3)" }}>
             Your Agency&apos;s
             <br />
             <span className="gradient-text-hero">Command Center.</span>
           </h1>
 
-          <p className="animate-fade-up delay-2 max-w-2xl mx-auto text-lg md:text-xl text-white/70 font-body mb-12 leading-relaxed" style={{ textShadow: "0 1px 10px rgba(0,0,0,0.4)" }}>
+          <p className="animate-fade-up delay-2 max-w-2xl mx-auto text-lg md:text-xl text-white/70 font-body mb-12 leading-relaxed" style={{ textShadow: "0 0 20px rgba(0,0,0,0.5)" }}>
             Build custom forms, collect client data and files, manage entries,
             and visualize it all with real-time insights, under your own brand.
           </p>
