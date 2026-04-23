@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
 import CookieConsent from "@/components/CookieConsent";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import type { ThemeMode } from "@/components/ThemeProvider";
 import "./globals.css";
 
@@ -69,6 +70,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -80,6 +82,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${isDark ? "dark" : ""} ${jakarta.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
+        {/* PWA: iOS standalone mode */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="linqme" />
+        {/* PWA: Android standalone tweaks */}
+        <meta name="mobile-web-app-capable" content="yes" />
         {/* Inline script to prevent flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
@@ -98,6 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </ThemeProvider>
         <CookieConsent />
+        <ServiceWorkerRegistrar />
         <Analytics />
         {/* Ambient background glows — multi-layered aurora */}
         <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden" aria-hidden="true">
