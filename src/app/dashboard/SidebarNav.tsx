@@ -53,7 +53,7 @@ export default function SidebarNav({
         <div className="mb-3 mx-1">
           <div className="flex bg-surface-container rounded-lg p-0.5">
             <button
-              onClick={() => setMode("workspace")}
+              onClick={(e) => { e.stopPropagation(); setMode("workspace"); }}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all ${
                 mode === "workspace"
                   ? "bg-primary text-on-primary shadow-sm"
@@ -64,7 +64,7 @@ export default function SidebarNav({
               Workspace
             </button>
             <button
-              onClick={() => setMode("admin")}
+              onClick={(e) => { e.stopPropagation(); setMode("admin"); }}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all ${
                 mode === "admin"
                   ? "bg-primary text-on-primary shadow-sm"
@@ -80,7 +80,7 @@ export default function SidebarNav({
       {isAdmin && collapsed && (
         <div className="mb-3 flex justify-center">
           <button
-            onClick={() => setMode(mode === "workspace" ? "admin" : "workspace")}
+            onClick={(e) => { e.stopPropagation(); setMode(mode === "workspace" ? "admin" : "workspace"); }}
             title={mode === "workspace" ? "Switch to Admin" : "Switch to Workspace"}
             className="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
           >
