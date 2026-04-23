@@ -167,16 +167,19 @@ export default function DashboardShell({
             )}
           </div>
 
-        {/* Nav */}
-        <SidebarNav
-          isAdmin={isAdmin}
-          isPartnerMember={isPartnerMember}
-          showPartners={showPartners}
-          accountName={accountName}
-          workspaceItems={workspaceItems}
-          adminItems={adminItems}
-          collapsed={collapsed}
-        />
+        {/* Scrollable middle section */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
+          {/* Nav */}
+          <SidebarNav
+            isAdmin={isAdmin}
+            isPartnerMember={isPartnerMember}
+            showPartners={showPartners}
+            accountName={accountName}
+            workspaceItems={workspaceItems}
+            adminItems={adminItems}
+            collapsed={collapsed}
+          />
+        </div>
 
         {/* Account context switcher */}
         {!collapsed && accountContexts.length >= 2 && activePartnerId && (
@@ -185,7 +188,7 @@ export default function DashboardShell({
 
         {/* Usage meter */}
         {usageLine && !collapsed && (
-          <div className="px-4 py-3 mx-3 mb-2 rounded-xl bg-surface-container-low/60 border border-outline-variant/[0.06]">
+          <div className="px-4 py-3 mx-3 mb-2 rounded-xl bg-surface-container-low/60 border border-outline-variant/[0.06] shrink-0">
             <div className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 mb-1 font-label">
               Usage
             </div>
@@ -203,13 +206,13 @@ export default function DashboardShell({
 
         {/* Theme toggle */}
         {!collapsed && (
-          <div className="px-3 mb-2">
+          <div className="px-3 mb-2 shrink-0">
             <ThemeToggle />
           </div>
         )}
 
         {/* Collapse toggle button */}
-        <div className={`px-3 mb-2 ${collapsed ? "flex justify-center" : ""}`}>
+        <div className={`px-3 mb-2 shrink-0 ${collapsed ? "flex justify-center" : ""}`}>
           <button
             onClick={toggle}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}

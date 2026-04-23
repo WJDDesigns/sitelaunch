@@ -47,7 +47,7 @@ export default function SidebarNav({
   const items = mode === "admin" ? adminItems : workspaceItems;
 
   return (
-    <nav className="flex-1 px-3 flex flex-col min-h-0">
+    <nav className="px-3 flex flex-col">
       {/* Mode toggle — only for superadmins */}
       {isAdmin && !collapsed && (
         <div className="mb-3 mx-1">
