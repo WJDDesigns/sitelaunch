@@ -7,9 +7,11 @@ interface Props {
   partnerId: string;
   partnerName: string;
   deleteAction: (partnerId: string) => Promise<void>;
+  label?: string;
+  redirectTo?: string;
 }
 
-export default function DeletePartnerButton({ partnerId, partnerName, deleteAction }: Props) {
+export default function DeletePartnerButton({ partnerId, partnerName, deleteAction, label, redirectTo }: Props) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -22,7 +24,7 @@ export default function DeletePartnerButton({ partnerId, partnerName, deleteActi
         onClick={() => setConfirming(true)}
         className="px-4 py-2 bg-error-container/20 text-error text-xs font-bold rounded-lg border border-error/20 hover:bg-error-container/40 transition-all"
       >
-        Delete partner
+        {label || "Delete partner"}
       </button>
     );
   }
@@ -37,7 +39,7 @@ export default function DeletePartnerButton({ partnerId, partnerName, deleteActi
           startTransition(async () => {
             try {
               await deleteAction(partnerId);
-              router.replace("/dashboard/partners");
+              router.replace(redirectTo || "/dashboard/partners");
             } catch (err) {
               setError(err instanceof Error ? err.message : "Delete failed");
             }

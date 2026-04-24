@@ -27,6 +27,7 @@ interface Props {
   removeMemberAction: (userId: string) => Promise<{ ok: boolean; error?: string }>;
   toggleFormEditingAction: (enabled: boolean) => Promise<{ ok: boolean; error?: string }>;
   allowFormEditing: boolean;
+  sectionLabel?: string;
 }
 
 export default function InvitePartnerSection({
@@ -39,6 +40,7 @@ export default function InvitePartnerSection({
   removeMemberAction,
   toggleFormEditingAction,
   allowFormEditing,
+  sectionLabel,
 }: Props) {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -102,7 +104,7 @@ export default function InvitePartnerSection({
     <section className="glass-panel rounded-2xl border border-outline-variant/15 p-6 space-y-6">
       <div>
         <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">
-          Partner Members
+          {sectionLabel || "Partner Members"}
         </h2>
         <p className="text-xs text-on-surface-variant/50">
           Invite people to manage {partnerName}&rsquo;s branding, submissions, and profile.

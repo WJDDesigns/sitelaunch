@@ -16,12 +16,15 @@ import ImpersonateButton from "../ImpersonateButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
-export default async function PartnerDetailPage({ params }: PageProps) {
+export default async function PartnerDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { from } = await searchParams;
   const session = await requireSession();
   const supabase = await createClient();
+  const isAdminView = from === "admin" && session.role === "superadmin";
 
   const { data: partner, error } = await supabase
     .from("partners")
@@ -90,8 +93,8 @@ export default async function PartnerDetailPage({ params }: PageProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-10 py-8"><div className="max-w-3xl space-y-6">
       <header>
-        <Link href="/dashboard/partners" className="text-xs text-on-surface-variant/60 hover:text-primary transition-colors">
-          <i className="fa-solid fa-arrow-left text-[10px] mr-1" /> Partners
+        <Link href={isAdminView ? "/dashboard/admin/customers" : "/dashboard/partners"} className="text-xs text-on-surface-variant/60 hover:text-primary transition-colors">
+          <i className="fa-solid fa-arrow-left text-[10px] mr-1" /> {isAdminView ? "Customers" : "Partners"}
         </Link>
         <div className="mt-2 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -174,6 +177,7 @@ export default async function PartnerDetailPage({ params }: PageProps) {
           removeMemberAction={boundRemoveMember}
           toggleFormEditingAction={boundToggleFormEditing}
           allowFormEditing={partner.allow_partner_form_editing ?? false}
+          sectionLabel={isAdminView ? "Customer Members" : undefined}
         />
       )}
 
@@ -182,12 +186,14 @@ export default async function PartnerDetailPage({ params }: PageProps) {
         <section className="glass-panel rounded-2xl border border-error/20 p-6">
           <h2 className="text-xs font-bold text-error uppercase tracking-widest mb-1">Danger zone</h2>
           <p className="text-xs text-on-surface-variant mb-3">
-            Deleting a partner removes all their forms, submissions, and members. This cannot be undone.
+            Deleting {isAdminView ? "this customer" : "a partner"} removes all their forms, submissions, and members. This cannot be undone.
           </p>
           <DeletePartnerButton
             partnerId={id}
             partnerName={partner.name}
             deleteAction={deletePartnerAction}
+            label={isAdminView ? "Delete customer" : undefined}
+            redirectTo={isAdminView ? "/dashboard/admin/customers" : undefined}
           />
         </section>
       )}

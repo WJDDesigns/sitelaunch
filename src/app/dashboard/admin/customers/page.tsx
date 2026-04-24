@@ -157,7 +157,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
             </p>
           </div>
           <Link
-            href="/dashboard/partners/new"
+            href="/dashboard/admin/customers/new"
             className="px-5 py-2.5 bg-primary text-on-primary font-bold rounded-lg text-sm hover:shadow-[0_0_20px_rgba(192,193,255,0.3)] transition-all whitespace-nowrap"
           >
             <i className="fa-solid fa-plus text-xs mr-2" />New Customer
@@ -213,7 +213,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
                 key={p.id}
                 className="flex items-center gap-4 px-6 py-4 hover:bg-on-surface/[0.02] transition-colors"
               >
-                <Link href={`/dashboard/partners/${p.id}`} className="flex items-center gap-4 flex-1 min-w-0">
+                <Link href={`/dashboard/admin/customers/${p.id}`} className="flex items-center gap-4 flex-1 min-w-0">
                   {p.logo_url ? (
                     <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
                       <Image src={p.logo_url} alt="" fill className="object-contain" sizes="40px" />
@@ -249,7 +249,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
                   </div>
                 </Link>
                 <TierChanger partnerId={p.id} currentTier={p.plan_tier} />
-                <Link href={`/dashboard/partners/${p.id}`} className="shrink-0">
+                <Link href={`/dashboard/admin/customers/${p.id}`} className="shrink-0">
                   <i className="fa-solid fa-chevron-right text-[10px] text-on-surface-variant/30" />
                 </Link>
               </div>
