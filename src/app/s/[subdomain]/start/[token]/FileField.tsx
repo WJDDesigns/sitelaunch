@@ -3,6 +3,12 @@
 import { useRef, useState, useTransition } from "react";
 import type { FieldDef, UploadedFile } from "@/lib/forms";
 
+interface UploadProgress {
+  current: number;
+  total: number;
+  currentFileName: string;
+}
+
 interface Props {
   field: FieldDef;
   initialFiles: UploadedFile[];
@@ -23,6 +29,7 @@ export default function FileField({ field, initialFiles, upload, remove, primary
   const [files, setFiles] = useState<UploadedFile[]>(initialFiles);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -43,7 +50,10 @@ export default function FileField({ field, initialFiles, upload, remove, primary
     }
 
     startTransition(async () => {
-      for (const f of selected) {
+      const total = selected.length;
+      for (let i = 0; i < total; i++) {
+        const f = selected[i];
+        setProgress({ current: i + 1, total, currentFileName: f.name });
         try {
           const fd = new FormData();
           fd.append("file", f);
@@ -54,6 +64,7 @@ export default function FileField({ field, initialFiles, upload, remove, primary
           break;
         }
       }
+      setProgress(null);
       if (inputRef.current) inputRef.current.value = "";
     });
   }
@@ -123,12 +134,40 @@ export default function FileField({ field, initialFiles, upload, remove, primary
               onChange={handleSelect}
             />
             <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <i className="fa-solid fa-cloud-arrow-up text-3xl" style={{ color: primaryColor }} />
+              {pending ? (
+                <i className="fa-solid fa-spinner animate-spin text-3xl" style={{ color: primaryColor }} />
+              ) : (
+                <i className="fa-solid fa-cloud-arrow-up text-3xl" style={{ color: primaryColor }} />
+              )}
             </div>
-            <p className="text-sm font-semibold text-on-surface font-headline">
-              {pending ? "Uploading..." : "Click or drag to upload"}
-            </p>
-            <p className="text-xs text-on-surface-variant/60">Max 50 MB per file · 100 MB for videos</p>
+            {pending && progress ? (
+              <>
+                <p className="text-sm font-semibold text-on-surface font-headline">
+                  Uploading {progress.total > 1 ? `${progress.current} of ${progress.total}` : progress.currentFileName}
+                </p>
+                <div className="w-full max-w-xs">
+                  <div className="h-1.5 rounded-full bg-surface-container-highest/40 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${(progress.current / progress.total) * 100}%`,
+                        backgroundColor: primaryColor,
+                      }}
+                    />
+                  </div>
+                  {progress.total > 1 && (
+                    <p className="text-[10px] text-on-surface-variant/50 mt-1 text-center truncate">{progress.currentFileName}</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-on-surface font-headline">
+                  Click or drag to upload
+                </p>
+                <p className="text-xs text-on-surface-variant/60">Max 50 MB per file · 100 MB for videos</p>
+              </>
+            )}
           </label>
         </div>
       )}

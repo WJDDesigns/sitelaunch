@@ -164,11 +164,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           activePartnerId={partnerCtx?.partnerId ?? accountContexts.find((c) => c.isOwnAccount)?.partnerId ?? accountContexts[0]?.partnerId ?? null}
           announcements={activeAnnouncements}
         >          {/* Upgrade banner for free-tier users near their limit */}
-          {account && usageLimit !== null && account.planTier === "free" && (
+          {account && usageLimit !== null && (
             <UpgradeBanner
               used={usageUsed}
               limit={usageLimit}
-              planName={TIER_LABELS[account.planTier] ?? "Free"}
+              planName={TIER_LABELS[account.planTier] ?? account.planTier}
             />
           )}
           {children}
