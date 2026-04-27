@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import VantaBackground from "@/components/VantaBackground";
@@ -14,6 +14,14 @@ export default function VerifyEmailPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up cooldown timer on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    };
+  }, []);
 
   async function handleResend() {
     if (!email || cooldown) return;
@@ -21,7 +29,7 @@ export default function VerifyEmailPage() {
     setStatus("sending");
     setErrorMsg(null);
 
-    const result = await resendVerificationAction(email);
+    const result = await resendVerificationAction(email, plan || undefined);
 
     if (!result.ok) {
       setStatus("error");
@@ -33,7 +41,8 @@ export default function VerifyEmailPage() {
 
     // Prevent spamming — 60-second cooldown
     setCooldown(true);
-    setTimeout(() => {
+    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    cooldownTimerRef.current = setTimeout(() => {
       setCooldown(false);
       setStatus("idle");
     }, 60_000);

@@ -85,9 +85,10 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
     tax_id: "",
   });
 
-  // Slug availability check (debounced)
+  // Slug availability check (debounced with stale-response guard)
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slugRequestId = useRef(0);
 
   useEffect(() => {
     const slug = formData.slug;
@@ -97,12 +98,18 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
     }
     setSlugStatus("checking");
     if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+    const requestId = ++slugRequestId.current;
     slugTimerRef.current = setTimeout(async () => {
       try {
         const { available } = await checkSlugAvailability(slug);
-        setSlugStatus(available ? "available" : "taken");
+        // Only apply result if this is still the latest request
+        if (requestId === slugRequestId.current) {
+          setSlugStatus(available ? "available" : "taken");
+        }
       } catch {
-        setSlugStatus("idle");
+        if (requestId === slugRequestId.current) {
+          setSlugStatus("idle");
+        }
       }
     }, 500);
     return () => {
@@ -131,6 +138,10 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
       }
       if (!/^[a-z0-9-]+$/.test(formData.slug)) {
         setError("Workspace URL can only contain lowercase letters, numbers, and hyphens.");
+        return false;
+      }
+      if (slugStatus === "checking") {
+        setError("Still checking if that workspace URL is available. Please wait a moment.");
         return false;
       }
       if (slugStatus === "taken") {

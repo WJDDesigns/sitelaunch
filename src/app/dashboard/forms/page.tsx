@@ -250,7 +250,7 @@ export default async function FormsListPage() {
                         {stepCount} step{stepCount !== 1 ? "s" : ""}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 hidden xs:flex">
+                    <div className="hidden xs:flex items-center gap-1.5">
                       <span className="text-xs text-on-surface-variant">
                         {fieldCount} field{fieldCount !== 1 ? "s" : ""}
                       </span>

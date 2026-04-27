@@ -12,6 +12,15 @@ export type SignupResult =
 export async function checkSlugAvailability(slug: string): Promise<{ available: boolean }> {
   if (!slug || slug.length < 2) return { available: false };
 
+  // Only allow valid slug characters
+  if (!/^[a-z0-9-]+$/.test(slug)) return { available: false };
+
+  // Rate limit by IP
+  const headerStore = await headers();
+  const ip = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success: withinLimit } = rateLimiter.check(`slug-check:${ip}`, 20, 60);
+  if (!withinLimit) return { available: false };
+
   const admin = createAdminClient();
   const { data: existing } = await admin
     .from("partners")

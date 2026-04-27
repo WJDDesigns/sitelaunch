@@ -23,7 +23,10 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       // Check if this OAuth user has a partner account yet
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("[auth/callback] getUser failed:", userError.message);
+      }
       let isNewOAuthUser = false;
       if (user) {
         isNewOAuthUser = await ensurePartnerExists(user.id, user.email ?? "", user.user_metadata?.full_name ?? user.user_metadata?.name ?? "");
@@ -133,10 +136,11 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
     .replace(/^-|-$/g, "")
     .slice(0, 40) || "workspace";
 
-  // Make slug unique
+  // Make slug unique (max 20 attempts to prevent infinite loop)
   let finalSlug = slug;
   let attempt = 0;
-  while (true) {
+  const MAX_SLUG_ATTEMPTS = 20;
+  while (attempt < MAX_SLUG_ATTEMPTS) {
     const { data: existing } = await admin
       .from("partners")
       .select("id")
@@ -188,6 +192,7 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
 
   if (rpcError) {
     console.error("[auth/callback] bootstrap_account failed:", rpcError.message);
+    return false; // Bootstrap failed — don't treat as new user
   }
 
   // Re-assert superadmin role after bootstrap (in case the RPC overwrote it)

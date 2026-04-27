@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
     // Supabase automatically exchanges the token from the URL hash
     // when the client is created. We just need to wait for it.
     const supabase = createClient();
-    supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setSessionReady(true);
       }
@@ -35,6 +35,10 @@ export default function ResetPasswordPage() {
         setSessionReady(true);
       }
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

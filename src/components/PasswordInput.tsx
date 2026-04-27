@@ -23,10 +23,9 @@ export default function PasswordInput({ className = "", ...rest }: PasswordInput
       />
       <button
         type="button"
-        tabIndex={-1}
         aria-label={visible ? "Hide password" : "Show password"}
         onClick={() => setVisible((v) => !v)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant/70 transition-colors duration-200"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant/70 focus:text-on-surface-variant/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded transition-colors duration-200"
       >
         <i className={`fa-solid ${visible ? "fa-eye-slash" : "fa-eye"} text-sm`} />
       </button>
