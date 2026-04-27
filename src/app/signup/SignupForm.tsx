@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signupAction } from "./actions";
+import PasswordInput from "@/components/PasswordInput";
+import { signupAction, checkSlugAvailability } from "./actions";
 
 const INPUT_CLS =
   "block w-full px-4 py-3 text-sm bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl text-on-surface placeholder:text-on-surface-variant/40 focus:ring-2 focus:ring-primary/30 focus:border-primary/30 outline-none transition-all duration-300";
@@ -84,6 +85,31 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
     tax_id: "",
   });
 
+  // Slug availability check (debounced)
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const slug = formData.slug;
+    if (!slug || slug.length < 2) {
+      setSlugStatus("idle");
+      return;
+    }
+    setSlugStatus("checking");
+    if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+    slugTimerRef.current = setTimeout(async () => {
+      try {
+        const { available } = await checkSlugAvailability(slug);
+        setSlugStatus(available ? "available" : "taken");
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 500);
+    return () => {
+      if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+    };
+  }, [formData.slug]);
+
   function update(field: string, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
@@ -95,12 +121,20 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
         setError("All fields are required.");
         return false;
       }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        setError("Please enter a valid email address.");
+        return false;
+      }
       if (formData.password.length < 8) {
         setError("Password must be at least 8 characters.");
         return false;
       }
       if (!/^[a-z0-9-]+$/.test(formData.slug)) {
         setError("Workspace URL can only contain lowercase letters, numbers, and hyphens.");
+        return false;
+      }
+      if (slugStatus === "taken") {
+        setError("That workspace URL is already taken. Please choose another.");
         return false;
       }
       if (!tosAccepted) {
@@ -152,18 +186,8 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
       return;
     }
 
-    // If redirecting to verify-email, pass the email so the page can offer resend
-    if (result.next === "/auth/verify-email") {
-      window.location.href = `/auth/verify-email?email=${encodeURIComponent(formData.email)}`;
-      return;
-    }
-
-    // If they chose a paid plan, go to checkout; otherwise go to dashboard
-    if (result.next === "/dashboard" && formData.selected_plan !== "free") {
-      window.location.href = nextUrl || `/checkout?plan=${formData.selected_plan}`;
-    } else {
-      window.location.href = nextUrl && result.next === "/dashboard" ? nextUrl : result.next;
-    }
+    // Server returns the full redirect URL (verify-email with email+plan params, or dashboard)
+    window.location.href = result.next;
   }
 
   return (
@@ -222,12 +246,11 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
             </Field>
 
             <Field label="Create a password" hint="At least 8 characters.">
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 autoComplete="new-password"
-                className={INPUT_CLS}
+                className={`${INPUT_CLS} pr-10`}
                 value={formData.password}
                 onChange={(e) => update("password", e.target.value)}
               />
@@ -264,6 +287,28 @@ export default function SignupForm({ rootHost }: { rootHost: string }) {
                   .{rootHost}
                 </span>
               </div>
+              {formData.slug.length >= 2 && (
+                <div className="mt-1.5 text-xs flex items-center gap-1.5">
+                  {slugStatus === "checking" && (
+                    <span className="text-on-surface-variant/50">
+                      <i className="fa-solid fa-spinner fa-spin mr-1" />
+                      Checking availability...
+                    </span>
+                  )}
+                  {slugStatus === "available" && (
+                    <span className="text-tertiary">
+                      <i className="fa-solid fa-circle-check mr-1" />
+                      {formData.slug}.{rootHost} is available!
+                    </span>
+                  )}
+                  {slugStatus === "taken" && (
+                    <span className="text-error">
+                      <i className="fa-solid fa-circle-xmark mr-1" />
+                      {formData.slug}.{rootHost} is already taken.
+                    </span>
+                  )}
+                </div>
+              )}
             </Field>
 
             {/* TOS Agreement */}

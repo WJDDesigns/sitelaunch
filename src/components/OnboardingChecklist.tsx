@@ -15,13 +15,13 @@ const ITEMS = [
   {
     key: "logo",
     label: "Upload your logo",
-    href: "/dashboard/settings",
+    href: "/dashboard/settings?tab=branding",
     icon: "fa-image",
   },
   {
     key: "brand",
     label: "Set brand colors",
-    href: "/dashboard/settings",
+    href: "/dashboard/settings?tab=branding",
     icon: "fa-palette",
   },
   {
@@ -32,9 +32,9 @@ const ITEMS = [
   },
   {
     key: "client",
-    label: "Invite your first client",
-    href: "/dashboard/submissions",
-    icon: "fa-user-plus",
+    label: "Send your form to a client",
+    href: "/dashboard/forms",
+    icon: "fa-paper-plane",
   },
   {
     key: "mfa",

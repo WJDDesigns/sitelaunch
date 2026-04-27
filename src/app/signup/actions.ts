@@ -6,8 +6,21 @@ import { sendWelcomeEmail, sendVerificationEmail } from "@/lib/notifications";
 import { rateLimiter } from "@/lib/rate-limit";
 
 export type SignupResult =
-  | { ok: true; next: "/auth/verify-email" }
+  | { ok: true; next: string }
   | { ok: false; error: string };
+
+export async function checkSlugAvailability(slug: string): Promise<{ available: boolean }> {
+  if (!slug || slug.length < 2) return { available: false };
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("partners")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  return { available: !existing };
+}
 
 function sanitizeSlug(raw: string): string {
   return raw
@@ -35,6 +48,7 @@ export async function signupAction(formData: FormData): Promise<SignupResult> {
   const slugRaw = String(formData.get("slug") ?? "");
   const slug = sanitizeSlug(slugRaw || companyName);
   const planType = String(formData.get("plan_type") ?? "agency");
+  const selectedPlan = String(formData.get("selected_plan") ?? "free").trim();
 
   // Step 2: Business details
   const phone = String(formData.get("phone") ?? "").trim();
@@ -129,7 +143,11 @@ export async function signupAction(formData: FormData): Promise<SignupResult> {
 
   // 4. Generate an email verification link and send it via Resend.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.linqme.io";
-  const redirectTo = `${appUrl.replace(/\/$/, "")}/auth/callback?next=/dashboard`;
+  // If they selected a paid plan, route them to checkout after verification
+  const postVerifyPath = selectedPlan && selectedPlan !== "free"
+    ? `/checkout?plan=${encodeURIComponent(selectedPlan)}`
+    : "/dashboard";
+  const redirectTo = `${appUrl.replace(/\/$/, "")}/auth/callback?next=${encodeURIComponent(postVerifyPath)}`;
 
   try {
     await sendVerificationEmail({ to: email, companyName, redirectTo });
@@ -154,5 +172,8 @@ export async function signupAction(formData: FormData): Promise<SignupResult> {
   }
 
   // Don't sign them in — they must verify their email first.
-  return { ok: true, next: "/auth/verify-email" };
+  const verifyUrl = selectedPlan && selectedPlan !== "free"
+    ? `/auth/verify-email?email=${encodeURIComponent(email)}&plan=${encodeURIComponent(selectedPlan)}`
+    : `/auth/verify-email?email=${encodeURIComponent(email)}`;
+  return { ok: true, next: verifyUrl };
 }

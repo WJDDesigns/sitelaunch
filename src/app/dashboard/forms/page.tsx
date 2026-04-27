@@ -117,15 +117,36 @@ export default async function FormsListPage() {
       )}
 
       {formsList.length === 0 ? (
-        <div className="bg-surface-container rounded-2xl p-12 text-center shadow-2xl shadow-black/20">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <i className="fa-solid fa-file-lines text-xl text-primary" />
+        <div className="bg-surface-container rounded-2xl p-8 sm:p-12 text-center shadow-2xl shadow-black/20 border border-outline-variant/[0.06]">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+            <i className="fa-solid fa-wand-magic-sparkles text-2xl text-primary" />
           </div>
-          <h3 className="text-lg font-bold text-on-surface mb-2">No forms yet</h3>
-          <p className="text-sm text-on-surface-variant/60 max-w-sm mx-auto mb-6">
-            Create your first onboarding form to start collecting client information.
+          <h3 className="text-xl font-bold font-headline text-on-surface mb-2">Create your first form</h3>
+          <p className="text-sm text-on-surface-variant/60 max-w-md mx-auto mb-8 leading-relaxed">
+            Build a branded onboarding form in minutes. Add fields, set your brand colors, and share a link with your clients to start collecting information.
           </p>
           <CreateFormButton canCreate={canCreateMore} formsLimit={formsLimit} prominent />
+
+          <div className="mt-8 pt-6 border-t border-outline-variant/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                <i className="fa-solid fa-pen-ruler text-sm text-tertiary" />
+              </div>
+              <span className="text-xs text-on-surface-variant/60">Drag &amp; drop builder</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                <i className="fa-solid fa-palette text-sm text-tertiary" />
+              </div>
+              <span className="text-xs text-on-surface-variant/60">Your brand, your style</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                <i className="fa-solid fa-share-nodes text-sm text-tertiary" />
+              </div>
+              <span className="text-xs text-on-surface-variant/60">Share via link or embed</span>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

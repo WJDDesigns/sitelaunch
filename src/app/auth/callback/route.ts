@@ -24,8 +24,14 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // Check if this OAuth user has a partner account yet
       const { data: { user } } = await supabase.auth.getUser();
+      let isNewOAuthUser = false;
       if (user) {
-        await ensurePartnerExists(user.id, user.email ?? "", user.user_metadata?.full_name ?? user.user_metadata?.name ?? "");
+        isNewOAuthUser = await ensurePartnerExists(user.id, user.email ?? "", user.user_metadata?.full_name ?? user.user_metadata?.name ?? "");
+      }
+
+      // New OAuth signups land on dashboard with welcome flag to prompt plan selection
+      if (isNewOAuthUser && next === "/dashboard") {
+        return NextResponse.redirect(`${origin}/dashboard?welcome=new`);
       }
 
       // Middleware will handle MFA enforcement (redirect to /auth/mfa/setup if needed)
@@ -49,7 +55,7 @@ function isSuperadminEmail(email: string): boolean {
  * If they signed up via OAuth (Google/GitHub/Apple), they skip the signup form
  * so we need to bootstrap their workspace automatically.
  */
-async function ensurePartnerExists(userId: string, email: string, fullName: string) {
+async function ensurePartnerExists(userId: string, email: string, fullName: string): Promise<boolean> {
   const admin = createAdminClient();
   const isSuperadmin = isSuperadminEmail(email);
 
@@ -69,7 +75,7 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
     .limit(1)
     .maybeSingle();
 
-  if (membership) return; // Already has an account
+  if (membership) return false; // Already has an account
 
   // Double-check: also look for a partner created by this user (covers edge cases
   // where partner_members might be missing but the partner exists)
@@ -86,7 +92,7 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
       { partner_id: ownedPartner.id, user_id: userId, role: "partner_owner" },
       { onConflict: "partner_id,user_id" },
     );
-    return;
+    return false;
   }
 
   // Also check by email in case the user re-registered with a different auth provider
@@ -114,7 +120,7 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
         { partner_id: existingMembership.partner_id, user_id: userId, role: "partner_owner" },
         { onConflict: "partner_id,user_id" },
       );
-      return;
+      return false;
     }
   }
 
@@ -191,4 +197,6 @@ async function ensurePartnerExists(userId: string, email: string, fullName: stri
       .update({ role: "superadmin" })
       .eq("id", userId);
   }
+
+  return true; // New account was bootstrapped
 }

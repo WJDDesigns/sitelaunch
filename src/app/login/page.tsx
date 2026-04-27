@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import OAuthButtons from "@/components/OAuthButtons";
 import VantaBackground from "@/components/VantaBackground";
 import AuthHeader from "@/components/AuthHeader";
+import PasswordInput from "@/components/PasswordInput";
 import Link from "next/link";
 
 type Mode = "password" | "magic";
@@ -123,12 +124,11 @@ export default function LoginPage() {
                 {mode === "password" && (
                   <label className="block">
                     <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Password</span>
-                    <input
-                      type="password"
+                    <PasswordInput
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={`mt-1.5 ${INPUT_CLS}`}
+                      className={`mt-1.5 ${INPUT_CLS} pr-10`}
                     />
                   </label>
                 )}

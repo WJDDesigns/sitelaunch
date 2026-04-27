@@ -10,6 +10,7 @@ import { resendVerificationAction } from "./actions";
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
+  const plan = searchParams.get("plan") ?? "";
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(false);
@@ -69,7 +70,7 @@ export default function VerifyEmailPage() {
             <div className="mt-6 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/10 p-4 space-y-2">
               <p className="text-xs text-on-surface-variant/70 leading-relaxed">
                 <i className="fa-solid fa-circle-info text-primary/60 mr-1.5" />
-                Click the link in the email to verify your account and access your dashboard. The link expires in 24 hours.
+                Click the link in the email to verify your account{plan ? " and complete your plan setup" : " and access your dashboard"}. The link expires in 24 hours.
               </p>
               <p className="text-xs text-on-surface-variant/50 leading-relaxed">
                 <i className="fa-solid fa-lightbulb text-on-surface-variant/30 mr-1.5" />

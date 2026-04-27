@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import VantaBackground from "@/components/VantaBackground";
 import AuthHeader from "@/components/AuthHeader";
+import PasswordInput from "@/components/PasswordInput";
 import Link from "next/link";
 
 const INPUT_CLS =
@@ -113,13 +114,12 @@ export default function ResetPasswordPage() {
                     <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">
                       New Password
                     </span>
-                    <input
-                      type="password"
+                    <PasswordInput
                       required
                       minLength={8}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={`mt-1.5 ${INPUT_CLS}`}
+                      className={`mt-1.5 ${INPUT_CLS} pr-10`}
                       placeholder="At least 8 characters"
                     />
                   </label>
@@ -128,13 +128,12 @@ export default function ResetPasswordPage() {
                     <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">
                       Confirm Password
                     </span>
-                    <input
-                      type="password"
+                    <PasswordInput
                       required
                       minLength={8}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={`mt-1.5 ${INPUT_CLS}`}
+                      className={`mt-1.5 ${INPUT_CLS} pr-10`}
                       placeholder="Re-enter your password"
                     />
                   </label>
