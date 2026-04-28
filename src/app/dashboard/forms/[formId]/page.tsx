@@ -52,7 +52,18 @@ export default async function FormEditorPage({ params }: PageProps) {
     .maybeSingle();
 
   if (!pf) {
-    console.error(`[form-editor] 404 — formId=${formId} accountId=${account.id} userId=${session.userId} error=${pfError?.message ?? "no error, just no row"}`);
+    // Debug: try query WITHOUT partner_id filter to see if form exists at all
+    const { data: debugForm } = await admin
+      .from("partner_forms")
+      .select("id, name, partner_id")
+      .eq("id", formId)
+      .maybeSingle();
+    console.error(
+      `[form-editor] 404 — formId=${formId} accountId=${account.id} accountName=${account.name} userId=${session.userId} ` +
+      `error=${pfError?.message ?? "no error, just no row"} ` +
+      `formExists=${!!debugForm} formPartnerId=${debugForm?.partner_id ?? "N/A"} ` +
+      `partnerMatch=${debugForm?.partner_id === account.id}`
+    );
     return notFound();
   }
 
