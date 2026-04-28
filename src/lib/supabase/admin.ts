@@ -13,5 +13,14 @@ export function createAdminClient() {
   }
   return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      // Disable Next.js data cache for admin client fetch calls.
+      // Without this, Next.js caches Supabase responses across requests
+      // because the admin client doesn't use cookies() — so Next.js sees
+      // no dynamic signal and serves stale cached data, causing intermittent
+      // 404s on dashboard pages.
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }

@@ -8,6 +8,8 @@ import LandingModeToggle from "./LandingModeToggle";
 import FormSettingsPanel from "./[formId]/FormSettingsPanel";
 import EmbedButton from "./EmbedButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function FormsListPage() {
   const session = await requireSession();
   const account = await getCurrentAccount(session.userId);

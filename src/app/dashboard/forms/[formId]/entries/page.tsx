@@ -7,6 +7,8 @@ import EntriesTable from "./EntriesTable";
 import SmartOverviewBox from "./SmartOverviewBox";
 import { getSmartOverview } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ formId: string }>;
 }

@@ -7,6 +7,8 @@ import FormSettingsPanel from "./FormSettingsPanel";
 import FormSendToPanel from "../FormSendToPanel";
 import type { NotificationCondition } from "../notification-actions";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ formId: string }>;
 }
