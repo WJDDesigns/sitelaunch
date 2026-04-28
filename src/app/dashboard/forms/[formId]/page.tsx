@@ -31,7 +31,7 @@ export default async function FormEditorPage({ params }: PageProps) {
   const supabase = await createClient();
 
   // Load this specific form + template
-  const { data: pf } = await supabase
+  const { data: pf, error: pfError } = await supabase
     .from("partner_forms")
     .select(
       `id, name, slug, template_id, is_default, is_active,
@@ -47,7 +47,11 @@ export default async function FormEditorPage({ params }: PageProps) {
     .eq("partner_id", account.id)
     .maybeSingle();
 
-  if (!pf) return notFound();
+  // Debug: log form query result to diagnose 404s
+  if (!pf) {
+    console.error(`[form-editor] 404 — formId=${formId} accountId=${account.id} userId=${session.userId} error=${pfError?.message ?? "no error, just no row"}`);
+    return notFound();
+  }
 
   const tpl = pf.form_templates && (Array.isArray(pf.form_templates) ? pf.form_templates[0] : pf.form_templates);
   const schema: FormSchema | null = (tpl?.schema as FormSchema) ?? null;
