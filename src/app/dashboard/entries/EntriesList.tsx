@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Pagination from "@/components/Pagination";
@@ -56,6 +56,175 @@ const STATUS_STYLES: Record<string, string> = {
 
 const STATUSES = ["draft", "submitted", "in_review", "complete", "archived"] as const;
 
+/* ── Column definitions for global entries ─────────────── */
+interface ColumnDef {
+  id: string;
+  label: string;
+}
+
+const GLOBAL_COLUMNS: ColumnDef[] = [
+  { id: "client", label: "Client" },
+  { id: "form", label: "Form" },
+  { id: "status", label: "Status" },
+  { id: "date", label: "Date" },
+  { id: "created_at", label: "Created" },
+  { id: "entry_id", label: "Entry ID" },
+];
+
+const DEFAULT_GLOBAL_COLS = ["client", "form", "status", "date"];
+
+/* ── Column Customizer ─────────────────────────────────── */
+function ColumnCustomizer({
+  allColumns,
+  activeIds,
+  onUpdate,
+}: {
+  allColumns: ColumnDef[];
+  activeIds: string[];
+  onUpdate: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handle);
+    return () => document.removeEventListener("keydown", handle);
+  }, [open]);
+
+  const activeSet = new Set(activeIds);
+  const inactive = allColumns.filter((c) => !activeSet.has(c.id));
+  const active = activeIds.map((id) => allColumns.find((c) => c.id === id)!).filter(Boolean);
+
+  const addColumn = (id: string) => onUpdate([...activeIds, id]);
+  const removeColumn = (id: string) => onUpdate(activeIds.filter((i) => i !== id));
+  const moveUp = (idx: number) => {
+    if (idx <= 0) return;
+    const next = [...activeIds];
+    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+    onUpdate(next);
+  };
+  const moveDown = (idx: number) => {
+    if (idx >= activeIds.length - 1) return;
+    const next = [...activeIds];
+    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+    onUpdate(next);
+  };
+
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    const next = [...activeIds];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(idx, 0, moved);
+    onUpdate(next);
+    setDragIdx(idx);
+  };
+  const handleDragEnd = () => setDragIdx(null);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border ${
+          open
+            ? "bg-primary/10 text-primary border-primary/30"
+            : "text-on-surface-variant/50 border-outline-variant/20 hover:bg-surface-container-high hover:text-on-surface-variant"
+        }`}
+        title="Customize columns"
+      >
+        <i className="fa-solid fa-table-columns text-xs" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-[360px] bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-outline-variant/10">
+            <h3 className="text-sm font-bold text-on-surface">Customize Columns</h3>
+            <p className="text-[11px] text-on-surface-variant/50 mt-0.5">Click to add/remove. Drag to reorder.</p>
+          </div>
+
+          <div className="flex divide-x divide-outline-variant/10 max-h-[300px]">
+            {/* Available */}
+            <div className="w-1/2 p-3 overflow-y-auto">
+              <div className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-2">Available</div>
+              {inactive.length === 0 ? (
+                <p className="text-[11px] text-on-surface-variant/30 italic py-4 text-center">All columns active</p>
+              ) : (
+                <div className="space-y-1">
+                  {inactive.map((col) => (
+                    <button
+                      key={col.id}
+                      onClick={() => addColumn(col.id)}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-on-surface-variant/70 hover:bg-primary/5 hover:text-primary transition-colors group text-left"
+                    >
+                      <i className="fa-solid fa-plus text-[8px] opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                      <span className="truncate flex-1">{col.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Active */}
+            <div className="w-1/2 p-3 overflow-y-auto">
+              <div className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-2">Active ({active.length})</div>
+              <div className="space-y-1">
+                {active.map((col, idx) => (
+                  <div
+                    key={col.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs transition-colors group ${
+                      dragIdx === idx ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-surface-container-high"
+                    }`}
+                  >
+                    <i className="fa-solid fa-grip-vertical text-[8px] text-on-surface-variant/20 cursor-grab" />
+                    <span className="truncate flex-1 text-on-surface">{col.label}</span>
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => moveUp(idx)} className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-primary hover:bg-primary/5" title="Move up">
+                        <i className="fa-solid fa-chevron-up text-[7px]" />
+                      </button>
+                      <button onClick={() => moveDown(idx)} className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-primary hover:bg-primary/5" title="Move down">
+                        <i className="fa-solid fa-chevron-down text-[7px]" />
+                      </button>
+                      <button onClick={() => removeColumn(col.id)} className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-red-400 hover:bg-red-500/5" title="Remove">
+                        <i className="fa-solid fa-xmark text-[8px]" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 py-2.5 border-t border-outline-variant/10 flex justify-between items-center">
+            <button onClick={() => onUpdate(DEFAULT_GLOBAL_COLS)} className="text-[11px] text-on-surface-variant/50 hover:text-primary transition-colors">
+              Reset to defaults
+            </button>
+            <button onClick={() => setOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-on-primary transition-all hover:opacity-90">
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function fmtDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -77,6 +246,8 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [page, setPage] = useState(1);
+  const [activeCols, setActiveCols] = useState<string[]>(DEFAULT_GLOBAL_COLS);
+  const activeColSet = useMemo(() => new Set(activeCols), [activeCols]);
 
   const filtered = useMemo(() => {
     let list = submissions;
@@ -310,6 +481,11 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
           <i className={`fa-solid ${exporting ? "fa-circle-check" : "fa-file-csv"} text-[10px]`} />
           {exporting ? `Exported ${filtered.length} rows` : `Export CSV (${filtered.length})`}
         </button>
+        <ColumnCustomizer
+          allColumns={GLOBAL_COLUMNS}
+          activeIds={activeCols}
+          onUpdate={setActiveCols}
+        />
       </div>
 
       {/* Active form banner */}
@@ -318,6 +494,12 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
           <i className="fa-solid fa-filter text-primary text-xs" />
           <span className="text-on-surface-variant">Showing entries for</span>
           <span className="font-bold text-primary">{activeFormName}</span>
+          <Link
+            href={`/dashboard/forms/${formFilter}/entries`}
+            className="ml-2 text-xs text-primary/70 hover:text-primary transition-colors underline underline-offset-2"
+          >
+            Open dedicated view
+          </Link>
           <button onClick={() => setFormFilter("")} className="ml-auto text-xs text-on-surface-variant/50 hover:text-error transition-colors">
             <i className="fa-solid fa-xmark" /> Clear
           </button>
@@ -395,27 +577,48 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
                     <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll}
                       className="w-3.5 h-3.5 rounded border-outline-variant/30 text-primary focus:ring-primary/30 bg-transparent" />
                   </th>
-                  <th className="py-3 pr-4">
-                    <button onClick={() => toggleSort("name")} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-1">
-                      Client
-                      {sortBy === "name" && <i className={`fa-solid fa-chevron-${sortDir === "asc" ? "up" : "down"} text-[8px]`} />}
-                    </button>
-                  </th>
-                  <th className="py-3 pr-4 hidden md:table-cell">
-                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60">Form</span>
-                  </th>
-                  <th className="py-3 pr-4">
-                    <button onClick={() => toggleSort("status")} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-1">
-                      Status
-                      {sortBy === "status" && <i className={`fa-solid fa-chevron-${sortDir === "asc" ? "up" : "down"} text-[8px]`} />}
-                    </button>
-                  </th>
-                  <th className="py-3 pr-4 hidden sm:table-cell">
-                    <button onClick={() => toggleSort("date")} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-1">
-                      Date
-                      {sortBy === "date" && <i className={`fa-solid fa-chevron-${sortDir === "asc" ? "up" : "down"} text-[8px]`} />}
-                    </button>
-                  </th>
+                  {activeCols.map((col) => {
+                    if (col === "client") return (
+                      <th key={col} className="py-3 pr-4">
+                        <button onClick={() => toggleSort("name")} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-1">
+                          Client
+                          {sortBy === "name" && <i className={`fa-solid fa-chevron-${sortDir === "asc" ? "up" : "down"} text-[8px]`} />}
+                        </button>
+                      </th>
+                    );
+                    if (col === "form") return (
+                      <th key={col} className="py-3 pr-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60">Form</span>
+                      </th>
+                    );
+                    if (col === "status") return (
+                      <th key={col} className="py-3 pr-4">
+                        <button onClick={() => toggleSort("status")} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-1">
+                          Status
+                          {sortBy === "status" && <i className={`fa-solid fa-chevron-${sortDir === "asc" ? "up" : "down"} text-[8px]`} />}
+                        </button>
+                      </th>
+                    );
+                    if (col === "date") return (
+                      <th key={col} className="py-3 pr-4">
+                        <button onClick={() => toggleSort("date")} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-1">
+                          Date
+                          {sortBy === "date" && <i className={`fa-solid fa-chevron-${sortDir === "asc" ? "up" : "down"} text-[8px]`} />}
+                        </button>
+                      </th>
+                    );
+                    if (col === "created_at") return (
+                      <th key={col} className="py-3 pr-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60">Created</span>
+                      </th>
+                    );
+                    if (col === "entry_id") return (
+                      <th key={col} className="py-3 pr-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60">Entry ID</span>
+                      </th>
+                    );
+                    return null;
+                  })}
                   <th className="py-3 pr-4 w-20">
                     <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60">Actions</span>
                   </th>
@@ -431,35 +634,53 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
                       <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleOne(row.id)}
                         className="w-3.5 h-3.5 rounded border-outline-variant/30 text-primary focus:ring-primary/30 bg-transparent" />
                     </td>
-                    <td className="py-3 pr-4">
-                      <Link href={`/dashboard/submissions/${row.id}`} className="block group/link">
-                        <div className="font-medium text-on-surface group-hover/link:text-primary transition-colors truncate max-w-[200px]">
-                          {row.client_name || "Unnamed"}
-                        </div>
-                        <div className="text-xs text-on-surface-variant/50 truncate max-w-[200px]">
-                          {row.client_email || "No email"}
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="py-3 pr-4 hidden md:table-cell">
-                      <span className="text-xs text-on-surface-variant/60 truncate max-w-[140px] block">
-                        {row.form_name ?? "—"}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <select
-                        value={row.status}
-                        onChange={(e) => handleStatusChange(row.id, e.target.value)}
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full appearance-none cursor-pointer focus:outline-none ${STATUS_STYLES[row.status] ?? STATUS_STYLES.draft}`}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>{s.replace("_", " ")}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-3 pr-4 hidden sm:table-cell">
-                      <span className="text-xs text-on-surface-variant/60">{fmtDate(row.submitted_at ?? row.created_at)}</span>
-                    </td>
+                    {activeColSet.has("client") && (
+                      <td className="py-3 pr-4">
+                        <Link href={`/dashboard/submissions/${row.id}`} className="block group/link">
+                          <div className="font-medium text-on-surface group-hover/link:text-primary transition-colors truncate max-w-[200px]">
+                            {row.client_name || "Unnamed"}
+                          </div>
+                          <div className="text-xs text-on-surface-variant/50 truncate max-w-[200px]">
+                            {row.client_email || "No email"}
+                          </div>
+                        </Link>
+                      </td>
+                    )}
+                    {activeColSet.has("form") && (
+                      <td className="py-3 pr-4">
+                        <span className="text-xs text-on-surface-variant/60 truncate max-w-[140px] block">
+                          {row.form_name ?? "—"}
+                        </span>
+                      </td>
+                    )}
+                    {activeColSet.has("status") && (
+                      <td className="py-3 pr-4">
+                        <select
+                          value={row.status}
+                          onChange={(e) => handleStatusChange(row.id, e.target.value)}
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full appearance-none cursor-pointer focus:outline-none ${STATUS_STYLES[row.status] ?? STATUS_STYLES.draft}`}
+                        >
+                          {STATUSES.map((s) => (
+                            <option key={s} value={s}>{s.replace("_", " ")}</option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
+                    {activeColSet.has("date") && (
+                      <td className="py-3 pr-4">
+                        <span className="text-xs text-on-surface-variant/60">{fmtDate(row.submitted_at ?? row.created_at)}</span>
+                      </td>
+                    )}
+                    {activeColSet.has("created_at") && (
+                      <td className="py-3 pr-4">
+                        <span className="text-xs text-on-surface-variant/60">{fmtDate(row.created_at)}</span>
+                      </td>
+                    )}
+                    {activeColSet.has("entry_id") && (
+                      <td className="py-3 pr-4">
+                        <span className="text-[10px] font-mono text-on-surface-variant/50">{row.id.slice(0, 8)}…</span>
+                      </td>
+                    )}
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-1">
                         {confirmDelete === row.id ? (

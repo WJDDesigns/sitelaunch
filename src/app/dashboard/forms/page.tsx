@@ -223,7 +223,7 @@ export default async function FormsListPage() {
                         <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" />
                       </a>
                       <Link
-                        href={`/dashboard/entries?form=${form.id}`}
+                        href={`/dashboard/forms/${form.id}/entries`}
                         className="w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-2 flex items-center justify-center text-xs font-bold text-on-surface-variant/60 border border-outline-variant/15 rounded-lg hover:border-primary/30 hover:text-primary transition-all"
                         title="View entries"
                       >
