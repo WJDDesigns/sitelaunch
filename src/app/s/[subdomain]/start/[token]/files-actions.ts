@@ -47,10 +47,10 @@ async function loadSubmissionAndField(token: string, fieldId: string) {
   const { data: sub, error } = await admin
     .from("submissions")
     .select(
-      \`id, status, partner_id,
+      `id, status, partner_id,
        partner_forms ( id, template_id,
          form_templates ( id, schema )
-       )\`,
+       )`,
     )
     .eq("access_token", token)
     .maybeSingle();
@@ -138,14 +138,14 @@ export async function uploadFileAction(
   const isVideo = f.type.startsWith("video/");
   const limit = isVideo ? MAX_VIDEO_BYTES : MAX_BYTES;
   const limitLabel = isVideo ? "100 MB" : "50 MB";
-  if (f.size > limit) throw new Error(\`File is too large (${limitLabel} max for ${isVideo ? "videos" : "files"}).\`);
+  if (f.size > limit) throw new Error(`File is too large (${limitLabel} max for ${isVideo ? "videos" : "files"}).`);
   if (!isAllowedFile(f)) throw new Error("File type not allowed. Please upload a document, image, video, or archive.");
 
   const admin = createAdminClient();
 
   const safe = sanitizeFilename(f.name);
   const collisionSuffix = randomBytes(4).toString("hex");
-  const basePath = \`${sub.partner_id}/${sub.id}/${fieldId}/${Date.now()}-${collisionSuffix}-${safe}\`;
+  const basePath = `${sub.partner_id}/${sub.id}/${fieldId}/${Date.now()}-${collisionSuffix}-${safe}`;
   const rawBytes = Buffer.from(await f.arrayBuffer());
 
   let path: string;
