@@ -1,13 +1,31 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import sharp from "sharp";
 
-/* ── R2 Client ─────────────────────────────────── */
+/* ── Env validation ────────────────────────────── */
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
+function envOrThrow(name: string): string {
+  const v = process.env[name];
+  if (!v || v.length === 0) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(`[storage] Missing required env var ${name}`);
+    }
+    console.warn(`[storage] env var ${name} is not set — uploads will fail until configured`);
+    return "";
+  }
+  return v;
+}
+
+const R2_ACCOUNT_ID = envOrThrow("R2_ACCOUNT_ID");
+const R2_ACCESS_KEY_ID = envOrThrow("R2_ACCESS_KEY_ID");
+const R2_SECRET_ACCESS_KEY = envOrThrow("R2_SECRET_ACCESS_KEY");
 const R2_BUCKET = process.env.R2_BUCKET_NAME || "linqme-submissions";
+if (!process.env.R2_BUCKET_NAME && process.env.NODE_ENV === "production") {
+  console.warn(`[storage] R2_BUCKET_NAME not set — falling back to "${R2_BUCKET}"`);
+}
+
+/* ── R2 Client ─────────────────────────────────── */
 
 const r2 = new S3Client({
   region: "auto",
@@ -16,21 +34,19 @@ const r2 = new S3Client({
     accessKeyId: R2_ACCESS_KEY_ID,
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
+  requestHandler: new NodeHttpHandler({
+    connectionTimeout: 5_000,
+    requestTimeout: 60_000,
+  }),
+  maxAttempts: 1,
 });
 
 /* ── Image Compression ─────────────────────────── */
 
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-const MAX_DIMENSION = 2400; // Max width/height in pixels
-const JPEG_QUALITY = 82;
+const MAX_DIMENSION = 2400;
 const WEBP_QUALITY = 80;
 
-/**
- * Compress an image buffer if it's a supported image type.
- * Resizes to max 2400px on longest side, converts to efficient format.
- * Returns { buffer, mimeType } with the processed result.
- * Non-image files pass through unchanged.
- */
 export async function compressIfImage(
   buffer: Buffer,
   mimeType: string,
@@ -41,13 +57,10 @@ export async function compressIfImage(
 
   try {
     let pipeline = sharp(buffer, { animated: mimeType === "image/gif" });
-
-    // Get metadata to check dimensions
     const meta = await pipeline.metadata();
     const w = meta.width ?? 0;
     const h = meta.height ?? 0;
 
-    // Only resize if larger than max
     if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
       pipeline = pipeline.resize(MAX_DIMENSION, MAX_DIMENSION, {
         fit: "inside",
@@ -55,75 +68,122 @@ export async function compressIfImage(
       });
     }
 
-    // Rotate based on EXIF orientation (phones)
     pipeline = pipeline.rotate();
 
-    // Convert to efficient format
     if (mimeType === "image/png") {
-      // Keep PNG for transparency, but optimize
       const result = await pipeline.png({ quality: 85, compressionLevel: 9 }).toBuffer();
       return { buffer: result, mimeType: "image/png" };
     } else if (mimeType === "image/gif") {
-      // Keep GIF as-is (animated)
       const result = await pipeline.toBuffer();
       return { buffer: result, mimeType: "image/gif" };
     } else {
-      // JPEG and WebP -- convert to WebP for best compression
       const result = await pipeline.webp({ quality: WEBP_QUALITY }).toBuffer();
       return { buffer: result, mimeType: "image/webp" };
     }
-  } catch {
-    // If compression fails, return original
+  } catch (err) {
+    console.warn("[storage] image compression failed, uploading original", {
+      mimeType,
+      bytes: buffer.length,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { buffer, mimeType };
   }
 }
 
+/* ── Retry helper ──────────────────────────────── */
+
+const TRANSIENT_ERROR_CODES = new Set([
+  "EPROTO", "ECONNRESET", "ETIMEDOUT", "ENETUNREACH",
+  "EHOSTUNREACH", "EAI_AGAIN", "EPIPE", "ECONNREFUSED",
+  "TimeoutError", "RequestTimeout",
+]);
+
+const TRANSIENT_MESSAGE_FRAGMENTS = [
+  "socket hang up", "fetch failed", "network socket disconnected",
+  "premature close", "connection timeout", "request timeout",
+];
+
+function isTransientError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; name?: string; cause?: { code?: string; name?: string }; message?: string; $metadata?: { httpStatusCode?: number } };
+  if (e.code && TRANSIENT_ERROR_CODES.has(e.code)) return true;
+  if (e.name && TRANSIENT_ERROR_CODES.has(e.name)) return true;
+  if (e.cause?.code && TRANSIENT_ERROR_CODES.has(e.cause.code)) return true;
+  if (e.cause?.name && TRANSIENT_ERROR_CODES.has(e.cause.name)) return true;
+  const status = e.$metadata?.httpStatusCode;
+  if (typeof status === "number" && status >= 500 && status < 600) return true;
+  const msg = (e.message ?? "").toLowerCase();
+  return TRANSIENT_MESSAGE_FRAGMENTS.some((frag) => msg.includes(frag));
+}
+
+async function withRetry<T>(op: () => Promise<T>, label: string, attempts = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await op();
+    } catch (err) {
+      lastErr = err;
+      if (i === attempts - 1 || !isTransientError(err)) break;
+      const base = Math.min(200 * Math.pow(3, i), 1500);
+      const delay = base + Math.floor(Math.random() * 100);
+      console.warn(`[storage] ${label} attempt ${i + 1} failed (${(err as Error)?.message ?? "unknown"}), retrying in ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 /* ── Upload / Delete / URL ─────────────────────── */
 
-/**
- * Upload a file to R2. Compresses images automatically.
- * Returns the storage path (key).
- */
 export async function uploadToR2(
   path: string,
   data: Buffer,
   contentType: string,
 ): Promise<{ path: string; mimeType: string; sizeBytes: number }> {
-  // Compress images before upload
   const { buffer, mimeType } = await compressIfImage(data, contentType);
 
-  // If we converted to webp, update the file extension in the path
   if (mimeType !== contentType && mimeType === "image/webp") {
     path = path.replace(/\.(jpe?g|png)$/i, ".webp");
   }
 
-  await r2.send(
-    new PutObjectCommand({
-      Bucket: R2_BUCKET,
-      Key: path,
-      Body: buffer,
-      ContentType: mimeType,
-    }),
+  await withRetry(
+    () =>
+      r2.send(
+        new PutObjectCommand({
+          Bucket: R2_BUCKET,
+          Key: path,
+          Body: buffer,
+          ContentType: mimeType,
+        }),
+      ),
+    `uploadToR2(${path})`,
   );
 
   return { path, mimeType, sizeBytes: buffer.length };
 }
 
-/**
- * Delete a file from R2.
- */
-export async function deleteFromR2(path: string): Promise<void> {
-  await r2.send(
-    new DeleteObjectCommand({
-      Bucket: R2_BUCKET,
-      Key: path,
-    }),
-  );
+export async function deleteFromR2(path: string): Promise<boolean> {
+  try {
+    await withRetry(
+      () =>
+        r2.send(
+          new DeleteObjectCommand({
+            Bucket: R2_BUCKET,
+            Key: path,
+          }),
+        ),
+      `deleteFromR2(${path})`,
+    );
+    return true;
+  } catch (err) {
+    console.error("[storage] deleteFromR2 failed", {
+      path,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
+  }
 }
 
-/**
- * Generate a signed URL for private file access (1 hour expiry).
- */
 export async function getSignedR2Url(path: string, expiresIn = 3600): Promise<string> {
   const command = new GetObjectCommand({
     Bucket: R2_BUCKET,
