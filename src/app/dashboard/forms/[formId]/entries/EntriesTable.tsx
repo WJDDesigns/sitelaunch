@@ -55,23 +55,50 @@ function formatDate(iso: string | null) {
   });
 }
 
+function flattenObject(obj: Record<string, unknown>): string {
+  // Name objects: { first, last, middle, prefix, suffix }
+  if ("first" in obj || "last" in obj) {
+    const parts = [obj.prefix, obj.first, obj.middle, obj.last, obj.suffix]
+      .filter((p) => typeof p === "string" && p.trim())
+      .map((p) => (p as string).trim());
+    if (parts.length > 0) return parts.join(" ");
+  }
+  // Address objects: { street, street2, city, state, zip, country }
+  if ("street" in obj || "city" in obj || "address" in obj) {
+    const parts = [obj.street || obj.address, obj.street2, obj.city, obj.state, obj.zip, obj.country]
+      .filter((p) => typeof p === "string" && p.trim())
+      .map((p) => (p as string).trim());
+    if (parts.length > 0) return parts.join(", ");
+  }
+  // Generic: join all string/number values
+  const vals = Object.values(obj)
+    .filter((v) => v !== null && v !== undefined && v !== "")
+    .map((v) => (typeof v === "object" ? flattenValue(v) : String(v)))
+    .filter(Boolean);
+  return vals.join(", ") || "";
+}
+
 function flattenValue(val: unknown): string {
   if (val === null || val === undefined) return "";
   if (typeof val === "string") {
+    // Try to parse JSON strings
     try {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.url) {
+        // Competitor analyzer entries
         return parsed.map((c: { url?: string; analysis?: { title?: string } }) =>
           c.analysis?.title || c.url || ""
         ).filter(Boolean).join(", ");
       }
+      if (Array.isArray(parsed)) return parsed.map(flattenValue).join("; ");
+      if (typeof parsed === "object" && parsed !== null) return flattenObject(parsed as Record<string, unknown>);
     } catch { /* not JSON, return as-is */ }
     return val;
   }
   if (typeof val === "number" || typeof val === "boolean") return String(val);
   if (Array.isArray(val)) return val.map(flattenValue).join("; ");
   if (typeof val === "object") {
-    try { return JSON.stringify(val); } catch { return "[object]"; }
+    return flattenObject(val as Record<string, unknown>);
   }
   return String(val);
 }
@@ -153,17 +180,17 @@ function ColumnCustomizer({
   const handleDragEnd = () => setDragIdx(null);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative inline-flex justify-end">
       <button
         onClick={() => setOpen(!open)}
-        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border ${
+        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
           open
-            ? "bg-primary/10 text-primary border-primary/30"
-            : "text-on-surface-variant/50 border-outline-variant/20 hover:bg-surface-container-high hover:text-on-surface-variant"
+            ? "bg-primary/10 text-primary"
+            : "text-on-surface-variant/40 hover:bg-surface-container-high hover:text-on-surface-variant"
         }`}
         title="Customize columns"
       >
-        <i className="fa-solid fa-table-columns text-xs" />
+        <i className="fa-solid fa-table-columns text-[10px]" />
       </button>
 
       {open && (
@@ -547,13 +574,6 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
         <span className="text-xs text-on-surface-variant/50">
           {filtered.length} of {entries.length}
         </span>
-        <ColumnCustomizer
-          allColumns={allColumns}
-          activeIds={activeColumnIds}
-          onUpdate={handleColumnsUpdate}
-          primaryColor={primaryColor}
-          defaultIds={defaultActive}
-        />
       </div>
 
       {/* Table */}
@@ -570,7 +590,15 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
                     {col.label}
                   </th>
                 ))}
-                <th className="w-10" />
+                <th className="w-16 px-3 py-3.5 text-right">
+                  <ColumnCustomizer
+                    allColumns={allColumns}
+                    activeIds={activeColumnIds}
+                    onUpdate={handleColumnsUpdate}
+                    primaryColor={primaryColor}
+                    defaultIds={defaultActive}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
