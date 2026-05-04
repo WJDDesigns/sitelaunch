@@ -29,6 +29,9 @@ function getR2Client(): S3Client {
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId, secretAccessKey },
+    // Required for R2 — without this the SDK generates virtual-hosted-style
+    // URLs (bucket.account.r2.cloudflarestorage.com) which R2 doesn't support.
+    forcePathStyle: true,
     // Use the SDK's default fetch-based handler — NodeHttpHandler causes
     // EPROTO TLS errors on Vercel's serverless runtime.
     maxAttempts: 3,
@@ -118,10 +121,22 @@ async function withRetry<T>(op: () => Promise<T>, label: string, attempts = 3): 
       return await op();
     } catch (err) {
       lastErr = err;
-      if (i === attempts - 1 || !isTransientError(err)) break;
+      const e = err as { message?: string; code?: string; name?: string; $metadata?: Record<string, unknown>; cause?: { message?: string; code?: string } };
+      const detail = JSON.stringify({
+        msg: e.message?.slice(0, 300),
+        code: e.code,
+        name: e.name,
+        status: e.$metadata?.httpStatusCode,
+        causeMsg: e.cause?.message?.slice(0, 200),
+        causeCode: e.cause?.code,
+      });
+      if (i === attempts - 1 || !isTransientError(err)) {
+        console.error(`[storage] ${label} FINAL FAILURE after ${i + 1} attempts: ${detail}`);
+        break;
+      }
       const base = Math.min(200 * Math.pow(3, i), 1500);
       const delay = base + Math.floor(Math.random() * 100);
-      console.warn(`[storage] ${label} attempt ${i + 1} failed (${(err as Error)?.message ?? "unknown"}), retrying in ${delay}ms`);
+      console.warn(`[storage] ${label} attempt ${i + 1} failed: ${detail}, retrying in ${delay}ms`);
       await new Promise((r) => setTimeout(r, delay));
     }
   }
