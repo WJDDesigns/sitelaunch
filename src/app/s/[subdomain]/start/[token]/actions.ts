@@ -118,15 +118,81 @@ export async function submitSubmissionAction(token: string) {
     redirect(await absoluteUrl(`/thanks/${token}`));
   }
   const admin = createAdminClient();
+
+  // Smart detection of client name/email from form data.
+  // Instead of hardcoding field IDs, we inspect the schema for name/email
+  // field types or IDs that match common patterns.
+  const data = sub.data as Record<string, unknown>;
+  const schema = resolveSchema(sub);
+  const allFields = schema.steps.flatMap((s) => s.fields ?? []);
+
+  let clientName: string | null = null;
+  let clientEmail: string | null = null;
+
+  // 1. Check for "name" field type first (our structured name field)
+  const nameField = allFields.find((f) => f.type === "name");
+  if (nameField) {
+    const v = data[nameField.id];
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      const n = v as Record<string, string>;
+      clientName = [n.first, n.last].filter(Boolean).join(" ") || null;
+    } else if (typeof v === "string" && v.trim()) {
+      clientName = v.trim();
+    }
+  }
+
+  // 2. Check for email field type
+  const emailField = allFields.find((f) => f.type === "email");
+  if (emailField) {
+    const v = data[emailField.id];
+    if (typeof v === "string" && v.includes("@")) clientEmail = v.trim();
+  }
+
+  // 3. Fallback: match by field ID patterns
+  if (!clientName) {
+    const namePatterns = ["contact_name", "client_name", "full_name", "name", "your_name"];
+    for (const p of namePatterns) {
+      const match = allFields.find((f) => f.id === p || f.id.endsWith(`_${p}`));
+      if (match) {
+        const v = data[match.id];
+        if (typeof v === "string" && v.trim()) { clientName = v.trim(); break; }
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+          const n = v as Record<string, string>;
+          const joined = [n.first, n.last].filter(Boolean).join(" ");
+          if (joined) { clientName = joined; break; }
+        }
+      }
+    }
+  }
+
+  if (!clientEmail) {
+    const emailPatterns = ["contact_email", "client_email", "email", "your_email", "email_address"];
+    for (const p of emailPatterns) {
+      const match = allFields.find((f) => f.id === p || f.id.endsWith(`_${p}`));
+      if (match) {
+        const v = data[match.id];
+        if (typeof v === "string" && v.includes("@")) { clientEmail = v.trim(); break; }
+      }
+    }
+  }
+
+  // 4. Last resort: scan all field values for email-like strings
+  if (!clientEmail) {
+    for (const f of allFields) {
+      if (f.type === "email" || f.id.toLowerCase().includes("email")) {
+        const v = data[f.id];
+        if (typeof v === "string" && v.includes("@")) { clientEmail = v.trim(); break; }
+      }
+    }
+  }
+
   const { error } = await admin
     .from("submissions")
     .update({
       status: "submitted",
       submitted_at: new Date().toISOString(),
-      client_email:
-        (sub.data as Record<string, unknown>).contact_email?.toString() ?? null,
-      client_name:
-        (sub.data as Record<string, unknown>).contact_name?.toString() ?? null,
+      client_email: clientEmail,
+      client_name: clientName,
     })
     .eq("id", sub.id);
   if (error) throw new Error(error.message);

@@ -929,14 +929,27 @@ export default async function SubmissionDetailPage({ params }: Props) {
                     <i className={`fa-solid ${mimeIcon(file.mime_type)} ${mimeColor(file.mime_type)} text-base`} />
                   </div>
 
-                  {/* File info */}
+                  {/* File info \u2014 clickable to open in new tab */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-on-surface truncate">{file.filename}</p>
-                    <p className="text-xs text-on-surface-variant/50">
-                      {file.mime_type ?? "file"}
-                      {file.size_bytes ? ` \u00B7 ${prettySize(file.size_bytes)}` : ""}
-                      {file.created_at ? ` \u00B7 ${new Date(file.created_at).toLocaleDateString()}` : ""}
-                    </p>
+                    {file.url ? (
+                      <a href={file.url} target="_blank" rel="noreferrer" className="block group/file">
+                        <p className="text-sm font-medium text-on-surface truncate group-hover/file:text-primary transition-colors">{file.filename}</p>
+                        <p className="text-xs text-on-surface-variant/50">
+                          {file.mime_type ?? "file"}
+                          {file.size_bytes ? ` \u00B7 ${prettySize(file.size_bytes)}` : ""}
+                          {file.created_at ? ` \u00B7 ${new Date(file.created_at).toLocaleDateString()}` : ""}
+                        </p>
+                      </a>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-on-surface truncate">{file.filename}</p>
+                        <p className="text-xs text-on-surface-variant/50">
+                          {file.mime_type ?? "file"}
+                          {file.size_bytes ? ` \u00B7 ${prettySize(file.size_bytes)}` : ""}
+                          {file.created_at ? ` \u00B7 ${new Date(file.created_at).toLocaleDateString()}` : ""}
+                        </p>
+                      </>
+                    )}
                   </div>
 
                   {/* Preview thumbnail for images */}
