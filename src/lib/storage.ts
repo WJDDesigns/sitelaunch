@@ -1,6 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { NodeHttpHandler } from "@smithy/node-http-handler";
 import sharp from "sharp";
 
 /* ── R2 Client ─────────────────────────────────── */
@@ -30,11 +29,9 @@ function getR2Client(): S3Client {
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId, secretAccessKey },
-    requestHandler: new NodeHttpHandler({
-      connectionTimeout: 5_000,
-      requestTimeout: 60_000,
-    }),
-    maxAttempts: 1,
+    // Use the SDK's default fetch-based handler — NodeHttpHandler causes
+    // EPROTO TLS errors on Vercel's serverless runtime.
+    maxAttempts: 3,
   });
   return _r2;
 }

@@ -14,6 +14,9 @@ const required = [
   "STRIPE_WEBHOOK_SECRET",
   "RESEND_API_KEY",
   "CLOUD_TOKEN_ENCRYPTION_KEY",
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
 ] as const;
 
 type RequiredVar = (typeof required)[number];
