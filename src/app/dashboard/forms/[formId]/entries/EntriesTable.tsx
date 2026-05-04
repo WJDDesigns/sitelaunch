@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Pagination from "@/components/Pagination";
@@ -127,13 +128,28 @@ function ColumnCustomizer({
   defaultIds: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+
+  // Position the panel when opening
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setPos({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const handle = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
@@ -180,8 +196,9 @@ function ColumnCustomizer({
   const handleDragEnd = () => setDragIdx(null);
 
   return (
-    <div ref={ref} className="relative inline-flex justify-end">
+    <>
       <button
+        ref={btnRef}
         onClick={() => setOpen(!open)}
         className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
           open
@@ -193,8 +210,12 @@ function ColumnCustomizer({
         <i className="fa-solid fa-table-columns text-[10px]" />
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-2 w-[420px] bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 overflow-hidden">
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          className="w-[420px] bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl overflow-hidden"
+          style={{ position: "fixed", top: pos.top, right: pos.right, zIndex: 9999 }}
+        >
           <div className="px-4 py-3 border-b border-outline-variant/10">
             <h3 className="text-sm font-bold text-on-surface">Customize Columns</h3>
             <p className="text-[11px] text-on-surface-variant/50 mt-0.5">Click to add or remove. Drag to reorder active columns.</p>
@@ -292,11 +313,11 @@ function ColumnCustomizer({
               Done
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
-
 }
 
 /* ── Main Component ───────────────────────────────────────── */
