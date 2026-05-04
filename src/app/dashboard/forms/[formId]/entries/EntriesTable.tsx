@@ -79,7 +79,12 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
 
   // Initialize from URL params
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(() => {
+    const raw = searchParams.get("status");
+    if (!raw) return new Set(["submitted"]);
+    if (raw === "all") return new Set<string>();
+    return new Set(raw.split(","));
+  });
   const [page, setPage] = useState(parseInt(searchParams.get("page") ?? "1", 10) || 1);
 
   // Sync state changes to URL
@@ -91,7 +96,7 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
         else sp.delete("q");
       }
       if (params.status !== undefined) {
-        if (params.status && params.status !== "all") sp.set("status", params.status);
+        if (params.status) sp.set("status", params.status);
         else sp.delete("status");
       }
       if (params.page !== undefined) {
@@ -109,10 +114,21 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
     setPage(1);
     updateUrl({ q: val, page: 1 });
   };
-  const handleStatusChange = (val: string) => {
-    setStatusFilter(val);
+  const toggleStatus = (val: string) => {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(val)) next.delete(val);
+      else next.add(val);
+      const serialized = next.size === 0 ? "all" : Array.from(next).join(",");
+      setPage(1);
+      updateUrl({ status: serialized, page: 1 });
+      return next;
+    });
+  };
+  const setAllStatuses = () => {
+    setStatusFilter(new Set());
     setPage(1);
-    updateUrl({ status: val, page: 1 });
+    updateUrl({ status: "all", page: 1 });
   };
   const handlePageChange = (p: number) => {
     setPage(p);
@@ -121,7 +137,7 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
 
   const filtered = useMemo(() => {
     return entries.filter((e) => {
-      if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      if (statusFilter.size > 0 && !statusFilter.has(e.status)) return false;
       if (search) {
         const q = search.toLowerCase();
         const nameMatch = (e.client_name ?? "").toLowerCase().includes(q);
@@ -203,15 +219,31 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
             style={{ "--tw-ring-color": primaryColor + "66" } as React.CSSProperties}
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => handleStatusChange(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border-2 border-outline-variant/20 bg-surface-container-lowest text-sm text-on-surface"
-        >
-          {statuses.map((s) => (
-            <option key={s} value={s}>{s === "all" ? "All statuses" : s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}</option>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={setAllStatuses}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              statusFilter.size === 0
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "text-on-surface-variant/60 border-outline-variant/20 hover:bg-surface-container-high"
+            }`}
+          >
+            All
+          </button>
+          {statuses.filter((s) => s !== "all").map((s) => (
+            <button
+              key={s}
+              onClick={() => toggleStatus(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                statusFilter.has(s)
+                  ? "bg-primary/10 text-primary border-primary/30"
+                  : "text-on-surface-variant/60 border-outline-variant/20 hover:bg-surface-container-high"
+              }`}
+            >
+              {s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
+            </button>
           ))}
-        </select>
+        </div>
         <button
           onClick={exportCSV}
           className="px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 flex items-center gap-2"

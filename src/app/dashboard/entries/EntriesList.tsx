@@ -68,7 +68,7 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(["submitted"]));
   const [formFilter, setFormFilter] = useState(initialFormId);
   const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "all">("all");
   const [sortBy, setSortBy] = useState<"date" | "name" | "status">("date");
@@ -81,7 +81,7 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
   const filtered = useMemo(() => {
     let list = submissions;
     if (formFilter) list = list.filter((s) => s.partner_form_id === formFilter);
-    if (statusFilter) list = list.filter((s) => s.status === statusFilter);
+    if (statusFilter.size > 0) list = list.filter((s) => statusFilter.has(s.status));
     if (dateRange !== "all") {
       const days = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : 90;
       const cutoff = new Date();
@@ -137,6 +137,20 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
     const next = new Set(selected);
     if (next.has(id)) next.delete(id); else next.add(id);
     setSelected(next);
+  };
+
+  const toggleStatusFilter = (val: string) => {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(val)) next.delete(val);
+      else next.add(val);
+      setPage(1);
+      return next;
+    });
+  };
+  const setAllStatuses = () => {
+    setStatusFilter(new Set());
+    setPage(1);
   };
 
   const handleStatusChange = (id: string, status: string) => {
@@ -240,16 +254,31 @@ export default function EntriesList({ submissions, forms, isSuperadmin, showSmar
         </select>
 
         {/* Status filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-xs font-medium bg-surface-container border border-outline-variant/15 rounded-lg text-on-surface-variant focus:border-primary/40 focus:outline-none transition-colors"
-        >
-          <option value="">All statuses</option>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={setAllStatuses}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              statusFilter.size === 0
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "text-on-surface-variant/60 border-outline-variant/20 hover:bg-surface-container-high"
+            }`}
+          >
+            All
+          </button>
           {STATUSES.map((s) => (
-            <option key={s} value={s}>{s.replace("_", " ")}</option>
+            <button
+              key={s}
+              onClick={() => toggleStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                statusFilter.has(s)
+                  ? "bg-primary/10 text-primary border-primary/30"
+                  : "text-on-surface-variant/60 border-outline-variant/20 hover:bg-surface-container-high"
+              }`}
+            >
+              {s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
+            </button>
           ))}
-        </select>
+        </div>
 
         {/* Date range */}
         <div className="flex items-center rounded-lg border border-outline-variant/15 overflow-hidden">

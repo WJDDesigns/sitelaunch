@@ -2,8 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["sharp"],
-  serverActions: {
-    bodySizeLimit: "105mb",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "105mb",
+    },
   },
   images: {
     remotePatterns: [
