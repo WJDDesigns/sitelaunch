@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Pagination from "@/components/Pagination";
@@ -20,6 +20,12 @@ interface EntryRow {
 interface FieldMapping {
   key: string;
   label: string;
+}
+
+interface ColumnDef {
+  id: string;
+  label: string;
+  type: "system" | "field";
 }
 
 interface Props {
@@ -52,11 +58,9 @@ function formatDate(iso: string | null) {
 function flattenValue(val: unknown): string {
   if (val === null || val === undefined) return "";
   if (typeof val === "string") {
-    // Try to detect stringified competitor analyzer / complex JSON arrays
     try {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.url) {
-        // Competitor analyzer entries — show URLs
         return parsed.map((c: { url?: string; analysis?: { title?: string } }) =>
           c.analysis?.title || c.url || ""
         ).filter(Boolean).join(", ");
@@ -72,10 +76,233 @@ function flattenValue(val: unknown): string {
   return String(val);
 }
 
+/* ── System columns (always available) ────────────────────── */
+const SYSTEM_COLUMNS: ColumnDef[] = [
+  { id: "_client", label: "Client", type: "system" },
+  { id: "_status", label: "Status", type: "system" },
+  { id: "_submitted_at", label: "Submitted", type: "system" },
+  { id: "_created_at", label: "Created", type: "system" },
+  { id: "_entry_id", label: "Entry ID", type: "system" },
+];
+
+/* ── Column Customizer Popover ────────────────────────────── */
+function ColumnCustomizer({
+  allColumns,
+  activeIds,
+  onUpdate,
+  primaryColor,
+  defaultIds,
+}: {
+  allColumns: ColumnDef[];
+  activeIds: string[];
+  onUpdate: (ids: string[]) => void;
+  primaryColor: string;
+  defaultIds: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", handle);
+    return () => document.removeEventListener("keydown", handle);
+  }, [open]);
+
+  const activeSet = new Set(activeIds);
+  const inactive = allColumns.filter((c) => !activeSet.has(c.id));
+  const active = activeIds.map((id) => allColumns.find((c) => c.id === id)!).filter(Boolean);
+
+  const addColumn = (id: string) => onUpdate([...activeIds, id]);
+  const removeColumn = (id: string) => onUpdate(activeIds.filter((i) => i !== id));
+  const moveUp = (idx: number) => {
+    if (idx <= 0) return;
+    const next = [...activeIds];
+    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+    onUpdate(next);
+  };
+  const moveDown = (idx: number) => {
+    if (idx >= activeIds.length - 1) return;
+    const next = [...activeIds];
+    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+    onUpdate(next);
+  };
+
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    const next = [...activeIds];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(idx, 0, moved);
+    onUpdate(next);
+    setDragIdx(idx);
+  };
+  const handleDragEnd = () => setDragIdx(null);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border ${
+          open
+            ? "bg-primary/10 text-primary border-primary/30"
+            : "text-on-surface-variant/50 border-outline-variant/20 hover:bg-surface-container-high hover:text-on-surface-variant"
+        }`}
+        title="Customize columns"
+      >
+        <i className="fa-solid fa-table-columns text-xs" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-[420px] bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-outline-variant/10">
+            <h3 className="text-sm font-bold text-on-surface">Customize Columns</h3>
+            <p className="text-[11px] text-on-surface-variant/50 mt-0.5">Click to add or remove. Drag to reorder active columns.</p>
+          </div>
+
+          <div className="flex divide-x divide-outline-variant/10 max-h-[360px]">
+            {/* Inactive (left) */}
+            <div className="w-1/2 p-3 overflow-y-auto">
+              <div className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-2">Available</div>
+              {inactive.length === 0 ? (
+                <p className="text-[11px] text-on-surface-variant/30 italic py-4 text-center">All columns active</p>
+              ) : (
+                <div className="space-y-1">
+                  {inactive.map((col) => (
+                    <button
+                      key={col.id}
+                      onClick={() => addColumn(col.id)}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-on-surface-variant/70 hover:bg-primary/5 hover:text-primary transition-colors group text-left"
+                    >
+                      <i className="fa-solid fa-plus text-[8px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: primaryColor }} />
+                      <span className="truncate flex-1">{col.label}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                        col.type === "system"
+                          ? "bg-surface-container-high text-on-surface-variant/40"
+                          : "bg-primary/5 text-primary/40"
+                      }`}>
+                        {col.type === "system" ? "System" : "Field"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Active (right) */}
+            <div className="w-1/2 p-3 overflow-y-auto">
+              <div className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-2">
+                Active ({active.length})
+              </div>
+              <div className="space-y-1">
+                {active.map((col, idx) => (
+                  <div
+                    key={col.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs transition-colors group ${
+                      dragIdx === idx ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-surface-container-high"
+                    }`}
+                  >
+                    <i className="fa-solid fa-grip-vertical text-[8px] text-on-surface-variant/20 cursor-grab" />
+                    <span className="truncate flex-1 text-on-surface">{col.label}</span>
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => moveUp(idx)}
+                        className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-primary hover:bg-primary/5"
+                        title="Move up"
+                      >
+                        <i className="fa-solid fa-chevron-up text-[7px]" />
+                      </button>
+                      <button
+                        onClick={() => moveDown(idx)}
+                        className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-primary hover:bg-primary/5"
+                        title="Move down"
+                      >
+                        <i className="fa-solid fa-chevron-down text-[7px]" />
+                      </button>
+                      <button
+                        onClick={() => removeColumn(col.id)}
+                        className="w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-red-400 hover:bg-red-500/5"
+                        title="Remove"
+                      >
+                        <i className="fa-solid fa-xmark text-[8px]" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 py-2.5 border-t border-outline-variant/10 flex justify-between items-center">
+            <button
+              onClick={() => onUpdate(defaultIds)}
+              className="text-[11px] text-on-surface-variant/50 hover:text-primary transition-colors"
+            >
+              Reset to defaults
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-90"
+              style={{ backgroundColor: primaryColor, color: "#fff" }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+}
+
+/* ── Main Component ───────────────────────────────────────── */
+
 export default function EntriesTable({ entries, fieldMap, formName, primaryColor }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Build full column list: system + form fields
+  const allColumns = useMemo<ColumnDef[]>(() => [
+    ...SYSTEM_COLUMNS,
+    ...fieldMap.map((f) => ({ id: `field:${f.key}`, label: f.label, type: "field" as const })),
+  ], [fieldMap]);
+
+  // Default active columns: Client, Status, Submitted + first 3 form fields
+  const defaultActive = useMemo(() => [
+    "_client", "_status", "_submitted_at",
+    ...fieldMap.slice(0, 3).map((f) => `field:${f.key}`),
+  ], [fieldMap]);
+
+  const [activeColumnIds, setActiveColumnIds] = useState<string[]>(() => {
+    // Try to restore from URL param
+    const raw = searchParams.get("cols");
+    if (raw) {
+      const ids = raw.split(",");
+      // Validate all IDs exist
+      const validIds = new Set(allColumns.map((c) => c.id));
+      const valid = ids.filter((id) => validIds.has(id));
+      if (valid.length > 0) return valid;
+    }
+    return defaultActive;
+  });
 
   // Initialize from URL params
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
@@ -89,7 +316,7 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
 
   // Sync state changes to URL
   const updateUrl = useCallback(
-    (params: { q?: string; status?: string; page?: number }) => {
+    (params: { q?: string; status?: string; page?: number; cols?: string }) => {
       const sp = new URLSearchParams(searchParams.toString());
       if (params.q !== undefined) {
         if (params.q) sp.set("q", params.q);
@@ -103,11 +330,22 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
         if (params.page > 1) sp.set("page", String(params.page));
         else sp.delete("page");
       }
+      if (params.cols !== undefined) {
+        if (params.cols) sp.set("cols", params.cols);
+        else sp.delete("cols");
+      }
       const qs = sp.toString();
       router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [router, pathname, searchParams],
   );
+
+  const handleColumnsUpdate = useCallback((ids: string[]) => {
+    setActiveColumnIds(ids);
+    // Persist to URL so it survives page reloads
+    const isDefault = ids.length === defaultActive.length && ids.every((id, i) => id === defaultActive[i]);
+    updateUrl({ cols: isDefault ? "" : ids.join(",") });
+  }, [defaultActive, updateUrl]);
 
   const handleSearchChange = (val: string) => {
     setSearch(val);
@@ -162,6 +400,60 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
     const s = new Set(entries.map((e) => e.status));
     return ["all", ...Array.from(s)];
   }, [entries]);
+
+  // Resolve active columns to their defs
+  const activeColumns = useMemo(() => {
+    const colMap = new Map(allColumns.map((c) => [c.id, c]));
+    return activeColumnIds.map((id) => colMap.get(id)).filter(Boolean) as ColumnDef[];
+  }, [allColumns, activeColumnIds]);
+
+  /* ── Render cell value for a column ────────── */
+  function renderCell(entry: EntryRow, col: ColumnDef) {
+    switch (col.id) {
+      case "_client":
+        return (
+          <td key={col.id} className="px-5 py-3.5">
+            <div className="font-semibold text-on-surface">{entry.client_name || "—"}</div>
+            <div className="text-xs text-on-surface-variant/50 mt-0.5">{entry.client_email || "—"}</div>
+          </td>
+        );
+      case "_status":
+        return (
+          <td key={col.id} className="px-4 py-3.5">
+            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[entry.status] ?? STATUS_STYLES.draft}`}>
+              {entry.status.replace(/_/g, " ")}
+            </span>
+          </td>
+        );
+      case "_submitted_at":
+        return (
+          <td key={col.id} className="px-4 py-3.5 text-on-surface-variant/70 text-xs whitespace-nowrap">
+            {formatDate(entry.submitted_at ?? entry.created_at)}
+          </td>
+        );
+      case "_created_at":
+        return (
+          <td key={col.id} className="px-4 py-3.5 text-on-surface-variant/70 text-xs whitespace-nowrap">
+            {formatDate(entry.created_at)}
+          </td>
+        );
+      case "_entry_id":
+        return (
+          <td key={col.id} className="px-4 py-3.5 text-on-surface-variant/50 text-[10px] font-mono">
+            {entry.id.slice(0, 8)}…
+          </td>
+        );
+      default: {
+        // Form field column — id is "field:<key>"
+        const fieldKey = col.id.replace("field:", "");
+        return (
+          <td key={col.id} className="px-4 py-3.5 text-on-surface-variant/70 text-xs max-w-[200px] truncate">
+            {flattenValue(entry.data[fieldKey]) || "—"}
+          </td>
+        );
+      }
+    }
+  }
 
   function exportCSV() {
     const headers = ["Name", "Email", "Status", "Submitted At", ...fieldMap.map((f) => f.label)];
@@ -252,9 +544,16 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
           <i className="fa-solid fa-file-csv text-xs" />
           Export CSV
         </button>
-        <span className="text-xs text-on-surface-variant/50 ml-auto">
+        <span className="text-xs text-on-surface-variant/50">
           {filtered.length} of {entries.length}
         </span>
+        <ColumnCustomizer
+          allColumns={allColumns}
+          activeIds={activeColumnIds}
+          onUpdate={handleColumnsUpdate}
+          primaryColor={primaryColor}
+          defaultIds={defaultActive}
+        />
       </div>
 
       {/* Table */}
@@ -263,11 +562,13 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-outline-variant/15">
-                <th className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-5 py-3.5">Client</th>
-                <th className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-4 py-3.5">Status</th>
-                <th className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-4 py-3.5">Submitted</th>
-                {fieldMap.slice(0, 3).map((f) => (
-                  <th key={f.key} className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-4 py-3.5 hidden lg:table-cell max-w-[200px]">{f.label}</th>
+                {activeColumns.map((col) => (
+                  <th
+                    key={col.id}
+                    className="text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-widest px-4 py-3.5 first:pl-5 max-w-[200px]"
+                  >
+                    {col.label}
+                  </th>
                 ))}
                 <th className="w-10" />
               </tr>
@@ -275,23 +576,7 @@ export default function EntriesTable({ entries, fieldMap, formName, primaryColor
             <tbody className="divide-y divide-outline-variant/10">
               {paginatedEntries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-surface-container/30 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="font-semibold text-on-surface">{entry.client_name || "—"}</div>
-                    <div className="text-xs text-on-surface-variant/50 mt-0.5">{entry.client_email || "—"}</div>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[entry.status] ?? STATUS_STYLES.draft}`}>
-                      {entry.status.replace(/_/g, " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-on-surface-variant/70 text-xs whitespace-nowrap">
-                    {formatDate(entry.submitted_at ?? entry.created_at)}
-                  </td>
-                  {fieldMap.slice(0, 3).map((f) => (
-                    <td key={f.key} className="px-4 py-3.5 text-on-surface-variant/70 text-xs hidden lg:table-cell max-w-[200px] truncate">
-                      {flattenValue(entry.data[f.key]) || "—"}
-                    </td>
-                  ))}
+                  {activeColumns.map((col) => renderCell(entry, col))}
                   <td className="px-3 py-3.5">
                     <Link
                       href={`/dashboard/submissions/${entry.id}`}
