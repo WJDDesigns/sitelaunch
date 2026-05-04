@@ -4,19 +4,31 @@ import sharp from "sharp";
 
 /* ── R2 Client ─────────────────────────────────── */
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
 const R2_BUCKET = process.env.R2_BUCKET_NAME || "linqme-submissions";
 
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
+/** Lazy-initialised R2 client — avoids crashing at import time when env vars are missing. */
+let _r2: S3Client | null = null;
+
+function getR2Client(): S3Client {
+  if (_r2) return _r2;
+
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "File uploads are not configured. Missing R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, or R2_SECRET_ACCESS_KEY environment variables.",
+    );
+  }
+
+  _r2 = new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+  return _r2;
+}
 
 /* ── Image Compression ─────────────────────────── */
 
@@ -97,7 +109,7 @@ export async function uploadToR2(
     path = path.replace(/\.(jpe?g|png)$/i, ".webp");
   }
 
-  await r2.send(
+  await getR2Client().send(
     new PutObjectCommand({
       Bucket: R2_BUCKET,
       Key: path,
@@ -113,7 +125,7 @@ export async function uploadToR2(
  * Delete a file from R2.
  */
 export async function deleteFromR2(path: string): Promise<void> {
-  await r2.send(
+  await getR2Client().send(
     new DeleteObjectCommand({
       Bucket: R2_BUCKET,
       Key: path,
@@ -129,5 +141,5 @@ export async function getSignedR2Url(path: string, expiresIn = 3600): Promise<st
     Bucket: R2_BUCKET,
     Key: path,
   });
-  return getSignedUrl(r2, command, { expiresIn });
+  return getSignedUrl(getR2Client(), command, { expiresIn });
 }
