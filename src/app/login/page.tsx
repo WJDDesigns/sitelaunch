@@ -27,28 +27,42 @@ export default function LoginPage() {
     setStatus("sending");
     setErrorMsg(null);
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!res.ok) {
+      // Guard against non-JSON responses (e.g. middleware redirect to HTML)
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        setStatus("error");
+        setErrorMsg("Login failed — please refresh the page and try again.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus("error");
+        setErrorMsg(data.error ?? "Login failed.");
+        return;
+      }
+
+      if (data.needsMfa) {
+        // User has MFA enrolled but hasn't verified yet -- redirect to challenge
+        window.location.href = `/auth/mfa/challenge?next=${encodeURIComponent(nextUrl)}`;
+        return;
+      }
+
+      // Use hard navigation so the browser shows its own loading indicator
+      // and doesn't hang on "Signing in..." while the dashboard renders
+      window.location.href = nextUrl;
+    } catch {
       setStatus("error");
-      setErrorMsg(data.error ?? "Login failed.");
-      return;
+      setErrorMsg("Login failed — please check your connection and try again.");
     }
-
-    if (data.needsMfa) {
-      // User has MFA enrolled but hasn't verified yet -- redirect to challenge
-      window.location.href = `/auth/mfa/challenge?next=${encodeURIComponent(nextUrl)}`;
-      return;
-    }
-
-    // Use hard navigation so the browser shows its own loading indicator
-    // and doesn't hang on "Signing in..." while the dashboard renders
-    window.location.href = nextUrl;
   }
 
   async function handleMagic(e: React.FormEvent) {
