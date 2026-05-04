@@ -6,6 +6,8 @@ import SubmissionForm from "./SubmissionForm";
 import { saveStepAction, submitSubmissionAction } from "./actions";
 import { uploadFileAction, deleteFileAction } from "./files-actions";
 
+export const maxDuration = 60;
+
 interface Props {
   params: Promise<{ subdomain: string; token: string }>;
   searchParams: Promise<{ embed?: string; chromeless?: string }>;

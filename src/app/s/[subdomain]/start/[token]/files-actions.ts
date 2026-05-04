@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { uploadToR2, deleteFromR2 } from "@/lib/storage";
 import type { FieldDef, FormSchema, UploadedFile } from "@/lib/forms";
 
-export const maxDuration = 60;
+// maxDuration moved to page.tsx — "use server" files can only export async functions
 
 const MAX_BYTES = 50 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
